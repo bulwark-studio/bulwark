@@ -11,10 +11,10 @@ const mp = process.env.MP || 'changeme';
 const dp = process.env.DP || '';
 const vp = process.env.VP || '';
 
-const devHost = 'aws-1-us-east-1.pooler.supabase.com';
-const devRef = 'postgres.flzccsvxzmpqglijrcxq';
-const vpsHost = 'aws-0-us-west-2.pooler.supabase.com';
-const vpsRef = 'postgres.qoobpabjcpshnhpwlztx';
+// Direct connections (port 5432) — bypasses pooler, avoids
+// "Tenant or user not found" errors from Supavisor
+const devHost = 'db.flzccsvxzmpqglijrcxq.supabase.co';
+const vpsHost = 'db.qoobpabjcpshnhpwlztx.supabase.co';
 
 const config = `module.exports = {
   apps: [{
@@ -22,8 +22,8 @@ const config = `module.exports = {
     script: 'server.js',
     env: {
       MONITOR_PASS: '${mp}',
-      DATABASE_URL: 'postgresql://${devRef}:${dp}@${devHost}:6543/postgres',
-      VPS_DATABASE_URL: 'postgresql://${vpsRef}:${vp}@${vpsHost}:6543/postgres'
+      DATABASE_URL: 'postgresql://postgres:${dp}@${devHost}:5432/postgres',
+      VPS_DATABASE_URL: 'postgresql://postgres:${vp}@${vpsHost}:5432/postgres'
     }
   }]
 };

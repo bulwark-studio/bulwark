@@ -661,7 +661,7 @@ async function getTicketSummary() {
 }
 
 async function getRecentActivity() {
-  return await dbQuery(`SELECT id, activity_type, description, created_at, metadata FROM chester_activity ORDER BY created_at DESC LIMIT 30`);
+  return await dbQuery(`SELECT id, type, title, description, created_at, metadata FROM chester_activity ORDER BY created_at DESC LIMIT 30`);
 }
 
 async function getProcessList() {
@@ -721,8 +721,8 @@ function runClaude(prompt) {
   child.on("close", (code) => {
     activeClaudeProc = null;
     io.emit("claude_done", { code, output, prompt });
-    dbQuery(`INSERT INTO chester_activity (activity_type, description, metadata) VALUES ($1, $2, $3)`,
-      ["claude_cli", `Claude CLI: ${prompt.substring(0, 100)}`, JSON.stringify({ code, prompt, output_length: output.length })]).catch(() => {});
+    dbQuery(`INSERT INTO chester_activity (type, title, description, metadata) VALUES ($1, $2, $3, $4)`,
+      ["claude_cli", `Claude CLI: ${prompt.substring(0, 100)}`, output.substring(0, 500), JSON.stringify({ code, prompt, output_length: output.length })]).catch(() => {});
   });
   child.on("error", (err) => { activeClaudeProc = null; io.emit("claude_output", `\r\n[ERROR] ${err.message}\r\n`); io.emit("claude_done", { code: 1, output: err.message, prompt }); });
 }
@@ -792,7 +792,7 @@ app.post("/api/tickets/:id/approve", async (req, res) => {
       await execCommand(`git -C ${REPO_DIR} push origin ${rows[0].fix_branch}`, { timeout: 30000 });
       io.emit("claude_output", `\r\n[DEPLOY] Pushed ${rows[0].fix_branch}\r\n`);
     }
-    await dbQuery(`INSERT INTO chester_activity (activity_type, description, metadata) VALUES ('ticket_approved', $1, $2)`, [`Ticket ${id.substring(0, 8)} approved`, JSON.stringify({ ticket_id: id })]);
+    await dbQuery(`INSERT INTO chester_activity (type, title, description, metadata) VALUES ('ticket_approved', $1, $2, $3)`, [`Ticket ${id.substring(0, 8)} approved`, `Approved for merge`, JSON.stringify({ ticket_id: id })]);
     io.emit("tickets", await getTicketSummary());
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -803,7 +803,7 @@ app.post("/api/tickets/:id/reject", async (req, res) => {
   const { reason } = req.body;
   try {
     await dbQuery(`UPDATE support_tickets SET fix_status = 'fixing', fix_notes = COALESCE(fix_notes, '') || E'\n[REJECTED] ' || $2, updated_at = NOW() WHERE id = $1`, [id, reason || "Rejected"]);
-    await dbQuery(`INSERT INTO chester_activity (activity_type, description, metadata) VALUES ('ticket_rejected', $1, $2)`, [`Ticket ${id.substring(0, 8)} rejected`, JSON.stringify({ ticket_id: id, reason })]);
+    await dbQuery(`INSERT INTO chester_activity (type, title, description, metadata) VALUES ('ticket_rejected', $1, $2, $3)`, [`Ticket ${id.substring(0, 8)} rejected`, reason || 'Rejected', JSON.stringify({ ticket_id: id, reason })]);
     io.emit("tickets", await getTicketSummary());
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
