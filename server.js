@@ -25,6 +25,7 @@ const PORT = process.env.MONITOR_PORT || 3001;
 const DB_URL = process.env.DATABASE_URL || "";
 const REPO_DIR = process.env.REPO_DIR || path.resolve(__dirname, "../admin");
 const VPS_HOST = process.env.VPS_HOST || "https://admin.autopilotaitech.com";
+const VPS_DB_URL = process.env.VPS_DATABASE_URL || "";
 const USERS_FILE = path.join(__dirname, "users.json");
 
 // ── User Store (JSON file) ──────────────────────────────────────────────────
@@ -189,6 +190,12 @@ if (DB_URL) {
   pool = new Pool({ connectionString: DB_URL, ssl: { rejectUnauthorized: false } });
 }
 
+// VPS production DB — read-only access for ticket syncing
+let vpsPool = null;
+if (VPS_DB_URL) {
+  vpsPool = new Pool({ connectionString: VPS_DB_URL, ssl: { rejectUnauthorized: false } });
+}
+
 async function dbQuery(sql, params = []) {
   if (!pool) return [];
   try {
@@ -196,6 +203,17 @@ async function dbQuery(sql, params = []) {
     return res.rows;
   } catch (e) {
     console.error("[DB]", e.message);
+    return [];
+  }
+}
+
+async function vpsQuery(sql, params = []) {
+  if (!vpsPool) return [];
+  try {
+    const res = await vpsPool.query(sql, params);
+    return res.rows;
+  } catch (e) {
+    console.error("[VPS-DB]", e.message);
     return [];
   }
 }
@@ -595,16 +613,51 @@ function getSystemInfo() {
 }
 
 // ── Ticket Pipeline ──────────────────────────────────────────────────────────
+// Fetches from BOTH local dev DB AND VPS production DB
+
 async function getTicketSummary() {
-  const summary = await dbQuery(`SELECT fix_status, COUNT(*) as count FROM support_tickets WHERE fix_status IS NOT NULL GROUP BY fix_status ORDER BY fix_status`);
-  const tickets = await dbQuery(`
+  // Local dev DB tickets
+  const localTickets = await dbQuery(`
     SELECT id, subject, issue_type, issue_description, priority, fix_status,
            fix_branch, fix_notes, source, created_at, updated_at, target_env, status
     FROM support_tickets WHERE target_env = 'dev' OR fix_status IS NOT NULL
-    ORDER BY CASE fix_status WHEN 'pending' THEN 1 WHEN 'analyzing' THEN 2 WHEN 'fixing' THEN 3
-      WHEN 'testing' THEN 4 WHEN 'awaiting_approval' THEN 5 WHEN 'approved' THEN 6
-      WHEN 'deployed' THEN 7 ELSE 8 END, updated_at DESC LIMIT 50`);
-  return { summary, tickets };
+    ORDER BY updated_at DESC LIMIT 50`);
+
+  // VPS production DB tickets (direct DB query — no auth needed)
+  const vpsTickets = await vpsQuery(`
+    SELECT id, subject, issue_type, issue_description, priority, fix_status,
+           fix_branch, fix_notes, source, created_at, updated_at, target_env, status
+    FROM support_tickets
+    ORDER BY created_at DESC LIMIT 50`);
+
+  // Mark VPS tickets with source
+  for (const t of vpsTickets) t._source = "vps";
+
+  // Merge: local tickets + VPS tickets (dedupe by id, local takes priority)
+  const localIds = new Set(localTickets.map(t => t.id));
+  const merged = [...localTickets];
+  for (const vt of vpsTickets) {
+    if (!localIds.has(vt.id)) merged.push(vt);
+  }
+
+  // Sort by fix_status priority, then by date
+  const statusOrder = { pending: 1, analyzing: 2, fixing: 3, testing: 4, awaiting_approval: 5, approved: 6, deployed: 7 };
+  merged.sort((a, b) => {
+    const sa = statusOrder[a.fix_status] || 8;
+    const sb = statusOrder[b.fix_status] || 8;
+    if (sa !== sb) return sa - sb;
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+
+  // Build summary from merged
+  const counts = {};
+  for (const t of merged) {
+    const s = t.fix_status || t.status || "open";
+    counts[s] = (counts[s] || 0) + 1;
+  }
+  const summary = Object.entries(counts).map(([fix_status, count]) => ({ fix_status, count }));
+
+  return { summary, tickets: merged.slice(0, 50) };
 }
 
 async function getRecentActivity() {
@@ -861,7 +914,8 @@ setInterval(() => {
 const users = ensureDefaultAdmin();
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`\n  Chester Dev Monitor running on http://0.0.0.0:${PORT}`);
-  console.log(`  DB: ${DB_URL ? "connected" : "NOT connected (set DATABASE_URL)"}`);
+  console.log(`  Dev DB: ${DB_URL ? "connected" : "NOT connected (set DATABASE_URL)"}`);
+  console.log(`  VPS DB: ${VPS_DB_URL ? "connected" : "NOT connected (set VPS_DATABASE_URL)"}`);
   console.log(`  Users: ${users.length} (stored in ${USERS_FILE})`);
   console.log(`  Repo: ${REPO_DIR}`);
   console.log(`  VPS: ${VPS_HOST}`);
