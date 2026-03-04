@@ -4,1266 +4,264 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chester Dev Monitor</title>
+
+  <!-- External Dependencies -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
   <link href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #0f1117; --bg2: #1a1d27; --bg3: #2a2d37; --bg4: #353842;
-      --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
-      --cyan: #22d3ee; --green: #22c55e; --yellow: #eab308; --red: #ef4444;
-      --purple: #a78bfa; --blue: #3b82f6; --orange: #f97316;
-      --sidebar-w: 220px;
-    }
-    body { font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; background: var(--bg); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 13px; }
 
-    /* Sidebar */
-    .sidebar { width: var(--sidebar-w); background: var(--bg2); border-right: 1px solid var(--bg3); display: flex; flex-direction: column; flex-shrink: 0; }
-    .sidebar-header { padding: 16px; border-bottom: 1px solid var(--bg3); }
-    .sidebar-header h1 { font-size: 14px; color: var(--cyan); font-weight: 700; letter-spacing: 1px; }
-    .sidebar-header .subtitle { font-size: 11px; color: var(--text3); margin-top: 2px; }
-    .sidebar-nav { flex: 1; padding: 8px 0; overflow-y: auto; }
-    .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; color: var(--text2); transition: all 0.15s; border-left: 3px solid transparent; font-size: 13px; }
-    .nav-item:hover { background: var(--bg3); color: var(--text); }
-    .nav-item.active { background: rgba(34,211,238,0.08); color: var(--cyan); border-left-color: var(--cyan); }
-    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
-    .nav-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 10px; padding: 1px 6px; border-radius: 10px; font-weight: 700; }
-    .sidebar-footer { padding: 12px 16px; border-top: 1px solid var(--bg3); font-size: 11px; color: var(--text3); }
-    .sidebar-footer .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-    .sidebar-footer .status-dot.ok { background: var(--green); }
-    .sidebar-footer .status-dot.err { background: var(--red); }
-
-    /* Main content */
-    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--bg3); background: var(--bg2); }
-    .topbar h2 { font-size: 16px; font-weight: 600; }
-    .topbar-actions { display: flex; gap: 8px; }
-    .content { flex: 1; overflow-y: auto; padding: 20px; }
-
-    /* Views */
-    .view { display: none; }
-    .view.active { display: block; }
-
-    /* Cards */
-    .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-bottom: 20px; }
-    .card { background: var(--bg2); border: 1px solid var(--bg3); border-radius: 8px; padding: 16px; }
-    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .card-title { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-    .card-value { font-size: 28px; font-weight: 700; }
-    .card-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
-    .card canvas { margin-top: 8px; }
-
-    /* Buttons */
-    .btn { padding: 6px 14px; border: 1px solid var(--bg3); border-radius: 6px; background: var(--bg3); color: var(--text); cursor: pointer; font-size: 12px; font-family: inherit; transition: all 0.15s; display: inline-flex; align-items: center; gap: 6px; }
-    .btn:hover { background: var(--bg4); border-color: var(--text3); }
-    .btn-primary { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: 600; }
-    .btn-primary:hover { background: #06b6d4; }
-    .btn-danger { background: var(--red); color: #fff; border-color: var(--red); }
-    .btn-danger:hover { background: #dc2626; }
-    .btn-success { background: var(--green); color: #fff; border-color: var(--green); }
-    .btn-success:hover { background: #16a34a; }
-    .btn-sm { padding: 4px 10px; font-size: 11px; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* Tables */
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; padding: 8px 12px; font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--bg3); font-weight: 600; }
-    td { padding: 8px 12px; border-bottom: 1px solid var(--bg3); font-size: 12px; }
-    tr:hover { background: rgba(255,255,255,0.02); }
-
-    /* Status badges */
-    .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
-    .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
-    .badge-yellow { background: rgba(234,179,8,0.15); color: var(--yellow); }
-    .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
-    .badge-cyan { background: rgba(34,211,238,0.15); color: var(--cyan); }
-    .badge-purple { background: rgba(167,139,250,0.15); color: var(--purple); }
-    .badge-blue { background: rgba(59,130,246,0.15); color: var(--blue); }
-    .badge-orange { background: rgba(249,115,22,0.15); color: var(--orange); }
-
-    /* Kanban */
-    .kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
-    .kanban-col { min-width: 220px; flex: 1; background: var(--bg2); border: 1px solid var(--bg3); border-radius: 8px; transition: border-color 0.2s; }
-    .kanban-col.drag-over { border-color: var(--cyan); background: rgba(34,211,238,0.05); }
-    .kanban-col-header { padding: 10px 12px; border-bottom: 1px solid var(--bg3); display: flex; align-items: center; justify-content: space-between; }
-    .kanban-col-title { font-size: 12px; font-weight: 600; text-transform: uppercase; }
-    .kanban-col-count { font-size: 11px; color: var(--text3); background: var(--bg3); padding: 1px 6px; border-radius: 8px; }
-    .kanban-cards { padding: 8px; max-height: 60vh; overflow-y: auto; min-height: 60px; }
-    .kanban-card { background: var(--bg); border: 1px solid var(--bg3); border-radius: 6px; padding: 10px; margin-bottom: 8px; cursor: grab; transition: all 0.15s; }
-    .kanban-card:hover { border-color: var(--cyan); }
-    .kanban-card.dragging { opacity: 0.4; transform: scale(0.95); }
-    .kanban-card-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
-    .kanban-card-meta { font-size: 10px; color: var(--text3); }
-    .kanban-card-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-    .kanban-card-desc { font-size: 11px; color: var(--text2); margin-top: 6px; max-height: 0; overflow: hidden; transition: max-height 0.3s; }
-    .kanban-card.expanded .kanban-card-desc { max-height: 200px; }
-    .kanban-card-source { font-size: 9px; color: var(--text3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .btn-icon { background: none; border: 1px solid var(--bg3); color: var(--text3); cursor: pointer; padding: 2px 6px; border-radius: 4px; font-size: 10px; transition: all 0.15s; }
-    .btn-icon:hover { border-color: var(--cyan); color: var(--cyan); }
-    .btn-icon.btn-delete:hover { border-color: var(--red); color: var(--red); }
-
-    /* Terminal */
-    #terminal-container { height: calc(100vh - 160px); background: #000; border-radius: 8px; overflow: hidden; }
-    #terminal-container .xterm { padding: 8px; }
-
-    /* Claude output */
-    .claude-output { background: #000; border: 1px solid var(--bg3); border-radius: 8px; padding: 12px; font-family: 'SF Mono', monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: calc(100vh - 300px); overflow-y: auto; color: var(--green); min-height: 200px; }
-    .claude-prompt-form { display: flex; gap: 8px; margin-bottom: 12px; }
-    .claude-prompt-form textarea { flex: 1; background: var(--bg2); border: 1px solid var(--bg3); border-radius: 6px; color: var(--text); padding: 10px; font-family: inherit; font-size: 12px; resize: vertical; min-height: 60px; }
-    .claude-prompt-form textarea:focus { outline: none; border-color: var(--cyan); }
-    .claude-status { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; }
-    .claude-status .spinner { width: 14px; height: 14px; border: 2px solid var(--bg3); border-top-color: var(--cyan); border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Activity feed */
-    .activity-feed { max-height: 400px; overflow-y: auto; }
-    .activity-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--bg3); }
-    .activity-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
-    .activity-item .time { font-size: 10px; color: var(--text3); white-space: nowrap; }
-    .activity-item .desc { font-size: 12px; flex: 1; }
-
-    /* Log viewer */
-    .log-viewer { background: #000; border: 1px solid var(--bg3); border-radius: 8px; padding: 12px; font-size: 11px; white-space: pre-wrap; word-break: break-word; max-height: calc(100vh - 240px); overflow-y: auto; color: var(--text2); font-family: 'SF Mono', monospace; }
-    .log-controls { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
-    .log-controls select { background: var(--bg2); border: 1px solid var(--bg3); color: var(--text); padding: 6px 10px; border-radius: 6px; font-family: inherit; font-size: 12px; }
-
-    /* Server cards */
-    .server-card { background: var(--bg2); border: 1px solid var(--bg3); border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 16px; }
-    .server-status-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
-    .server-status-dot.healthy { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.4); }
-    .server-status-dot.unhealthy { background: var(--red); box-shadow: 0 0 8px rgba(239,68,68,0.4); }
-    .server-status-dot.unreachable { background: var(--text3); }
-    .server-info { flex: 1; }
-    .server-name { font-weight: 600; font-size: 14px; }
-    .server-host { font-size: 11px; color: var(--text3); }
-    .server-stats { display: flex; gap: 16px; font-size: 11px; color: var(--text2); }
-    .server-stat-label { color: var(--text3); }
-
-    /* Git */
-    .commit-list { list-style: none; }
-    .commit-item { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid var(--bg3); font-size: 12px; }
-    .commit-hash { color: var(--cyan); font-weight: 600; min-width: 70px; }
-    .commit-msg { color: var(--text2); }
-
-    /* Section headers */
-    .section-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-    .section-title svg { width: 18px; height: 18px; color: var(--cyan); }
-
-    /* Process table */
-    .proc-status { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
-    .proc-status.online { background: var(--green); }
-    .proc-status.stopped { background: var(--red); }
-    .proc-status.errored { background: var(--red); }
-
-    /* Progress bar */
-    .progress-bar { background: var(--bg3); border-radius: 4px; height: 6px; overflow: hidden; }
-    .progress-fill { height: 100%; border-radius: 4px; transition: width 0.5s; }
-    .progress-fill.green { background: var(--green); }
-    .progress-fill.yellow { background: var(--yellow); }
-    .progress-fill.red { background: var(--red); }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: var(--bg); }
-    ::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--bg4); }
-
-    /* Empty state */
-    .empty-state { text-align: center; padding: 40px; color: var(--text3); }
-    .empty-state svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: 0.3; }
-  </style>
+  <!-- Theme & Layout -->
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/kanban.css">
+  <link rel="stylesheet" href="/css/terminal.css">
+  <link rel="stylesheet" href="/css/modal.css">
 </head>
 <body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 class="sidebar-logo">CHESTER DEV</h1>
+        <div class="sidebar-subtitle">Monitor v2.0</div>
+      </div>
 
-<!-- Sidebar -->
-<div class="sidebar">
-  <div class="sidebar-header">
-    <h1>CHESTER DEV</h1>
-    <div class="subtitle">Monitor v1.0</div>
+      <nav class="sidebar-nav">
+        <!-- Overview -->
+        <div class="nav-group" id="nav-group-overview">
+          <div class="nav-group-header" onclick="toggleNavGroup('overview')">
+            <span>Overview</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
+              <span>Dashboard</span>
+            </div>
+            <div class="nav-item" data-view="metrics" onclick="switchView('metrics')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><polyline points="2 16 6 10 10 13 14 5 18 8"/></svg>
+              <span>Metrics</span>
+            </div>
+            <div class="nav-item" data-view="uptime" onclick="switchView('uptime')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><polyline points="10 6 10 10 13 12"/></svg>
+              <span>Uptime</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Infrastructure -->
+        <div class="nav-group" id="nav-group-infrastructure">
+          <div class="nav-group-header" onclick="toggleNavGroup('infrastructure')">
+            <span>Infrastructure</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="servers" onclick="switchView('servers')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="2" width="14" height="6" rx="1"/><rect x="3" y="12" width="14" height="6" rx="1"/><circle cx="6" cy="5" r="1" fill="currentColor"/><circle cx="6" cy="15" r="1" fill="currentColor"/></svg>
+              <span>Servers</span>
+            </div>
+            <div class="nav-item" data-view="docker" onclick="switchView('docker')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/><rect x="14" y="8" width="4" height="4"/><rect x="5" y="3" width="4" height="4"/><rect x="11" y="3" width="4" height="4"/><path d="M0 14c3 3 14 3 20 0"/></svg>
+              <span>Docker</span>
+            </div>
+            <div class="nav-item" data-view="databases" onclick="switchView('databases')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><ellipse cx="10" cy="4" rx="7" ry="3"/><path d="M3 4v12c0 1.66 3.13 3 7 3s7-1.34 7-3V4"/><path d="M3 10c0 1.66 3.13 3 7 3s7-1.34 7-3"/></svg>
+              <span>Databases</span>
+            </div>
+            <div class="nav-item" data-view="pm2" onclick="switchView('pm2')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.2 4.2l2.1 2.1M13.7 13.7l2.1 2.1M4.2 15.8l2.1-2.1M13.7 6.3l2.1-2.1"/></svg>
+              <span>PM2</span>
+            </div>
+            <div class="nav-item" data-view="ssl" onclick="switchView('ssl')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 016 0v3"/></svg>
+              <span>SSL / Domains</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Operations -->
+        <div class="nav-group" id="nav-group-operations">
+          <div class="nav-group-header" onclick="toggleNavGroup('operations')">
+            <span>Operations</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="terminal" onclick="switchView('terminal')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><polyline points="6 9 9 12 6 15"/><line x1="12" y1="15" x2="16" y2="15"/></svg>
+              <span>Terminal</span>
+            </div>
+            <div class="nav-item" data-view="claude" onclick="switchView('claude')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M7 8h0M13 8h0M7 12c1.5 1.5 4.5 1.5 6 0"/></svg>
+              <span>Claude</span>
+            </div>
+            <div class="nav-item" data-view="tickets" onclick="switchView('tickets')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="2" width="14" height="16" rx="2"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="14" x2="11" y2="14"/></svg>
+              <span>Tickets</span>
+              <span class="nav-badge" id="ticket-badge" style="display:none">0</span>
+            </div>
+            <div class="nav-item" data-view="git" onclick="switchView('git')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="7" cy="5" r="2"/><circle cx="13" cy="10" r="2"/><circle cx="7" cy="15" r="2"/><line x1="7" y1="7" x2="7" y2="13"/><path d="M9 5h2a2 2 0 012 2v1"/></svg>
+              <span>Git</span>
+            </div>
+            <div class="nav-item" data-view="deploy" onclick="switchView('deploy')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M10 2l6 4v8l-6 4-6-4V6z"/><line x1="10" y1="10" x2="10" y2="18"/><polyline points="4 6 10 10 16 6"/></svg>
+              <span>Deploy</span>
+            </div>
+            <div class="nav-item" data-view="cron" onclick="switchView('cron')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><polyline points="10 5 10 10 14 12"/></svg>
+              <span>Cron Jobs</span>
+            </div>
+            <div class="nav-item" data-view="files" onclick="switchView('files')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M2 5a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"/></svg>
+              <span>File Manager</span>
+            </div>
+            <div class="nav-item" data-view="envvars" onclick="switchView('envvars')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="2"/><line x1="7" y1="7" x2="7" y2="7.01"/><line x1="10" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="7" y2="10.01"/><line x1="10" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="7" y2="13.01"/><line x1="10" y1="13" x2="13" y2="13"/></svg>
+              <span>Env Variables</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="nav-group" id="nav-group-security">
+          <div class="nav-group-header" onclick="toggleNavGroup('security')">
+            <span>Security</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="security" onclick="switchView('security')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M10 2l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V5l7-3z"/></svg>
+              <span>Security Center</span>
+            </div>
+            <div class="nav-item" data-view="ftp" onclick="switchView('ftp')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 14l4-4m0 0l4 4m-4-4V2"/><rect x="2" y="14" width="16" height="4" rx="1"/></svg>
+              <span>FTP</span>
+            </div>
+            <div class="nav-item" data-view="notifications" onclick="switchView('notifications')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M10 2a5 5 0 015 5c0 5 2 7 2 7H3s2-2 2-7a5 5 0 015-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+              <span>Notifications</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- System -->
+        <div class="nav-group" id="nav-group-system">
+          <div class="nav-group-header" onclick="toggleNavGroup('system')">
+            <span>System</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="logs" onclick="switchView('logs')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="2" width="14" height="16" rx="2"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="10" x2="11" y2="10"/></svg>
+              <span>Logs</span>
+            </div>
+            <div class="nav-item" data-view="multi-server" onclick="switchView('multi-server')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="4" r="2"/><circle cx="4" cy="14" r="2"/><circle cx="16" cy="14" r="2"/><line x1="10" y1="6" x2="4" y2="12"/><line x1="10" y1="6" x2="16" y2="12"/></svg>
+              <span>Multi-Server</span>
+            </div>
+            <div class="nav-item" data-view="settings" onclick="switchView('settings')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.5 3.5l2 2M14.5 14.5l2 2M3.5 16.5l2-2M14.5 5.5l2-2"/></svg>
+              <span>Settings</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-status">
+          <span class="dot dot-healthy" id="sidebar-status-dot"></span>
+          <span id="sidebar-status-text">Connected</span>
+        </div>
+        <div class="sidebar-clock" id="sidebar-clock"></div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <h2 class="topbar-title" id="topbar-title">Dashboard</h2>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-sm btn-ghost" onclick="refreshCurrentView()" title="Refresh">Refresh</button>
+          <a href="/logout" class="btn btn-sm btn-ghost">Logout</a>
+        </div>
+      </div>
+
+      <div class="content-area">
+        <!-- View containers — each view JS populates its own div -->
+        <div class="view active" id="view-dashboard"></div>
+        <div class="view" id="view-metrics"></div>
+        <div class="view" id="view-uptime"></div>
+        <div class="view" id="view-servers"></div>
+        <div class="view" id="view-docker"></div>
+        <div class="view" id="view-databases"></div>
+        <div class="view" id="view-pm2"></div>
+        <div class="view" id="view-ssl"></div>
+        <div class="view" id="view-terminal"></div>
+        <div class="view" id="view-claude"></div>
+        <div class="view" id="view-tickets"></div>
+        <div class="view" id="view-git"></div>
+        <div class="view" id="view-deploy"></div>
+        <div class="view" id="view-cron"></div>
+        <div class="view" id="view-files"></div>
+        <div class="view" id="view-envvars"></div>
+        <div class="view" id="view-security"></div>
+        <div class="view" id="view-ftp"></div>
+        <div class="view" id="view-notifications"></div>
+        <div class="view" id="view-logs"></div>
+        <div class="view" id="view-multi-server"></div>
+        <div class="view" id="view-settings"></div>
+      </div>
+    </main>
+
+    <footer class="status-bar">
+      <div class="status-bar-left">
+        <span class="status-dot ok" id="sb-conn-dot"></span>
+        <span id="sb-conn-text">Connected</span>
+        <span class="status-sep">|</span>
+        <span id="sb-server">Local Dev</span>
+      </div>
+      <div class="status-bar-right">
+        <span id="sb-last-update">--</span>
+        <span class="status-sep">|</span>
+        <span id="sb-db">DB: connected</span>
+      </div>
+    </footer>
   </div>
-  <nav class="sidebar-nav">
-    <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-      Dashboard
-    </div>
-    <div class="nav-item" data-view="tickets" onclick="switchView('tickets')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-      Tickets
-      <span class="nav-badge" id="ticket-count" style="display:none">0</span>
-    </div>
-    <div class="nav-item" data-view="terminal" onclick="switchView('terminal')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-      Terminal
-    </div>
-    <div class="nav-item" data-view="claude" onclick="switchView('claude')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 017 7c0 3-2 5-4 6.5V17a1 1 0 01-1 1h-4a1 1 0 01-1-1v-1.5C7 14 5 12 5 9a7 7 0 017-7z"/><line x1="10" y1="21" x2="14" y2="21"/></svg>
-      Claude
-    </div>
-    <div class="nav-item" data-view="servers" onclick="switchView('servers')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><circle cx="6" cy="6" r="1"/><circle cx="6" cy="18" r="1"/></svg>
-      Servers
-    </div>
-    <div class="nav-item" data-view="logs" onclick="switchView('logs')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-      Logs
-    </div>
-    <div class="nav-item" data-view="git" onclick="switchView('git')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 012 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
-      Git
-    </div>
-    <div class="nav-item" data-view="pm2" onclick="switchView('pm2')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      PM2
-    </div>
-    <div class="nav-item" data-view="deploy" onclick="switchView('deploy')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14l8-8 8 8"/><path d="M12 6v15"/></svg>
-      Deploy
-    </div>
-    <div class="nav-item" data-view="settings" onclick="switchView('settings')">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-      Settings
-    </div>
-  </nav>
-  <div class="sidebar-footer">
-    <span class="status-dot" id="conn-dot"></span>
-    <span id="conn-text">Connecting...</span>
-  </div>
-</div>
 
-<!-- Main Content -->
-<div class="main">
-  <div class="topbar">
-    <h2 id="view-title">Dashboard</h2>
-    <div class="topbar-actions">
-      <button class="btn btn-sm" onclick="refreshAll()">Refresh</button>
-      <span id="clock" style="font-size:12px;color:var(--text3)"></span>
-      <a href="/logout" class="btn btn-sm" style="text-decoration:none;color:var(--text2)">Logout</a>
-    </div>
-  </div>
-  <div class="content">
-
-    <!-- ═══ DASHBOARD ═══ -->
-    <div class="view active" id="view-dashboard">
-      <div class="card-grid" id="metric-cards">
-        <div class="card">
-          <div class="card-header"><span class="card-title">CPU Usage</span></div>
-          <div class="card-value" id="cpu-val">--</div>
-          <div class="progress-bar"><div class="progress-fill green" id="cpu-bar" style="width:0%"></div></div>
-          <canvas id="cpu-chart" height="40"></canvas>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Memory</span></div>
-          <div class="card-value" id="mem-val">--</div>
-          <div class="card-sub" id="mem-detail"></div>
-          <div class="progress-bar"><div class="progress-fill green" id="mem-bar" style="width:0%"></div></div>
-          <canvas id="mem-chart" height="40"></canvas>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Uptime</span></div>
-          <div class="card-value" id="uptime-val">--</div>
-          <div class="card-sub" id="uptime-detail"></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><span class="card-title">Ticket Pipeline</span></div>
-          <div id="ticket-summary" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-        </div>
-      </div>
-
-      <div class="section-title">Server Health</div>
-      <div class="card-grid" id="server-health-cards"></div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
-        <div>
-          <div class="section-title">Recent Activity</div>
-          <div class="activity-feed" id="activity-feed"></div>
-        </div>
-        <div>
-          <div class="section-title">PM2 Processes</div>
-          <div id="dash-processes"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══ TICKETS ═══ -->
-    <div class="view" id="view-tickets">
-      <div class="kanban" id="ticket-kanban"></div>
-    </div>
-
-    <!-- ═══ TERMINAL ═══ -->
-    <div class="view" id="view-terminal">
-      <div style="margin-bottom:8px;display:flex;gap:8px">
-        <button class="btn btn-sm btn-primary" onclick="startTerminal()">New Session</button>
-        <span style="font-size:11px;color:var(--text3);line-height:28px">PTY terminal — runs on the dev server</span>
-      </div>
-      <div id="terminal-container"></div>
-    </div>
-
-    <!-- ═══ CLAUDE ═══ -->
-    <div class="view" id="view-claude">
-      <div class="claude-status" id="claude-status">
-        <span style="color:var(--text3)">Idle — ready for prompts</span>
-      </div>
-      <div class="claude-prompt-form">
-        <textarea id="claude-prompt" placeholder="Enter a prompt for Claude CLI...&#10;e.g., Fix the login redirect loop in app/api/auth/login/route.ts"></textarea>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <button class="btn btn-primary" id="claude-run-btn" onclick="runClaude()">Run</button>
-          <button class="btn btn-danger btn-sm" id="claude-stop-btn" onclick="stopClaude()" style="display:none">Stop</button>
-        </div>
-      </div>
-      <div class="claude-output" id="claude-output">Waiting for input...\n</div>
-      <div style="margin-top:8px;font-size:11px;color:var(--text3)">
-        Tip: Output streams in real-time via WebSocket. All runs are logged to chester_activity.
-      </div>
-    </div>
-
-    <!-- ═══ SERVERS ═══ -->
-    <div class="view" id="view-servers">
-      <div style="margin-bottom:12px;display:flex;gap:8px">
-        <button class="btn btn-sm btn-primary" onclick="refreshServers()">Check All</button>
-        <span style="font-size:11px;color:var(--text3);line-height:28px">Pings /api/health on each server</span>
-      </div>
-      <div class="card-grid" id="server-cards"></div>
-    </div>
-
-    <!-- ═══ LOGS ═══ -->
-    <div class="view" id="view-logs">
-      <div class="log-controls">
-        <select id="log-service" onchange="fetchLogs()">
-          <option value="chester-dev">chester-dev</option>
-          <option value="ticket-watcher">ticket-watcher</option>
-          <option value="dev-monitor">dev-monitor</option>
-        </select>
-        <button class="btn btn-sm" onclick="fetchLogs()">Refresh</button>
-        <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px">
-          <input type="checkbox" id="log-autoscroll" checked> Auto-scroll
-        </label>
-      </div>
-      <div class="log-viewer" id="log-viewer">Loading logs...</div>
-    </div>
-
-    <!-- ═══ GIT ═══ -->
-    <div class="view" id="view-git">
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button class="btn btn-sm" onclick="fetchGit()">Refresh</button>
-        <button class="btn btn-sm btn-primary" onclick="gitPull()">Pull</button>
-        <button class="btn btn-sm" onclick="gitPush()">Push</button>
-      </div>
-      <div class="card-grid">
-        <div class="card">
-          <div class="card-title">Current Branch</div>
-          <div class="card-value" id="git-branch" style="font-size:18px;color:var(--cyan);margin-top:8px">--</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Working Directory</div>
-          <pre id="git-status" style="font-size:11px;color:var(--text2);margin-top:8px;white-space:pre-wrap">--</pre>
-        </div>
-      </div>
-      <div class="section-title" style="margin-top:16px">Recent Commits</div>
-      <ul class="commit-list" id="git-commits"></ul>
-    </div>
-
-    <!-- ═══ PM2 ═══ -->
-    <div class="view" id="view-pm2">
-      <div style="margin-bottom:12px">
-        <button class="btn btn-sm" onclick="fetchProcesses()">Refresh</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Name</th><th>Status</th><th>CPU</th><th>Memory</th><th>Uptime</th><th>Restarts</th><th>PID</th><th>Actions</th></tr></thead>
-          <tbody id="pm2-table"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- ═══ DEPLOY ═══ -->
-    <div class="view" id="view-deploy">
-      <div class="card-grid">
-        <div class="card">
-          <div class="card-title">Push to GitHub</div>
-          <div class="card-sub" style="margin-top:8px">Push current branch to origin</div>
-          <button class="btn btn-primary" style="margin-top:12px" onclick="gitPush()">Push Current Branch</button>
-        </div>
-        <div class="card">
-          <div class="card-title">Pull from GitHub</div>
-          <div class="card-sub" style="margin-top:8px">Pull latest from main</div>
-          <button class="btn" style="margin-top:12px" onclick="gitPull()">Pull Main</button>
-        </div>
-        <div class="card">
-          <div class="card-title">VPS Deploy Trigger</div>
-          <div class="card-sub" style="margin-top:8px">Tell VPS to pull latest GHCR image</div>
-          <button class="btn btn-success" style="margin-top:12px" onclick="triggerVPSDeploy()" disabled>Coming Soon</button>
-        </div>
-      </div>
-      <div class="section-title" style="margin-top:24px">Deploy History</div>
-      <div id="deploy-history" class="activity-feed"></div>
-    </div>
-
-    <!-- ═══ SETTINGS ═══ -->
-    <div class="view" id="view-settings">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <!-- My Account -->
-        <div class="card">
-          <div class="card-title">My Account</div>
-          <div id="my-account" style="margin-top:12px">Loading...</div>
-        </div>
-        <!-- 2FA Setup -->
-        <div class="card">
-          <div class="card-title">Two-Factor Authentication</div>
-          <div id="my-2fa" style="margin-top:12px">Loading...</div>
-        </div>
-      </div>
-
-      <!-- User Management (admin only) -->
-      <div id="user-management" style="margin-top:20px">
-        <div class="section-title">User Management</div>
-        <div style="margin-bottom:12px;display:flex;gap:8px">
-          <input type="text" id="new-username" placeholder="Username" style="background:var(--bg2);border:1px solid var(--bg3);border-radius:6px;color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;width:150px">
-          <input type="password" id="new-password" placeholder="Password (min 8)" style="background:var(--bg2);border:1px solid var(--bg3);border-radius:6px;color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;width:180px">
-          <select id="new-role" style="background:var(--bg2);border:1px solid var(--bg3);color:var(--text);padding:6px 10px;border-radius:6px;font-family:inherit;font-size:12px">
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="createUser()">Add User</button>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Username</th><th>Role</th><th>2FA</th><th>Created</th><th>Actions</th></tr></thead>
-            <tbody id="users-table"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<script>
-// ═══════════════════════════════════════════════════════════════════════════
-// State
-// ═══════════════════════════════════════════════════════════════════════════
-const state = {
-  currentView: 'dashboard',
-  system: {},
-  tickets: { summary: [], tickets: [] },
-  activity: [],
-  processes: [],
-  servers: [],
-  claudeRunning: false,
-  cpuHistory: [],
-  memHistory: [],
-};
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Socket.IO
-// ═══════════════════════════════════════════════════════════════════════════
-const socket = io();
-
-socket.on('connect', () => {
-  document.getElementById('conn-dot').className = 'status-dot ok';
-  document.getElementById('conn-text').textContent = 'Connected';
-});
-
-socket.on('disconnect', () => {
-  document.getElementById('conn-dot').className = 'status-dot err';
-  document.getElementById('conn-text').textContent = 'Disconnected';
-});
-
-socket.on('init', (data) => {
-  if (data.system) updateMetrics(data.system);
-  if (data.tickets) updateTickets(data.tickets);
-  if (data.activity) updateActivity(data.activity);
-  if (data.processes) updateProcesses(data.processes);
-});
-
-socket.on('metrics', (data) => {
-  if (data.system) updateMetrics(data.system);
-});
-
-socket.on('tickets', (data) => {
-  updateTickets(data);
-});
-
-socket.on('activity', (data) => {
-  if (data.activity) updateActivity(data.activity);
-});
-
-socket.on('process_list', (data) => {
-  if (data.processes) updateProcesses(data.processes);
-});
-
-socket.on('server_health', (data) => {
-  if (data.servers) updateServers(data.servers);
-});
-
-socket.on('claude_output', (text) => {
-  state.claudeRunning = true;
-  updateClaudeStatus(true);
-  const el = document.getElementById('claude-output');
-  el.textContent += text;
-  el.scrollTop = el.scrollHeight;
-});
-
-socket.on('claude_done', (data) => {
-  state.claudeRunning = false;
-  updateClaudeStatus(false, data.code);
-});
-
-socket.on('terminal_output', (data) => {
-  if (window._term) window._term.write(data);
-});
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Charts
-// ═══════════════════════════════════════════════════════════════════════════
-const chartOpts = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: { legend: { display: false } },
-  scales: { x: { display: false }, y: { display: false, min: 0, max: 100 } },
-  elements: { point: { radius: 0 }, line: { tension: 0.3, borderWidth: 1.5 } },
-  animation: { duration: 300 },
-};
-
-let cpuChart, memChart;
-
-function initCharts() {
-  const cpuCtx = document.getElementById('cpu-chart');
-  const memCtx = document.getElementById('mem-chart');
-  if (!cpuCtx || !memCtx) return;
-
-  cpuChart = new Chart(cpuCtx, {
-    type: 'line',
-    data: { labels: Array(30).fill(''), datasets: [{ data: Array(30).fill(0), borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,0.1)', fill: true }] },
-    options: chartOpts,
-  });
-
-  memChart = new Chart(memCtx, {
-    type: 'line',
-    data: { labels: Array(30).fill(''), datasets: [{ data: Array(30).fill(0), borderColor: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.1)', fill: true }] },
-    options: chartOpts,
-  });
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Update Functions
-// ═══════════════════════════════════════════════════════════════════════════
-
-function updateMetrics(sys) {
-  state.system = sys;
-
-  // CPU
-  const cpuPct = sys.cpuPct || 0;
-  document.getElementById('cpu-val').textContent = cpuPct + '%';
-  const cpuBar = document.getElementById('cpu-bar');
-  cpuBar.style.width = cpuPct + '%';
-  cpuBar.className = 'progress-fill ' + (cpuPct > 80 ? 'red' : cpuPct > 50 ? 'yellow' : 'green');
-
-  // Memory
-  const memPct = sys.usedMemPct || 0;
-  document.getElementById('mem-val').textContent = memPct + '%';
-  document.getElementById('mem-detail').textContent = `${sys.usedMemMB || 0} / ${sys.totalMemMB || 0} MB`;
-  const memBar = document.getElementById('mem-bar');
-  memBar.style.width = memPct + '%';
-  memBar.className = 'progress-fill ' + (memPct > 85 ? 'red' : memPct > 60 ? 'yellow' : 'green');
-
-  // Uptime
-  const hrs = sys.uptimeHours || 0;
-  document.getElementById('uptime-val').textContent = hrs + 'h';
-  document.getElementById('uptime-detail').textContent = `${sys.hostname || ''} / ${sys.platform || ''} / Node ${sys.nodeVersion || ''}`;
-
-  // Charts
-  if (cpuChart) {
-    state.cpuHistory.push(cpuPct);
-    if (state.cpuHistory.length > 30) state.cpuHistory.shift();
-    cpuChart.data.datasets[0].data = [...state.cpuHistory];
-    cpuChart.data.labels = state.cpuHistory.map(() => '');
-    cpuChart.update('none');
-  }
-  if (memChart) {
-    state.memHistory.push(memPct);
-    if (state.memHistory.length > 30) state.memHistory.shift();
-    memChart.data.datasets[0].data = [...state.memHistory];
-    memChart.data.labels = state.memHistory.map(() => '');
-    memChart.update('none');
-  }
-}
-
-function updateTickets(data) {
-  state.tickets = data;
-
-  // Summary badges on dashboard
-  const summaryEl = document.getElementById('ticket-summary');
-  if (summaryEl && data.summary) {
-    summaryEl.innerHTML = data.summary.map(s => {
-      const color = statusColor(s.fix_status);
-      return `<span class="badge badge-${color}">${s.fix_status}: ${s.count}</span>`;
-    }).join('');
-  }
-
-  // Nav badge
-  const pending = (data.tickets || []).filter(t => ['pending','analyzing','fixing','testing','awaiting_approval'].includes(t.fix_status));
-  const badge = document.getElementById('ticket-count');
-  if (pending.length > 0) {
-    badge.style.display = '';
-    badge.textContent = pending.length;
-  } else {
-    badge.style.display = 'none';
-  }
-
-  // Kanban board
-  renderKanban(data.tickets || []);
-}
-
-function renderKanban(tickets) {
-  const kanban = document.getElementById('ticket-kanban');
-  if (!kanban) return;
-
-  const cols = [
-    { key: 'pending', label: 'Pending', color: 'blue' },
-    { key: 'analyzing', label: 'Analyzing', color: 'purple' },
-    { key: 'fixing', label: 'Fixing', color: 'orange' },
-    { key: 'testing', label: 'Testing', color: 'yellow' },
-    { key: 'awaiting_approval', label: 'Awaiting Approval', color: 'cyan' },
-    { key: 'approved', label: 'Approved', color: 'green' },
-    { key: 'deployed', label: 'Deployed', color: 'green' },
-  ];
-
-  kanban.innerHTML = cols.map(col => {
-    const colTickets = tickets.filter(t => t.fix_status === col.key);
-    return `
-      <div class="kanban-col" data-status="${col.key}"
-           ondragover="kanbanDragOver(event)" ondragleave="kanbanDragLeave(event)" ondrop="kanbanDrop(event)">
-        <div class="kanban-col-header">
-          <span class="kanban-col-title" style="color:var(--${col.color})">${col.label}</span>
-          <span class="kanban-col-count">${colTickets.length}</span>
-        </div>
-        <div class="kanban-cards">
-          ${colTickets.length === 0 ? '<div class="kanban-empty" style="text-align:center;color:var(--text3);font-size:11px;padding:16px">Drop tickets here</div>' : ''}
-          ${colTickets.map(t => {
-            const desc = t.issue_description || t.fix_notes || '';
-            const src = t._source === 'vps' ? 'VPS' : 'DEV';
-            return `
-            <div class="kanban-card" draggable="true" data-id="${t.id}"
-                 ondragstart="kanbanDragStart(event)" ondragend="kanbanDragEnd(event)"
-                 onclick="toggleTicketExpand(this)">
-              <div class="kanban-card-title">${esc(t.subject || t.issue_type || 'Untitled')}</div>
-              <div class="kanban-card-meta">
-                ${t.priority ? `<span class="badge badge-${t.priority === 'high' || t.priority === 'critical' ? 'red' : t.priority === 'medium' ? 'yellow' : 'blue'}">${t.priority}</span>` : ''}
-                ${t.fix_branch ? `<span style="color:var(--cyan);margin-left:4px">${esc(t.fix_branch)}</span>` : ''}
-                <span class="kanban-card-source">${src}</span>
-              </div>
-              ${desc ? `<div class="kanban-card-desc">${esc(desc)}</div>` : ''}
-              <div class="kanban-card-actions">
-                ${col.key === 'awaiting_approval' ? `
-                  <button class="btn btn-sm btn-success" onclick="event.stopPropagation();approveTicket('${t.id}')">Approve</button>
-                  <button class="btn btn-sm btn-danger" onclick="event.stopPropagation();rejectTicket('${t.id}')">Reject</button>
-                ` : `
-                  <button class="btn-icon" onclick="event.stopPropagation();moveTicket('${t.id}','${col.key}',-1)" title="Move left">◀</button>
-                  <button class="btn-icon" onclick="event.stopPropagation();moveTicket('${t.id}','${col.key}',1)" title="Move right">▶</button>
-                `}
-                <button class="btn-icon btn-delete" onclick="event.stopPropagation();deleteTicket('${t.id}')" title="Delete">✕</button>
-              </div>
-            </div>`;
-          }).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// Drag and drop
-let dragTicketId = null;
-function kanbanDragStart(e) {
-  dragTicketId = e.target.dataset.id;
-  e.target.classList.add('dragging');
-  e.dataTransfer.effectAllowed = 'move';
-}
-function kanbanDragEnd(e) {
-  e.target.classList.remove('dragging');
-  document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
-}
-function kanbanDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  const col = e.target.closest('.kanban-col');
-  if (col) col.classList.add('drag-over');
-}
-function kanbanDragLeave(e) {
-  const col = e.target.closest('.kanban-col');
-  if (col) col.classList.remove('drag-over');
-}
-function kanbanDrop(e) {
-  e.preventDefault();
-  const col = e.target.closest('.kanban-col');
-  if (!col || !dragTicketId) return;
-  col.classList.remove('drag-over');
-  const newStatus = col.dataset.status;
-  changeTicketStatus(dragTicketId, newStatus);
-  dragTicketId = null;
-}
-
-function toggleTicketExpand(el) { el.classList.toggle('expanded'); }
-
-const statusFlow = ['pending','analyzing','fixing','testing','awaiting_approval','approved','deployed'];
-function moveTicket(id, current, dir) {
-  const idx = statusFlow.indexOf(current);
-  const next = statusFlow[idx + dir];
-  if (next) changeTicketStatus(id, next);
-}
-
-async function changeTicketStatus(id, newStatus) {
-  try {
-    await fetch(`/api/tickets/${id}/status`, {
-      method: 'PATCH', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ fix_status: newStatus })
-    });
-  } catch (e) { console.error('Status update failed:', e); }
-}
-
-async function deleteTicket(id) {
-  if (!confirm('Delete this ticket permanently?')) return;
-  try {
-    await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
-  } catch (e) { console.error('Delete failed:', e); }
-}
-
-function updateActivity(activity) {
-  state.activity = activity;
-  const feed = document.getElementById('activity-feed');
-  if (!feed) return;
-
-  feed.innerHTML = (activity || []).slice(0, 15).map(a => {
-    const t = a.type || '';
-    const color = t.includes('error') ? 'var(--red)' :
-                  t.includes('claude') ? 'var(--cyan)' :
-                  t.includes('ticket') ? 'var(--purple)' :
-                  t.includes('deploy') ? 'var(--green)' : 'var(--text3)';
-    return `
-      <div class="activity-item">
-        <div class="activity-dot" style="background:${color}"></div>
-        <div class="desc">${esc(a.title || a.description || a.type || '')}</div>
-        <div class="time">${timeAgo(a.created_at)}</div>
-      </div>
-    `;
-  }).join('') || '<div class="empty-state">No recent activity</div>';
-
-  // Deploy history
-  const deployFeed = document.getElementById('deploy-history');
-  if (deployFeed) {
-    const deploys = (activity || []).filter(a =>
-      a.activity_type?.includes('deploy') || a.activity_type?.includes('approved') || a.activity_type?.includes('push')
-    );
-    deployFeed.innerHTML = deploys.slice(0, 10).map(a => `
-      <div class="activity-item">
-        <div class="activity-dot" style="background:var(--green)"></div>
-        <div class="desc">${esc(a.description || '')}</div>
-        <div class="time">${timeAgo(a.created_at)}</div>
-      </div>
-    `).join('') || '<div class="empty-state">No deploy history</div>';
-  }
-}
-
-function updateProcesses(processes) {
-  state.processes = processes;
-
-  // Dashboard
-  const dash = document.getElementById('dash-processes');
-  if (dash) {
-    dash.innerHTML = (processes || []).map(p => `
-      <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bg3)">
-        <span class="proc-status ${p.status}"></span>
-        <span style="font-weight:600;min-width:120px">${esc(p.name)}</span>
-        <span style="color:var(--text3);font-size:11px">CPU: ${p.cpu || 0}%</span>
-        <span style="color:var(--text3);font-size:11px">MEM: ${p.memory || 0}MB</span>
-        <span style="color:var(--text3);font-size:11px;margin-left:auto">${p.restarts || 0} restarts</span>
-      </div>
-    `).join('') || '<div class="empty-state">No PM2 processes</div>';
-  }
-
-  // PM2 table
-  const table = document.getElementById('pm2-table');
-  if (table) {
-    table.innerHTML = (processes || []).map(p => `
-      <tr>
-        <td><strong>${esc(p.name)}</strong></td>
-        <td><span class="proc-status ${p.status}"></span>${p.status}</td>
-        <td>${p.cpu || 0}%</td>
-        <td>${p.memory || 0} MB</td>
-        <td>${p.uptime ? timeAgo(p.uptime) : '--'}</td>
-        <td>${p.restarts || 0}</td>
-        <td style="color:var(--text3)">${p.pid || '--'}</td>
-        <td>
-          <button class="btn btn-sm" onclick="pm2Action('restart','${esc(p.name)}')">Restart</button>
-          <button class="btn btn-sm btn-danger" onclick="pm2Action('stop','${esc(p.name)}')">Stop</button>
-        </td>
-      </tr>
-    `).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--text3)">No processes</td></tr>';
-  }
-}
-
-function updateServers(servers) {
-  state.servers = servers;
-  renderServerCards('server-cards', servers);
-  renderServerCards('server-health-cards', servers);
-}
-
-function renderServerCards(containerId, servers) {
-  const el = document.getElementById(containerId);
-  if (!el) return;
-  el.innerHTML = (servers || []).map(s => `
-    <div class="server-card">
-      <div class="server-status-dot ${s.status}"></div>
-      <div class="server-info">
-        <div class="server-name">${esc(s.name)}</div>
-        <div class="server-host">${esc(s.host)} &middot; ${esc(s.provider)}</div>
-      </div>
-      <div class="server-stats">
-        ${s.latency >= 0 ? `<div><span class="server-stat-label">Latency</span> ${s.latency}ms</div>` : ''}
-        ${s.commit ? `<div><span class="server-stat-label">Commit</span> ${esc(s.commit.substring(0, 7))}</div>` : ''}
-        ${s.error ? `<div style="color:var(--red)">${esc(s.error.substring(0, 30))}</div>` : ''}
-      </div>
-    </div>
-  `).join('') || '<div class="empty-state">No servers configured</div>';
-}
-
-function updateClaudeStatus(running, exitCode) {
-  const el = document.getElementById('claude-status');
-  const runBtn = document.getElementById('claude-run-btn');
-  const stopBtn = document.getElementById('claude-stop-btn');
-
-  if (running) {
-    el.innerHTML = '<div class="spinner"></div> <span style="color:var(--cyan)">Claude is running...</span>';
-    runBtn.disabled = true;
-    stopBtn.style.display = '';
-  } else {
-    const color = exitCode === 0 ? 'var(--green)' : exitCode != null ? 'var(--red)' : 'var(--text3)';
-    const text = exitCode === 0 ? 'Completed successfully' : exitCode != null ? `Exited with code ${exitCode}` : 'Idle — ready for prompts';
-    el.innerHTML = `<span style="color:${color}">${text}</span>`;
-    runBtn.disabled = false;
-    stopBtn.style.display = 'none';
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Actions
-// ═══════════════════════════════════════════════════════════════════════════
-
-function switchView(view) {
-  state.currentView = view;
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('view-' + view)?.classList.add('active');
-  document.querySelector(`[data-view="${view}"]`)?.classList.add('active');
-
-  const titles = {
-    dashboard: 'Dashboard', tickets: 'Ticket Pipeline', terminal: 'Terminal',
-    claude: 'Claude CLI', servers: 'Server Health', logs: 'Service Logs',
-    git: 'Git Repository', pm2: 'PM2 Process Manager', deploy: 'Deploy',
-    settings: 'Settings',
-  };
-  document.getElementById('view-title').textContent = titles[view] || view;
-
-  // Lazy-load view data
-  if (view === 'terminal' && !window._termInitialized) startTerminal();
-  if (view === 'logs') fetchLogs();
-  if (view === 'git') fetchGit();
-  if (view === 'servers') refreshServers();
-  if (view === 'settings') loadSettings();
-}
-
-function startTerminal() {
-  const container = document.getElementById('terminal-container');
-  if (!container) return;
-
-  if (window._term) { window._term.dispose(); window._term = null; }
-  container.innerHTML = '';
-
-  const term = new Terminal({
-    theme: { background: '#0f1117', foreground: '#e2e8f0', cursor: '#22d3ee' },
-    fontFamily: "'SF Mono', 'Cascadia Code', 'Fira Code', monospace",
-    fontSize: 13,
-    cursorBlink: true,
-  });
-
-  const fitAddon = new FitAddon.FitAddon();
-  term.loadAddon(fitAddon);
-  term.open(container);
-  fitAddon.fit();
-
-  window._term = term;
-  window._termInitialized = true;
-
-  term.onData((data) => {
-    socket.emit('terminal_input', data);
-  });
-
-  term.onResize(({ cols, rows }) => {
-    socket.emit('terminal_resize', { cols, rows });
-  });
-
-  socket.emit('terminal_start');
-
-  window.addEventListener('resize', () => { try { fitAddon.fit(); } catch {} });
-}
-
-function runClaude() {
-  const input = document.getElementById('claude-prompt');
-  const prompt = input.value.trim();
-  if (!prompt) return;
-
-  document.getElementById('claude-output').textContent = '';
-  socket.emit('claude_run', { prompt });
-  input.value = '';
-}
-
-function stopClaude() {
-  fetch('/api/claude/stop', { method: 'POST' });
-}
-
-async function approveTicket(id) {
-  if (!confirm('Approve this fix and push to GitHub?')) return;
-  const res = await fetch(`/api/tickets/${id}/approve`, { method: 'POST' });
-  const data = await res.json();
-  if (data.success) alert('Approved! Branch pushed to GitHub.');
-}
-
-async function rejectTicket(id) {
-  const reason = prompt('Rejection reason:');
-  if (reason === null) return;
-  await fetch(`/api/tickets/${id}/reject`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ reason }),
-  });
-}
-
-async function fetchLogs() {
-  const service = document.getElementById('log-service').value;
-  const viewer = document.getElementById('log-viewer');
-  viewer.textContent = 'Loading...';
-  try {
-    const res = await fetch(`/api/logs/${service}?lines=200`);
-    const data = await res.json();
-    viewer.textContent = (data.lines || []).join('\n');
-    if (document.getElementById('log-autoscroll').checked) {
-      viewer.scrollTop = viewer.scrollHeight;
-    }
-  } catch (e) {
-    viewer.textContent = 'Error loading logs: ' + e.message;
-  }
-}
-
-async function fetchGit() {
-  try {
-    const res = await fetch('/api/git');
-    const data = await res.json();
-    document.getElementById('git-branch').textContent = data.branch || '--';
-    document.getElementById('git-status').textContent = data.status || 'Clean';
-    const commits = document.getElementById('git-commits');
-    commits.innerHTML = (data.commits || []).map(c => {
-      const parts = c.split(' ');
-      const hash = parts[0];
-      const msg = parts.slice(1).join(' ');
-      return `<li class="commit-item"><span class="commit-hash">${esc(hash)}</span><span class="commit-msg">${esc(msg)}</span></li>`;
-    }).join('');
-  } catch (e) {
-    document.getElementById('git-branch').textContent = 'Error';
-  }
-}
-
-async function gitPull() {
-  try {
-    const res = await fetch('/api/git/pull', { method: 'POST' });
-    const data = await res.json();
-    alert(data.stdout || data.stderr || 'Pull complete');
-    fetchGit();
-  } catch (e) { alert('Pull failed: ' + e.message); }
-}
-
-async function gitPush() {
-  if (!confirm('Push current branch to origin?')) return;
-  try {
-    const res = await fetch('/api/git/push', { method: 'POST' });
-    const data = await res.json();
-    alert(`Pushed ${data.branch || ''}\n${data.stdout || data.stderr || ''}`);
-  } catch (e) { alert('Push failed: ' + e.message); }
-}
-
-async function refreshServers() {
-  try {
-    const res = await fetch('/api/servers');
-    const data = await res.json();
-    updateServers(data.servers || []);
-  } catch {}
-}
-
-async function fetchProcesses() {
-  try {
-    const res = await fetch('/api/processes');
-    const data = await res.json();
-    updateProcesses(data.processes || []);
-  } catch {}
-}
-
-async function pm2Action(action, name) {
-  if (action === 'stop' && !confirm(`Stop ${name}?`)) return;
-  try {
-    await fetch(`/api/pm2/${action}/${name}`, { method: 'POST' });
-    setTimeout(fetchProcesses, 1000);
-  } catch (e) { alert('Failed: ' + e.message); }
-}
-
-function refreshAll() {
-  fetch('/api/system').then(r => r.json()).then(updateMetrics).catch(() => {});
-  fetch('/api/tickets').then(r => r.json()).then(updateTickets).catch(() => {});
-  fetch('/api/activity').then(r => r.json()).then(d => updateActivity(d.activity || [])).catch(() => {});
-  fetch('/api/processes').then(r => r.json()).then(d => updateProcesses(d.processes || [])).catch(() => {});
-  refreshServers();
-}
-
-function triggerVPSDeploy() {
-  alert('VPS deploy trigger coming soon');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Settings / User Management
-// ═══════════════════════════════════════════════════════════════════════════
-
-let currentUser = null;
-
-async function loadSettings() {
-  // Load current user
-  try {
-    const res = await fetch('/api/me');
-    currentUser = await res.json();
-    renderMyAccount();
-    render2FA();
-    if (currentUser.role === 'admin') {
-      document.getElementById('user-management').style.display = '';
-      loadUsers();
-    } else {
-      document.getElementById('user-management').style.display = 'none';
-    }
-  } catch {}
-}
-
-function renderMyAccount() {
-  const el = document.getElementById('my-account');
-  if (!currentUser) return;
-  el.innerHTML = `
-    <div style="margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text3)">USERNAME</div>
-      <div style="font-size:14px;font-weight:600">${esc(currentUser.username)}</div>
-    </div>
-    <div style="margin-bottom:12px">
-      <div style="font-size:11px;color:var(--text3)">ROLE</div>
-      <div><span class="badge badge-${currentUser.role === 'admin' ? 'cyan' : 'blue'}">${currentUser.role}</span></div>
-    </div>
-    <div style="margin-top:16px">
-      <div style="font-size:11px;color:var(--text3);margin-bottom:4px">CHANGE PASSWORD</div>
-      <div style="display:flex;gap:6px">
-        <input type="password" id="change-pw" placeholder="New password (min 8)" style="background:var(--bg);border:1px solid var(--bg3);border-radius:6px;color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;flex:1">
-        <button class="btn btn-sm" onclick="changeMyPassword()">Update</button>
-      </div>
-    </div>
-  `;
-}
-
-function render2FA() {
-  const el = document.getElementById('my-2fa');
-  if (!currentUser) return;
-  if (currentUser.totp_enabled) {
-    el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <span class="badge badge-green">ENABLED</span>
-        <span style="font-size:12px;color:var(--text2)">2FA is active on your account</span>
-      </div>
-      <button class="btn btn-sm btn-danger" onclick="disable2FA()">Disable 2FA</button>
-    `;
-  } else {
-    el.innerHTML = `
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <span class="badge badge-yellow">DISABLED</span>
-        <span style="font-size:12px;color:var(--text2)">Add an extra layer of security</span>
-      </div>
-      <button class="btn btn-sm btn-primary" onclick="setup2FA()">Enable 2FA</button>
-      <div id="2fa-setup-area" style="margin-top:12px"></div>
-    `;
-  }
-}
-
-async function setup2FA() {
-  try {
-    const res = await fetch(`/api/users/${currentUser.id}/2fa/setup`, { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) return alert(data.error);
-
-    const area = document.getElementById('2fa-setup-area');
-    area.innerHTML = `
-      <div style="background:var(--bg);border:1px solid var(--bg3);border-radius:8px;padding:16px;margin-top:8px">
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">1. Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</div>
-        <div style="background:#fff;padding:16px;border-radius:8px;display:inline-block;margin-bottom:12px">
-          <img id="qr-img" style="width:200px;height:200px" alt="Loading QR...">
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Or enter manually: <code style="color:var(--cyan);user-select:all">${esc(data.secret)}</code></div>
-        <div style="font-size:12px;color:var(--text2);margin-bottom:8px">2. Enter the 6-digit code from your app:</div>
-        <div style="display:flex;gap:6px">
-          <input type="text" id="totp-verify-code" maxlength="6" pattern="[0-9]{6}" placeholder="000000" style="background:var(--bg2);border:1px solid var(--bg3);border-radius:6px;color:var(--text);padding:8px;font-family:inherit;font-size:18px;width:120px;text-align:center;letter-spacing:4px">
-          <button class="btn btn-primary" onclick="verify2FA()">Verify & Enable</button>
-        </div>
-      </div>
-    `;
-
-    // Generate QR code using a public API
-    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(data.uri);
-    document.getElementById('qr-img').src = qrUrl;
-  } catch (e) { alert('Error: ' + e.message); }
-}
-
-async function verify2FA() {
-  const code = document.getElementById('totp-verify-code').value.trim();
-  if (code.length !== 6) return alert('Enter a 6-digit code');
-  try {
-    const res = await fetch(`/api/users/${currentUser.id}/2fa/verify`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code }),
-    });
-    const data = await res.json();
-    if (!res.ok) return alert(data.error);
-    alert('2FA enabled successfully!');
-    currentUser.totp_enabled = true;
-    render2FA();
-  } catch (e) { alert('Error: ' + e.message); }
-}
-
-async function disable2FA() {
-  if (!confirm('Disable 2FA? This removes the extra security layer.')) return;
-  try {
-    const res = await fetch(`/api/users/${currentUser.id}/2fa/disable`, { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) return alert(data.error);
-    currentUser.totp_enabled = false;
-    render2FA();
-  } catch (e) { alert('Error: ' + e.message); }
-}
-
-async function changeMyPassword() {
-  const pw = document.getElementById('change-pw').value;
-  if (pw.length < 8) return alert('Password must be at least 8 characters');
-  try {
-    const res = await fetch(`/api/users/${currentUser.id}/password`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw }),
-    });
-    const data = await res.json();
-    if (!res.ok) return alert(data.error);
-    document.getElementById('change-pw').value = '';
-    alert('Password updated');
-  } catch (e) { alert('Error: ' + e.message); }
-}
-
-async function loadUsers() {
-  try {
-    const res = await fetch('/api/users');
-    const data = await res.json();
-    const table = document.getElementById('users-table');
-    table.innerHTML = (data.users || []).map(u => `
-      <tr>
-        <td><strong>${esc(u.username)}</strong></td>
-        <td><span class="badge badge-${u.role === 'admin' ? 'cyan' : 'blue'}">${u.role}</span></td>
-        <td>${u.totp_enabled ? '<span class="badge badge-green">ON</span>' : '<span class="badge badge-yellow">OFF</span>'}</td>
-        <td style="color:var(--text3)">${u.created ? new Date(u.created).toLocaleDateString() : '--'}</td>
-        <td>
-          ${u.id !== currentUser?.id ? `<button class="btn btn-sm btn-danger" onclick="deleteUser('${u.id}','${esc(u.username)}')">Delete</button>` : '<span style="color:var(--text3);font-size:11px">You</span>'}
-        </td>
-      </tr>
-    `).join('');
-  } catch {}
-}
-
-async function createUser() {
-  const username = document.getElementById('new-username').value.trim();
-  const password = document.getElementById('new-password').value;
-  const role = document.getElementById('new-role').value;
-  if (!username || !password) return alert('Username and password required');
-  if (password.length < 8) return alert('Password must be at least 8 characters');
-  try {
-    const res = await fetch('/api/users', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password, role }),
-    });
-    const data = await res.json();
-    if (!res.ok) return alert(data.error);
-    document.getElementById('new-username').value = '';
-    document.getElementById('new-password').value = '';
-    loadUsers();
-  } catch (e) { alert('Error: ' + e.message); }
-}
-
-async function deleteUser(id, username) {
-  if (!confirm(`Delete user "${username}"? This cannot be undone.`)) return;
-  try {
-    const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (!res.ok) return alert(data.error);
-    loadUsers();
-  } catch (e) { alert('Error: ' + e.message); }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Helpers
-// ═══════════════════════════════════════════════════════════════════════════
-
-function statusColor(status) {
-  const map = {
-    pending: 'blue', analyzing: 'purple', fixing: 'orange',
-    testing: 'yellow', awaiting_approval: 'cyan', approved: 'green', deployed: 'green',
-  };
-  return map[status] || 'blue';
-}
-
-function timeAgo(ts) {
-  if (!ts) return '';
-  const now = Date.now();
-  const t = typeof ts === 'number' ? ts : new Date(ts).getTime();
-  const diff = Math.floor((now - t) / 1000);
-  if (diff < 60) return diff + 's ago';
-  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-  return Math.floor(diff / 86400) + 'd ago';
-}
-
-function esc(s) {
-  if (!s) return '';
-  const d = document.createElement('div');
-  d.textContent = String(s);
-  return d.innerHTML;
-}
-
-// Clock
-setInterval(() => {
-  document.getElementById('clock').textContent = new Date().toLocaleTimeString();
-}, 1000);
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Init
-// ═══════════════════════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  initCharts();
-  refreshAll();
-
-  // Handle Enter in Claude prompt
-  document.getElementById('claude-prompt').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      runClaude();
-    }
-  });
-});
-</script>
+  <!-- Core JS -->
+  <script src="/js/app.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/modal.js"></script>
+  <script src="/js/toast.js"></script>
+
+  <!-- View JS -->
+  <script src="/js/views/dashboard.js"></script>
+  <script src="/js/views/metrics.js"></script>
+  <script src="/js/views/uptime.js"></script>
+  <script src="/js/views/servers.js"></script>
+  <script src="/js/views/docker.js"></script>
+  <script src="/js/views/databases.js"></script>
+  <script src="/js/views/pm2.js"></script>
+  <script src="/js/views/ssl.js"></script>
+  <script src="/js/views/terminal.js"></script>
+  <script src="/js/views/claude.js"></script>
+  <script src="/js/views/tickets.js"></script>
+  <script src="/js/views/git.js"></script>
+  <script src="/js/views/deploy.js"></script>
+  <script src="/js/views/cron.js"></script>
+  <script src="/js/views/files.js"></script>
+  <script src="/js/views/envvars.js"></script>
+  <script src="/js/views/security.js"></script>
+  <script src="/js/views/ftp.js"></script>
+  <script src="/js/views/notifications.js"></script>
+  <script src="/js/views/logs.js"></script>
+  <script src="/js/views/multi-server.js"></script>
+  <script src="/js/views/settings.js"></script>
 </body>
 </html>

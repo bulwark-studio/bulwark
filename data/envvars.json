@@ -1,0 +1,21 @@
+{
+  "apps": {
+    "dev-monitor": {
+      "vars": {
+        "TEST_VAR": {
+          "value": "36c5e6391d19211d32da83de:aaf896152959d1e9eaac01381fb97b92:9080ab42790ad796",
+          "description": "",
+          "updated": "2026-03-04T06:32:00.890Z"
+        }
+      },
+      "history": [
+        {
+          "action": "set",
+          "key": "TEST_VAR",
+          "by": "admin",
+          "ts": "2026-03-04T06:32:00.890Z"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,275 @@
+/* ==========================================================================
+   Chester Dev Monitor v2.0 — Terminal & Claude Output
+   xterm.js terminal + Claude streaming output panel
+   ========================================================================== */
+
+/* --- Terminal Container --- */
+.terminal-container {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 160px);
+  min-height: 300px;
+  background: #000000;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.terminal-container .xterm {
+  padding: var(--space-3);
+  height: 100%;
+}
+
+/* xterm.js overrides for theme consistency */
+.terminal-container .xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+.terminal-container .xterm-viewport::-webkit-scrollbar { width: 6px; }
+.terminal-container .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
+.terminal-container .xterm-viewport::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+.terminal-container .xterm-viewport::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* --- Terminal Header Bar --- */
+.terminal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface-solid);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.terminal-header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.terminal-dots {
+  display: flex;
+  gap: 6px;
+}
+.terminal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--text-disabled);
+  transition: background var(--transition-fast);
+}
+.terminal-dot.red    { background: #ef4444; }
+.terminal-dot.yellow { background: #eab308; }
+.terminal-dot.green  { background: var(--cyan); }
+
+.terminal-title {
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.terminal-header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* --- Terminal Tabs --- */
+.terminal-tabs {
+  display: flex;
+  gap: 0;
+  background: var(--surface-solid);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.terminal-tab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+.terminal-tab:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.02);
+}
+.terminal-tab.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+
+.terminal-tab-close {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.terminal-tab:hover .terminal-tab-close { opacity: 0.6; }
+.terminal-tab-close:hover { opacity: 1 !important; background: rgba(255, 255, 255, 0.08); }
+
+/* --- Split Terminal Layout --- */
+.terminal-split {
+  display: flex;
+  height: calc(100vh - 160px);
+  gap: 0;
+}
+
+.terminal-pane {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  border-right: 1px solid var(--border);
+}
+.terminal-pane:last-child { border-right: none; }
+
+.terminal-split-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: var(--border);
+  transition: background var(--transition-fast);
+  flex-shrink: 0;
+}
+.terminal-split-handle:hover {
+  background: var(--cyan);
+}
+
+/* --- Claude Output Panel --- */
+.claude-output {
+  width: 100%;
+  height: calc(100vh - 160px);
+  min-height: 300px;
+  background: #05060a;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow-y: auto;
+  padding: var(--space-4);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  line-height: 1.7;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-card);
+}
+
+.claude-output-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-size-xs);
+  color: var(--text-tertiary);
+}
+
+.claude-output-label {
+  color: var(--cyan);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* --- Log Lines --- */
+.log-line {
+  padding: 1px 0;
+  display: flex;
+  gap: var(--space-3);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.log-timestamp {
+  color: var(--text-disabled);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-level {
+  flex-shrink: 0;
+  font-weight: 600;
+  width: 44px;
+  text-align: right;
+}
+.log-level.info  { color: var(--cyan); }
+.log-level.warn  { color: var(--orange); }
+.log-level.error { color: var(--orange); }
+.log-level.debug { color: var(--text-tertiary); }
+
+.log-message {
+  color: var(--text-secondary);
+}
+.log-message .highlight {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* --- Streaming Indicator --- */
+.streaming-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-xs);
+  color: var(--cyan);
+}
+
+.streaming-cursor {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  background: var(--cyan);
+  animation: blink-cursor 1s step-end infinite;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* --- Connected/Disconnected Status Bar --- */
+.terminal-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1) var(--space-4);
+  background: var(--surface-solid);
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.terminal-status-bar .connected   { color: var(--cyan); }
+.terminal-status-bar .disconnected { color: var(--orange); }
+
+/* --- Code Block inside Claude Output --- */
+.claude-output pre {
+  background: var(--well);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin: var(--space-2) 0;
+  overflow-x: auto;
+  font-size: var(--font-size-xs);
+}
+.claude-output code {
+  font-family: var(--font-mono);
+  color: var(--cyan);
+}
