@@ -1,0 +1,42 @@
+[
+  {
+    "sql": "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
+    "duration": 8,
+    "rows": 2725,
+    "rowCount": 2725,
+    "type": "SELECT",
+    "ts": "2026-03-05T02:17:35.932Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
+    "duration": 7,
+    "rows": 2725,
+    "rowCount": 2725,
+    "type": "SELECT",
+    "ts": "2026-03-05T02:15:19.905Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT count(*) as cnt FROM chester_skills",
+    "duration": 2,
+    "rows": 1,
+    "rowCount": 1,
+    "type": "SELECT",
+    "ts": "2026-03-05T02:12:57.497Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT count(*) as table_count FROM information_schema.tables WHERE table_schema='public'",
+    "duration": 4,
+    "rows": 1,
+    "rowCount": 1,
+    "type": "SELECT",
+    "ts": "2026-03-05T02:09:18.888Z",
+    "user": "admin",
+    "pool": "dev"
+  }
+]

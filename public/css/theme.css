@@ -13,16 +13,18 @@
   --well:              rgba(0, 0, 0, 0.30);
 
   /* Borders (opacity-based, never solid greys) */
-  --border:            rgba(255, 255, 255, 0.06);
-  --border-hover:      rgba(255, 255, 255, 0.10);
-  --border-focus:      rgba(34, 211, 238, 0.30);
+  --border:            rgba(255, 255, 255, 0.08);
+  --border-hover:      rgba(255, 255, 255, 0.14);
+  --border-focus:      rgba(34, 211, 238, 0.25);
   --border-subtle:     rgba(255, 255, 255, 0.03);
+  --border-glass:      rgba(255, 255, 255, 0.10);
+  --border-top:        rgba(255, 255, 255, 0.14);
 
-  /* Text hierarchy */
-  --text-primary:      #e2e8f0;
-  --text-secondary:    #94a3b8;
-  --text-tertiary:     #64748b;
-  --text-disabled:     #475569;
+  /* Text hierarchy (zinc tones — matches admin) */
+  --text-primary:      #e4e4e7;
+  --text-secondary:    #8b8b92;
+  --text-tertiary:     #52525a;
+  --text-disabled:     #3f3f46;
 
   /* Signal colours — CYAN positive, ORANGE negative */
   --cyan:              #22d3ee;
@@ -142,32 +144,45 @@ a:hover { color: #67e8f9; }
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
-/* --- Glass Utilities --- */
+/* --- Glass Utilities (matches admin Dimension Dark) --- */
 .glass-card {
   background: var(--surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
-  border-top-color: rgba(255, 255, 255, 0.10);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  border-top: 1px solid var(--border-top);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 .glass-card:hover {
   border-color: var(--border-hover);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.35),
+    0 0 30px rgba(100, 100, 110, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .glass-surface {
   background: var(--surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border);
+}
+
+.glass-nav {
+  background: rgba(10, 10, 14, 0.70);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid var(--border);
 }
 
 .glass-input {
   background: var(--well);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -178,7 +193,9 @@ a:hover { color: #67e8f9; }
 .glass-input:focus {
   outline: none;
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.08);
+  box-shadow:
+    0 0 0 3px rgba(34, 211, 238, 0.05),
+    0 0 12px rgba(34, 211, 238, 0.06);
 }
 
 /* --- Signal Colour Helpers --- */

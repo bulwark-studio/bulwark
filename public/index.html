@@ -20,6 +20,16 @@
   <link rel="stylesheet" href="/css/kanban.css">
   <link rel="stylesheet" href="/css/terminal.css">
   <link rel="stylesheet" href="/css/modal.css">
+  <link rel="stylesheet" href="/css/db-studio.css">
+
+  <!-- CodeMirror (SQL Editor) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/sql/sql.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/sql-hint.min.js"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -68,7 +78,7 @@
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/><rect x="14" y="8" width="4" height="4"/><rect x="5" y="3" width="4" height="4"/><rect x="11" y="3" width="4" height="4"/><path d="M0 14c3 3 14 3 20 0"/></svg>
               <span>Docker</span>
             </div>
-            <div class="nav-item" data-view="databases" onclick="switchView('databases')">
+            <div class="nav-item" data-view="databases" onclick="switchView('databases')" style="display:none">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><ellipse cx="10" cy="4" rx="7" ry="3"/><path d="M3 4v12c0 1.66 3.13 3 7 3s7-1.34 7-3V4"/><path d="M3 10c0 1.66 3.13 3 7 3s7-1.34 7-3"/></svg>
               <span>Databases</span>
             </div>
@@ -79,6 +89,40 @@
             <div class="nav-item" data-view="ssl" onclick="switchView('ssl')">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 016 0v3"/></svg>
               <span>SSL / Domains</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Database (Supabase Studio) -->
+        <div class="nav-group" id="nav-group-database">
+          <div class="nav-group-header" onclick="toggleNavGroup('database')">
+            <span>Database</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="sql-editor" onclick="switchView('sql-editor')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><polyline points="6 9 9 12 6 15"/><line x1="12" y1="15" x2="16" y2="15"/></svg>
+              <span>SQL Editor</span>
+            </div>
+            <div class="nav-item" data-view="tables" onclick="switchView('tables')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="2" width="16" height="16" rx="2"/><line x1="2" y1="7" x2="18" y2="7"/><line x1="2" y1="12" x2="18" y2="12"/><line x1="8" y1="7" x2="8" y2="18"/></svg>
+              <span>Tables</span>
+            </div>
+            <div class="nav-item" data-view="schema" onclick="switchView('schema')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="5" r="3"/><circle cx="5" cy="15" r="2"/><circle cx="15" cy="15" r="2"/><path d="M10 8v2M8 12l-2 2M12 12l2 2"/></svg>
+              <span>Schema</span>
+            </div>
+            <div class="nav-item" data-view="migrations" onclick="switchView('migrations')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 4h12M4 8h12M4 12h8M4 16h6"/><polyline points="14 12 17 15 14 18"/></svg>
+              <span>Migrations</span>
+            </div>
+            <div class="nav-item" data-view="roles" onclick="switchView('roles')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="15" cy="6" r="2"/><path d="M14 17c2-1 3-3 3-5"/></svg>
+              <span>Roles</span>
+            </div>
+            <div class="nav-item" data-view="db-backups" onclick="switchView('db-backups')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 14l4-4m0 0l4 4m-4-4V2"/><rect x="2" y="14" width="16" height="4" rx="1"/></svg>
+              <span>Backups</span>
             </div>
           </div>
         </div>
@@ -200,6 +244,12 @@
         <div class="view" id="view-servers"></div>
         <div class="view" id="view-docker"></div>
         <div class="view" id="view-databases"></div>
+        <div class="view" id="view-sql-editor"></div>
+        <div class="view" id="view-tables"></div>
+        <div class="view" id="view-schema"></div>
+        <div class="view" id="view-migrations"></div>
+        <div class="view" id="view-roles"></div>
+        <div class="view" id="view-db-backups"></div>
         <div class="view" id="view-pm2"></div>
         <div class="view" id="view-ssl"></div>
         <div class="view" id="view-terminal"></div>
@@ -247,6 +297,12 @@
   <script src="/js/views/servers.js"></script>
   <script src="/js/views/docker.js"></script>
   <script src="/js/views/databases.js"></script>
+  <script src="/js/views/sql-editor.js"></script>
+  <script src="/js/views/tables.js"></script>
+  <script src="/js/views/schema.js"></script>
+  <script src="/js/views/migrations.js"></script>
+  <script src="/js/views/roles.js"></script>
+  <script src="/js/views/db-backups.js"></script>
   <script src="/js/views/pm2.js"></script>
   <script src="/js/views/ssl.js"></script>
   <script src="/js/views/terminal.js"></script>

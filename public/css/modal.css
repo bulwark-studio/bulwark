@@ -21,7 +21,7 @@
   animation: backdrop-exit 160ms ease forwards;
 }
 
-/* --- Glass Panel --- */
+/* --- Glass Panel (matches admin dim-glass-modal) --- */
 .modal-glass {
   position: relative;
   width: 520px;
@@ -29,16 +29,14 @@
   max-height: calc(100vh - 80px);
   display: flex;
   flex-direction: column;
-  background: rgba(14, 14, 18, 0.82);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border);
-  border-top-color: rgba(255, 255, 255, 0.10);
+  background: rgba(14, 14, 18, 0.85);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid var(--border-glass, rgba(255,255,255,0.10));
+  border-top: 1px solid var(--border-top, rgba(255,255,255,0.14));
   border-radius: 16px;
   box-shadow:
-    0 4px 12px rgba(0, 0, 0, 0.40),
-    0 16px 48px rgba(0, 0, 0, 0.35),
-    0 0 0 1px var(--border),
+    0 24px 80px rgba(0, 0, 0, 0.50),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
   animation: modal-enter 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   overflow: hidden;

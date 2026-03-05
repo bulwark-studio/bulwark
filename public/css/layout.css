@@ -10,14 +10,16 @@
   overflow: hidden;
 }
 
-/* --- Sidebar --- */
+/* --- Sidebar (glass nav — matches admin) --- */
 .sidebar {
   width: 240px;
   min-width: 240px;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--surface-solid);
+  background: rgba(10, 10, 14, 0.70);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border-right: 1px solid var(--border);
   overflow-y: auto;
   overflow-x: hidden;
@@ -79,7 +81,7 @@
   transition: background var(--transition-fast);
 }
 .nav-group-header:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .nav-group-label {
@@ -184,7 +186,7 @@
   min-width: 0;
 }
 
-/* --- Topbar --- */
+/* --- Topbar (glass — matches admin) --- */
 .topbar {
   display: flex;
   align-items: center;
@@ -192,7 +194,9 @@
   height: 52px;
   min-height: 52px;
   padding: 0 var(--space-6);
-  background: var(--surface-solid);
+  background: rgba(14, 14, 18, 0.80);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--border);
   z-index: 30;
 }

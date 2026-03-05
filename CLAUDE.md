@@ -16,32 +16,34 @@ cd dev-monitor && npm install && npm start
 ### Server (200-line orchestrator)
 ```
 server.js                    → Express + Socket.IO setup, auth middleware, intervals
-routes/                      → 16 route modules (auth, tickets, system, claude, servers,
-                               docker, databases, security, ssl, envvars, files, cron,
-                               ftp, notifications, multi-server, uptime)
+routes/                      → 17 route modules (auth, tickets, system, claude, servers,
+                               docker, databases, db-studio, security, ssl, envvars, files,
+                               cron, ftp, notifications, multi-server, uptime)
 lib/                         → 9 shared modules (db, exec, adapter-client, users, totp,
                                sessions, metrics-collector, uptime-store, notification-sender)
 adapter/                     → Proxy to ServerKit (port 4001) for Docker/DB/Security/SSL/Cron/FTP
-data/                        → Runtime JSON stores (uptime, notifications, envvars, agents)
+data/                        → Runtime JSON stores (uptime, notifications, envvars, agents,
+                               query-history, saved-queries)
 ```
 
 ### Frontend (ViewRegistry pattern)
 ```
 public/
-  index.html                 → Shell (~250 lines): head, sidebar, 22 view containers
+  index.html                 → Shell (~300 lines): head, sidebar, 28 view containers
   css/
-    theme.css                → Dimension Dark + CSS variables
-    layout.css               → Sidebar, topbar, content grid, status bar
-    components.css           → Cards, badges, buttons, tables, forms, animations
+    theme.css                → Dimension Dark + CSS variables (glass treatment)
+    layout.css               → Glass sidebar, topbar, content grid, status bar
+    components.css           → Glass cards, badges, buttons, tables, forms, animations
     kanban.css               → Ticket board styles
     terminal.css             → xterm.js + claude terminal
     modal.css                → Glass modal system
+    db-studio.css            → DB Studio views (CodeMirror, two-panel, results tables)
   js/
     app.js                   → State, Socket.IO, view registry, nav, cache, animations
     charts.js                → Chart.js wrappers
     modal.js                 → Modal.open/close/confirm/loading
     toast.js                 → Toast notification system
-    views/                   → 22 self-registering view modules
+    views/                   → 28 self-registering view modules (22 original + 6 DB Studio)
 ```
 
 ### ViewRegistry Pattern
@@ -58,16 +60,23 @@ Views.myview = {
 ### Shared Context (ctx)
 Route modules receive `ctx` with: `pool`, `vpsPool`, `dbQuery`, `vpsQuery`, `io`, `execCommand`, `REPO_DIR`, `callAdapter`, `requireAuth`, `requireAdmin`, `getSystemInfo`, plus callbacks populated by routes (`getTicketSummary`, `getRecentActivity`, `getProcessList`, `getServerHealth`, `runClaude`, `sendNotification`).
 
-## Theme: Dimension Dark
+## Theme: Dimension Dark (Glass Treatment — matches admin)
 
 ### CSS Variables (defined in theme.css)
 - `--canvas: #0a0b10` — deepest background
-- `--surface-solid: #0e0e12` — sidebar, topbar
+- `--surface-solid: #0e0e12` — sidebar, topbar base
 - `--surface: rgba(14,14,18,0.65)` — glass cards
-- `--text-primary`, `--text-secondary`, `--text-tertiary`
-- `--border: rgba(255,255,255,0.06)`
+- `--text-primary: #e4e4e7`, `--text-secondary: #8b8b92`, `--text-tertiary: #52525a` (zinc scale)
+- `--border: rgba(255,255,255,0.08)`, `--border-glass: rgba(255,255,255,0.10)`, `--border-top: rgba(255,255,255,0.14)`
 - `--cyan: #22d3ee` — success, healthy, active, positive
 - `--orange: #ff6b2b` — error, down, warning, destructive
+
+### Glass Treatment
+- Sidebar: `rgba(10,10,14,0.70)` + `backdrop-filter: blur(40px) saturate(180%)`
+- Topbar: `rgba(14,14,18,0.80)` + `backdrop-filter: blur(20px) saturate(180%)`
+- Cards: `backdrop-filter: blur(20px) saturate(180%)` + border-top highlight + inset shadow
+- Modals: `rgba(14,14,18,0.85)` + `blur(24px) saturate(180%)`
+- CodeMirror CDN (v5.65.16) for SQL Editor with material-darker theme
 
 ### Signal System (MANDATORY)
 - **Cyan (#22d3ee)** = positive/success/healthy/active/up
@@ -108,6 +117,53 @@ Route modules receive `ctx` with: `pool`, `vpsPool`, `dbQuery`, `vpsQuery`, `io`
 - Tables: `support_tickets`, `chester_activity`, `cloud_endpoints`
 - Works without DB (graceful degradation)
 
+## DB Studio (Supabase-Style Database Management)
+
+### Route: `routes/db-studio.js` (25+ endpoints, direct PG introspection)
+All endpoints use `ctx.dbQuery`/`ctx.pool` — NO adapter dependency. Pool selector: `?pool=vps` for VPS DB.
+
+```
+GET  /api/db/info                → DB version, size, uptime, connections
+GET  /api/db/tables              → All tables: name, schema, row estimate, size
+GET  /api/db/tables/:name        → Columns, constraints, indexes, foreign keys
+GET  /api/db/tables/:name/rows   → Paginated rows (?limit=50&offset=0&sort=&order=)
+POST /api/db/query               → Execute SQL (DDL blocked without ?allow_ddl=true)
+GET  /api/db/functions           → pg_proc: name, args, return type, language
+GET  /api/db/triggers            → pg_trigger + event_object_table
+GET  /api/db/extensions          → pg_extension: name, version, schema
+GET  /api/db/indexes             → pg_indexes: table, name, definition, size
+GET  /api/db/roles               → pg_roles: name, superuser, login, connections
+GET  /api/db/roles/:name/perms   → Table-level permissions for role
+GET  /api/db/migrations          → Applied vs filesystem migrations
+GET  /api/db/migrations/pending  → Unapplied migration files
+POST /api/db/migrations/run      → Execute migration SQL file
+POST /api/db/migrations/test     → Docker test-run (spin up PG, apply, validate, destroy)
+POST /api/db/migrations/diff     → Compare live DB vs schema.sql
+POST /api/db/backup              → pg_dump to data/backups/
+GET  /api/db/backups             → List backup files
+POST /api/db/backup/restore      → pg_restore from file
+GET  /api/db/query/history       → Last 100 queries from data/query-history.json
+POST /api/db/query/save          → Save named query to data/saved-queries.json
+GET  /api/db/query/saved         → List saved queries
+POST /api/db/claude/generate     → Claude CLI generates SQL from natural language
+```
+
+### SQL Safety Layer
+- SELECT/WITH/EXPLAIN: always allowed
+- INSERT/UPDATE/DELETE: allowed, logged with warning
+- DROP/TRUNCATE/ALTER: blocked without `?allow_ddl=true`
+- All queries logged to `data/query-history.json`
+
+### 6 Frontend Views (sidebar "Database" group)
+| View | File | Description |
+|------|------|-------------|
+| SQL Editor | `views/sql-editor.js` | CodeMirror 5 + autocomplete + history + saved queries + Ask Claude |
+| Tables | `views/tables.js` | Two-panel: table list + Columns/Data/Constraints/FK/Indexes tabs |
+| Schema | `views/schema.js` | Functions, Triggers, Extensions, Indexes tabs |
+| Migrations | `views/migrations.js` | Applied/pending status, Docker test-run, schema diff |
+| Roles | `views/roles.js` | PG roles + table permissions |
+| Backups | `views/db-backups.js` | pg_dump/pg_restore, backup list |
+
 ## Adapter Pattern
 Routes for Docker, Databases, Security, SSL, Cron, FTP proxy through `lib/adapter-client.js` → adapter service (port 4001). When adapter unavailable, returns `{ degraded: true, message: "..." }`.
 
@@ -138,9 +194,10 @@ curl -b "monitor_session=TOKEN" http://localhost:3001/api/tickets
 curl -b "monitor_session=TOKEN" http://localhost:3001/api/activity
 ```
 
-## 22 Sidebar Views
+## 28 Sidebar Views
 Overview: Dashboard, Metrics, Uptime
-Infrastructure: Servers, Docker, Databases, PM2, SSL/Domains
+Infrastructure: Servers, Docker, PM2, SSL/Domains
+Database: SQL Editor, Tables, Schema, Migrations, Roles, Backups
 Operations: Terminal, Claude, Tickets, Git, Deploy, Cron Jobs, File Manager, Env Variables
 Security: Security Center, FTP, Notifications
 System: Logs, Multi-Server, Settings
