@@ -20,7 +20,8 @@
       checkConfig();
     },
     show: function () {
-      this.init();
+      checkConfig();
+      if (refreshTimer) clearInterval(refreshTimer);
       refreshTimer = setInterval(function () { loadData(); }, 60000);
     },
     hide: function () {

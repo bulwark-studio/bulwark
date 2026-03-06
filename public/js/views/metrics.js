@@ -10,6 +10,7 @@
   var MAX_HISTORY = 200;
   var aiAnalysisCache = null;
   var aiCacheTime = 0;
+  var typewriterTimer = null;
 
   // ── SVG Icons ──────────────────────────────────────────────────────
   var IC = {
@@ -122,7 +123,9 @@
       this.runAnalysis(false);
     },
 
-    hide: function () {},
+    hide: function () {
+      if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
+    },
 
     update: function (data) {
       if (!data || !data.system) return;
@@ -430,17 +433,19 @@
 
   function typeWriter(el, text, speed) {
     speed = speed || 18;
+    if (typewriterTimer) clearInterval(typewriterTimer);
     el.innerHTML = '';
     var i = 0;
     var cursor = document.createElement('span');
     cursor.className = 'briefing-cursor';
-    var timer = setInterval(function () {
+    typewriterTimer = setInterval(function () {
       if (i < text.length) {
         el.textContent = text.substring(0, i + 1);
         el.appendChild(cursor);
         i++;
       } else {
-        clearInterval(timer);
+        clearInterval(typewriterTimer);
+        typewriterTimer = null;
         setTimeout(function () { if (cursor.parentNode) cursor.remove(); }, 2000);
       }
     }, speed);

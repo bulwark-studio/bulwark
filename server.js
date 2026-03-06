@@ -104,6 +104,7 @@ const ctx = {
 // ── Public assets (no auth required — favicon, logo, fonts) ──────────────────
 app.use("/favicon.svg", express.static(path.join(__dirname, "public", "favicon.svg")));
 app.use("/logo.svg", express.static(path.join(__dirname, "public", "logo.svg")));
+app.get("/api/branding", (req, res) => { res.json({ name: APP_NAME, version: "2.1.0" }); });
 
 // ── Route modules (auth routes BEFORE requireAuth middleware) ─────────────────
 require("./routes/auth")(app, ctx);
@@ -159,7 +160,6 @@ function saveSettings(s) {
   fs_env.writeFileSync(settingsFile, JSON.stringify(s, null, 2), "utf8");
 }
 
-app.get("/api/branding", (req, res) => { res.json({ name: APP_NAME, version: "2.1.0" }); });
 app.get("/api/settings", (req, res) => { res.json(loadSettings()); });
 app.put("/api/settings", requireAdmin, (req, res) => {
   const current = loadSettings();

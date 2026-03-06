@@ -108,6 +108,13 @@ window.animateValue = function(el, end, duration) {
   // ── Socket.IO Connection ──
   window.socket = io();
 
+  window.socket.on('connect_error', function (err) {
+    if (err && err.message === 'Unauthorized') {
+      console.warn('[Monitor] Socket auth failed — redirecting to login');
+      window.location.href = '/login';
+    }
+  });
+
   // ── Status Bar Update ──
   function updateStatusBar() {
     var el = document.getElementById('sb-last-update');

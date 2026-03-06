@@ -10,6 +10,7 @@
   var events = [];
   var selectedDate = null;
   var activeTab = 'month';
+  var typewriterTimer = null;
 
   var CAT_COLORS = {
     meeting: '#a78bfa', deploy: '#22d3ee', deadline: '#ff6b2b',
@@ -78,7 +79,9 @@
       this.loadBriefing();
     },
 
-    hide: function () {},
+    hide: function () {
+      if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
+    },
     update: function () {},
 
     loadEvents: function () {
@@ -99,10 +102,12 @@
     },
 
     typewriter: function (el, text) {
+      if (typewriterTimer) clearInterval(typewriterTimer);
       el.innerHTML = '';
       var i = 0;
-      var interval = setInterval(function () {
-        if (i < text.length) { el.textContent += text[i]; i++; } else clearInterval(interval);
+      typewriterTimer = setInterval(function () {
+        if (i < text.length) { el.textContent += text[i]; i++; }
+        else { clearInterval(typewriterTimer); typewriterTimer = null; }
       }, 12);
     },
 
