@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 40">
+  <defs>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#0e7490"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield icon -->
+  <path d="M18 4L8 9v7c0 6.1 4.3 11.5 10 13 5.7-1.5 10-6.9 10-13V9L18 4z" fill="none" stroke="url(#shield)" stroke-width="1.6"/>
+  <path d="M18 7L11 10.5v5.5c0 4.5 3 8.5 7 9.5 4-1 7-5 7-9.5V10.5L18 7z" fill="url(#shield)" opacity="0.15"/>
+  <path d="M15 16l2 2 4-5" fill="none" stroke="#22d3ee" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- BULWARK text -->
+  <text x="40" y="27" font-family="'JetBrains Mono', 'SF Mono', 'Fira Code', monospace" font-size="18" font-weight="700" letter-spacing="0.12em" fill="#e4e4e7">BULWARK</text>
+</svg>

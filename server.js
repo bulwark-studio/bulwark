@@ -101,6 +101,10 @@ const ctx = {
   sendNotification: null,
 };
 
+// ── Public assets (no auth required — favicon, logo, fonts) ──────────────────
+app.use("/favicon.svg", express.static(path.join(__dirname, "public", "favicon.svg")));
+app.use("/logo.svg", express.static(path.join(__dirname, "public", "logo.svg")));
+
 // ── Route modules (auth routes BEFORE requireAuth middleware) ─────────────────
 require("./routes/auth")(app, ctx);
 

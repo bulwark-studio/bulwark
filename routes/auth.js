@@ -24,7 +24,7 @@ function recordFailedLogin(ip) {
 function getLoginHTML(errorMsg = "") {
   const error = errorMsg ? `<div class="error">${errorMsg}</div>` : "";
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Bulwark — Login</title><style>
+<title>Bulwark — Login</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'JetBrains Mono','SF Mono','Cascadia Code',monospace;background:#0a0b10;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh}
 .login-box{background:rgba(14,14,18,0.82);border:1px solid rgba(255,255,255,0.08);border-top:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:40px;width:400px;max-width:90vw;box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 8px 32px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);backdrop-filter:blur(20px)}
@@ -39,7 +39,7 @@ button:hover{background:#06b6d4}
 .error{background:rgba(255,107,43,0.12);color:#ff6b2b;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:16px;text-align:center;border:1px solid rgba(255,107,43,0.2)}
 .lock-icon{text-align:center;margin-bottom:16px;font-size:28px;opacity:.25}
 </style></head><body><div class="login-box">
-<div class="lock-icon">&#128274;</div><h1>BULWARK</h1><div class="subtitle">Monitor Control Panel</div>${error}
+<div style="text-align:center;margin-bottom:20px"><img src="/logo.svg" alt="Bulwark" height="32"></div><div class="subtitle">Server Management Platform</div>${error}
 <form method="POST" action="/login">
 <label for="username">Username</label><input type="text" id="username" name="username" required autocomplete="username" autofocus>
 <label for="password">Password</label><input type="password" id="password" name="password" required autocomplete="current-password">
@@ -49,7 +49,7 @@ button:hover{background:#06b6d4}
 function get2FAHTML(errorMsg = "") {
   const error = errorMsg ? `<div class="error">${errorMsg}</div>` : "";
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Bulwark — 2FA</title><style>
+<title>Bulwark — 2FA</title><link rel="icon" type="image/svg+xml" href="/favicon.svg"><style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'JetBrains Mono','SF Mono','Cascadia Code',monospace;background:#0a0b10;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh}
 .login-box{background:rgba(14,14,18,0.82);border:1px solid rgba(255,255,255,0.08);border-top:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:40px;width:400px;max-width:90vw;box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 8px 32px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);backdrop-filter:blur(20px)}
