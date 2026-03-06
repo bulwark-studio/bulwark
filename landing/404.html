@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>404 — Bulwark</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: #0a0b10;
+  color: #e4e4e7;
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; text-align: center;
+}
+a { color: #22d3ee; text-decoration: none; }
+a:hover { text-decoration: underline; }
+.code { font-size: 96px; font-weight: 800; color: #22d3ee; letter-spacing: 8px; line-height: 1; }
+.msg { font-size: 16px; color: #8b8b92; margin: 16px 0 32px; }
+.btn {
+  display: inline-block; padding: 12px 28px; border-radius: 8px;
+  background: rgba(14,14,18,0.65); border: 1px solid rgba(255,255,255,0.08);
+  color: #e4e4e7; font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 500; letter-spacing: 0.5px;
+  transition: all 0.2s;
+}
+.btn:hover { border-color: #22d3ee; color: #22d3ee; text-decoration: none; }
+</style>
+</head>
+<body>
+<div>
+  <div class="code">404</div>
+  <p class="msg">This page doesn't exist.</p>
+  <a href="/" class="btn">Back to Bulwark</a>
+</div>
+</body>
+</html>
