@@ -67,7 +67,7 @@ fi
 
 # --- Check PostgreSQL (optional) ---
 if command -v psql &>/dev/null; then
-  echo -e "  ${CYAN}✓${NC} PostgreSQL $(psql --version | grep -oP '\d+\.\d+')"
+  echo -e "  ${CYAN}✓${NC} PostgreSQL $(psql --version | grep -oE '[0-9]+\.[0-9]+')"
 else
   echo -e "  ${ORANGE}—${NC} PostgreSQL not found (optional — app works without it)"
 fi
@@ -161,8 +161,12 @@ echo -e "  ${BOLD}URL:${NC}      http://$(hostname -I 2>/dev/null | awk '{print 
 echo -e "  ${BOLD}User:${NC}     admin"
 echo -e "  ${BOLD}Password:${NC} ${ADMIN_PASS}"
 echo ""
-echo -e "  ${BOLD}Manage:${NC}   sudo systemctl {start|stop|restart|status} ${SERVICE_NAME}"
-echo -e "  ${BOLD}Logs:${NC}     sudo journalctl -u ${SERVICE_NAME} -f"
+if [[ "$OS" == "Linux" ]] && command -v systemctl &>/dev/null; then
+  echo -e "  ${BOLD}Manage:${NC}   sudo systemctl {start|stop|restart|status} ${SERVICE_NAME}"
+  echo -e "  ${BOLD}Logs:${NC}     sudo journalctl -u ${SERVICE_NAME} -f"
+else
+  echo -e "  ${BOLD}Start:${NC}    cd ${INSTALL_DIR} && node server.js"
+fi
 echo -e "  ${BOLD}Config:${NC}   ${INSTALL_DIR}/.env"
 echo ""
 echo -e "  ${ORANGE}Change your password immediately after first login!${NC}"
