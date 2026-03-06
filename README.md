@@ -57,15 +57,32 @@ MONITOR_USER=admin MONITOR_PASS=changeme npm start
 # Open http://localhost:3001
 ```
 
-### Docker
+### Docker Compose (recommended)
+
+```bash
+git clone https://github.com/bulwark-studio/bulwark.git
+cd bulwark
+docker compose up -d
+# Open http://localhost:3001 (admin / admin)
+```
+
+Includes PostgreSQL 17, Docker socket access, and persistent volumes out of the box.
+
+### Docker (standalone)
 
 ```bash
 docker build -t bulwark .
 docker run -d -p 3001:3001 \
   -e MONITOR_USER=admin \
   -e MONITOR_PASS=changeme \
-  -e DATABASE_URL=postgresql://user:pass@host:5432/db \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   bulwark
+```
+
+### npx (try without installing)
+
+```bash
+npx @bulwark-studio/bulwark
 ```
 
 ### One-Line Install (Linux)
