@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulwark vs Portainer vs pgAdmin vs Uptime Kuma</title>
+<meta name="description" content="Compare Bulwark to Portainer, pgAdmin, and Uptime Kuma. One dashboard replaces them all — Terminal, Docker, Database, Git, Deploy, Security, Monitoring.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://bulwark.studio/compare.html">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bulwark.studio/compare.html">
+<meta property="og:title" content="Bulwark vs Portainer vs pgAdmin vs Uptime Kuma">
+<meta property="og:description" content="One dashboard replaces them all. See the feature comparison.">
+<meta property="og:image" content="https://bulwark.studio/social-preview.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@BulwarkStudio">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --canvas: #0a0b10;
+  --surface: rgba(14,14,18,0.65);
+  --border: rgba(255,255,255,0.08);
+  --border-top: rgba(255,255,255,0.14);
+  --text-primary: #e4e4e7;
+  --text-secondary: #8b8b92;
+  --text-tertiary: #52525a;
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34,211,238,0.15);
+  --orange: #ff6b2b;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--canvas); color: var(--text-primary);
+  line-height: 1.7;
+}
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(34,211,238,0.04), transparent 70%);
+  pointer-events: none;
+}
+a { color: var(--cyan); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,11,16,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  height: 56px; display: flex; align-items: center; padding: 0 24px;
+}
+.nav-brand { font-size: 18px; font-weight: 700; letter-spacing: 3px; color: var(--cyan); }
+.nav-links { margin-left: auto; display: flex; gap: 20px; align-items: center; }
+.nav-links a { color: var(--text-secondary); font-size: 13px; }
+.nav-links a:hover { color: var(--text-primary); text-decoration: none; }
+
+/* HERO */
+.hero {
+  padding: 120px 0 60px; text-align: center;
+}
+.hero h1 {
+  font-size: clamp(28px, 4vw, 44px); font-weight: 800;
+  letter-spacing: 2px; margin-bottom: 16px;
+}
+.hero h1 span { color: var(--cyan); }
+.hero p { font-size: 15px; color: var(--text-secondary); max-width: 640px; margin: 0 auto; }
+
+/* TABLE */
+.compare-wrap {
+  overflow-x: auto; margin: 48px 0 80px; -webkit-overflow-scrolling: touch;
+}
+table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(20px) saturate(180%);
+}
+thead th {
+  padding: 16px 14px;
+  text-align: left;
+  font-size: 13px; font-weight: 700;
+  color: var(--text-primary);
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+thead th:first-child { width: 220px; }
+thead th.bulwark { color: var(--cyan); }
+tbody td {
+  padding: 12px 14px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover { background: rgba(255,255,255,0.02); }
+td:first-child {
+  font-weight: 600; color: var(--text-primary);
+  white-space: nowrap;
+}
+.yes { color: var(--cyan); font-weight: 600; }
+.no { color: var(--text-tertiary); }
+.partial { color: var(--orange); }
+
+/* BOTTOM CTA */
+.cta {
+  text-align: center; padding: 60px 0 100px;
+}
+.cta h2 { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+.cta p { font-size: 14px; color: var(--text-secondary); margin-bottom: 28px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 28px; border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 700;
+  border: none; cursor: pointer; transition: all 0.2s;
+  background: var(--orange); color: #000;
+}
+.btn:hover { background: #e85a1e; text-decoration: none; }
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border); padding: 40px 0; text-align: center;
+}
+footer p { font-size: 13px; color: var(--text-tertiary); }
+footer .links { display: flex; gap: 24px; justify-content: center; margin-top: 12px; }
+footer .links a { color: var(--text-secondary); font-size: 13px; }
+
+@media (max-width: 768px) {
+  thead th, tbody td { padding: 10px 8px; font-size: 12px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-brand" style="text-decoration:none;">BULWARK</a>
+  <div class="nav-links">
+    <a href="/">Home</a>
+    <a href="/docs.html">Docs</a>
+    <a href="https://github.com/bulwark-studio/bulwark" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <h1>Bulwark vs <span>Everything Else</span></h1>
+    <p>One self-hosted dashboard replaces your collection of disconnected DevOps tools. Here's how they compare.</p>
+  </div>
+</section>
+
+<div class="container">
+<div class="compare-wrap">
+<table>
+<thead>
+<tr>
+  <th>Feature</th>
+  <th class="bulwark">Bulwark</th>
+  <th>Portainer</th>
+  <th>pgAdmin</th>
+  <th>Uptime Kuma</th>
+  <th>Cockpit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Browser Terminal</td>
+  <td class="yes">Full PTY (xterm.js)</td>
+  <td class="partial">Container exec only</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="yes">Yes</td>
+</tr>
+<tr>
+  <td>Docker Management</td>
+  <td class="yes">27 Engine API endpoints</td>
+  <td class="yes">Full (primary focus)</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="partial">Basic via Podman</td>
+</tr>
+<tr>
+  <td>SQL Editor</td>
+  <td class="yes">CodeMirror + AI generation</td>
+  <td class="no">No</td>
+  <td class="yes">Yes (primary focus)</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>Table Browser</td>
+  <td class="yes">Two-panel, constraints, FK</td>
+  <td class="no">No</td>
+  <td class="yes">Yes</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>Schema Explorer</td>
+  <td class="yes">Functions, triggers, indexes</td>
+  <td class="no">No</td>
+  <td class="yes">Yes</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>DB Migrations</td>
+  <td class="yes">Applied/pending + Docker test</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>Uptime Monitoring</td>
+  <td class="yes">HTTP/TCP + history</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="yes">Full (primary focus)</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>CPU/Memory/Disk Metrics</td>
+  <td class="yes">Real-time (3s Socket.IO)</td>
+  <td class="partial">Container stats only</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="yes">Yes</td>
+</tr>
+<tr>
+  <td>Git Operations</td>
+  <td class="yes">Commit, push, branch, diff</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>Deploy Pipeline</td>
+  <td class="yes">One-click + rollback</td>
+  <td class="partial">Stack deploy only</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>Security Scanning</td>
+  <td class="yes">Posture score + vault</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="partial">Firewall only</td>
+</tr>
+<tr>
+  <td>Credential Vault</td>
+  <td class="yes">AES-256-GCM encrypted</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>AI Integration</td>
+  <td class="yes">BYOK (Claude/Codex)</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>Cron Management</td>
+  <td class="yes">Visual scheduler</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="partial">Timers</td>
+</tr>
+<tr>
+  <td>File Manager</td>
+  <td class="yes">Browse + editor</td>
+  <td class="partial">Container volumes</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>Multi-Server</td>
+  <td class="yes">Aggregated dashboard</td>
+  <td class="yes">Multi-environment</td>
+  <td class="partial">Multi-connection</td>
+  <td class="yes">Multi-monitor</td>
+  <td class="no">No</td>
+</tr>
+<tr>
+  <td>RBAC</td>
+  <td class="yes">Admin/editor/viewer</td>
+  <td class="yes">Team roles</td>
+  <td class="yes">Roles</td>
+  <td class="no">No</td>
+  <td class="partial">System users</td>
+</tr>
+<tr>
+  <td>Self-Hosted</td>
+  <td class="yes">Always</td>
+  <td class="yes">CE + Business</td>
+  <td class="yes">Always</td>
+  <td class="yes">Always</td>
+  <td class="yes">Always</td>
+</tr>
+<tr>
+  <td>npm Dependencies</td>
+  <td class="yes">4</td>
+  <td class="no">Go binary</td>
+  <td class="no">Python</td>
+  <td class="no">~500+</td>
+  <td class="no">System package</td>
+</tr>
+<tr>
+  <td>Build Step Required</td>
+  <td class="yes">None</td>
+  <td class="no">Go build</td>
+  <td class="no">Python setup</td>
+  <td class="no">npm build</td>
+  <td class="no">System package</td>
+</tr>
+<tr>
+  <td>License</td>
+  <td>AGPL-3.0</td>
+  <td>Zlib (CE) / Proprietary (BE)</td>
+  <td>PostgreSQL License</td>
+  <td>MIT</td>
+  <td>LGPL-2.1</td>
+</tr>
+<tr>
+  <td>Price</td>
+  <td class="yes">Free forever</td>
+  <td>Free CE / $$$$ Business</td>
+  <td class="yes">Free</td>
+  <td class="yes">Free</td>
+  <td class="yes">Free</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+<section class="cta">
+  <div class="container">
+    <h2>Replace them all with one dashboard.</h2>
+    <p>Self-host in 60 seconds. Free forever. 4 npm dependencies.</p>
+    <a href="https://github.com/bulwark-studio/bulwark" class="btn" target="_blank">Get Started</a>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>&copy; 2026 Autopilot AI Tech LLC</p>
+    <div class="links">
+      <a href="/">Home</a>
+      <a href="/docs.html">Docs</a>
+      <a href="https://github.com/bulwark-studio/bulwark" target="_blank">GitHub</a>
+      <a href="https://x.com/BulwarkStudio" target="_blank">Twitter</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

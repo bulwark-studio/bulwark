@@ -11,8 +11,11 @@
 **Your entire server, one dashboard.**
 
 [![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](LICENSE)
+[![CI](https://github.com/bulwark-studio/bulwark/actions/workflows/ci.yml/badge.svg)](https://github.com/bulwark-studio/bulwark/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/bulwark-studio/bulwark?color=%2322d3ee)](https://github.com/bulwark-studio/bulwark/releases)
 [![Node 18+](https://img.shields.io/badge/Node-18%2B-green.svg)](https://nodejs.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](Dockerfile)
+[![GitHub Discussions](https://img.shields.io/github/discussions/bulwark-studio/bulwark?color=%2322d3ee)](https://github.com/bulwark-studio/bulwark/discussions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-cyan.svg)](CONTRIBUTING.md)
 
 Bulwark is an AI-powered, self-hosted server management platform that replaces your collection of DevOps tools with a single glass-themed dashboard. Terminal, database studio, Docker management, Git workflows, security scanning, and real-time monitoring — all in one place.
