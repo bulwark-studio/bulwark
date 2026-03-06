@@ -613,7 +613,7 @@ The Projects view shows your active database connection with real-time stats:
 | Stat | Description |
 |------|-------------|
 | **Status** | Green dot = connected, orange = disconnected |
-| **Database** | Name (e.g. `db_autopilot`) |
+| **Database** | Name (e.g. `my_project_db`) |
 | **Size** | Database size on disk (e.g. 19 MB) |
 | **Connections** | Active connection count |
 | **Version** | PostgreSQL version (e.g. 17.8) |
