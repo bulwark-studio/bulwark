@@ -171,6 +171,20 @@ Bulwark features a glass-morphism dark theme with cyan/orange signal system:
 
 Full docs at **[bulwark.studio/docs](https://bulwark.studio/docs.html)** — installation, configuration, all 34 views, API reference, AI setup, and troubleshooting.
 
+**[Comparison: Bulwark vs Portainer vs pgAdmin vs Uptime Kuma](https://bulwark.studio/compare.html)** — see how Bulwark replaces multiple tools.
+
+---
+
+## Star History
+
+<a href="https://star-history.com/#bulwark-studio/bulwark&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=bulwark-studio/bulwark&type=Date&theme=dark" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=bulwark-studio/bulwark&type=Date" />
+    <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=bulwark-studio/bulwark&type=Date" />
+  </picture>
+</a>
+
 ---
 
 ## Contributing
