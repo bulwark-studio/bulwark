@@ -291,12 +291,38 @@
       fontSize: 13,
       fontFamily: "'JetBrains Mono', 'Cascadia Code', 'Fira Code', monospace",
       cursorBlink: true, cursorStyle: 'bar',
-      allowProposedApi: true, scrollback: 10000, convertEol: true
+      allowProposedApi: true, scrollback: 10000, convertEol: true,
+      rightClickSelectsWord: true
     });
     fitAddon = new FitAddon.FitAddon();
     term.loadAddon(fitAddon);
     term.open(container);
     fitTerminal();
+
+    // Clipboard: Ctrl+Shift+C = copy, Ctrl+Shift+V = paste, right-click = paste
+    term.attachCustomKeyEventHandler(function (e) {
+      if (e.ctrlKey && e.shiftKey && e.key === 'C' && e.type === 'keydown') {
+        var sel = term.getSelection();
+        if (sel) navigator.clipboard.writeText(sel);
+        return false;
+      }
+      if (e.ctrlKey && e.shiftKey && e.key === 'V' && e.type === 'keydown') {
+        navigator.clipboard.readText().then(function (text) {
+          if (text && termStarted) socket.emit('terminal_input', text);
+        });
+        return false;
+      }
+      return true;
+    });
+
+    // Right-click paste
+    container.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      navigator.clipboard.readText().then(function (text) {
+        if (text && termStarted) socket.emit('terminal_input', text);
+      }).catch(function () {});
+    });
+
     term.onData(function (data) { if (termStarted) socket.emit('terminal_input', data); });
     window.addEventListener('resize', function () { if (drawerOpen && activeTab === 'shell') { fitTerminal(); updateSizeLabel(); } });
     socket.on('terminal_output', function (data) {
