@@ -1,197 +1,456 @@
 /**
- * Chester Dev Monitor v2.0 — Enhanced Metrics View
- * CPU per-core bar + aggregate line, Memory line + processes, Network RX/TX, Disk donut + I/O
- * Time range selector: 5m, 15m, 1h, 6h, 24h
+ * Chester Dev Monitor v2.0 — Metrics Command Center
+ * AI-powered system intelligence with real-time visualization
  */
 (function () {
   'use strict';
 
-  var timeRange = 60; // data points
-  var initialized = false;
+  var timeRange = 60;
+  var cpuHistory = [], memHistory = [], coreHistory = [];
+  var MAX_HISTORY = 200;
+  var aiAnalysisCache = null;
+  var aiCacheTime = 0;
 
+  // ── SVG Icons ──────────────────────────────────────────────────────
+  var IC = {
+    cpu: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>',
+    mem: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="10" x2="6" y2="14"/><line x1="10" y1="10" x2="10" y2="14"/><line x1="14" y1="10" x2="14" y2="14"/><line x1="18" y1="10" x2="18" y2="14"/></svg>',
+    brain: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3c1.8-1.2 3-3.3 3-5.7a7 7 0 0 0-7-7z"/><path d="M9 21h6"/></svg>',
+    refresh: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>',
+    activity: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>',
+    zap: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+    disc: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>',
+    clock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'
+  };
+
+  // ── Core heatmap color (0-100 → dark to cyan) ─────────────────────
+  function coreColor(pct) {
+    if (pct > 80) return '#ff6b2b';
+    if (pct > 50) return '#f59e0b';
+    if (pct > 20) return '#22d3ee';
+    return 'rgba(34,211,238,0.25)';
+  }
+
+  function coreOpacity(pct) {
+    return Math.max(0.2, pct / 100);
+  }
+
+  // ── Build layout ───────────────────────────────────────────────────
   Views.metrics = {
     init: function () {
-      var container = document.getElementById('view-metrics');
-      if (container) {
-        container.innerHTML =
-          /* ── Time Range Selector ── */
-          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-5)">' +
-            '<div class="card-title" style="font-size:var(--font-size-lg)">System Metrics</div>' +
-            '<div style="display:flex;gap:var(--space-2)">' +
-              '<button class="btn btn-sm metrics-range-btn" data-range="15" onclick="setMetricsRange(15)">5m</button>' +
-              '<button class="btn btn-sm metrics-range-btn" data-range="30" onclick="setMetricsRange(30)">15m</button>' +
-              '<button class="btn btn-sm btn-primary metrics-range-btn" data-range="60" onclick="setMetricsRange(60)">1h</button>' +
-              '<button class="btn btn-sm metrics-range-btn" data-range="180" onclick="setMetricsRange(180)">6h</button>' +
-              '<button class="btn btn-sm metrics-range-btn" data-range="720" onclick="setMetricsRange(720)">24h</button>' +
+      var c = document.getElementById('view-metrics');
+      if (!c) return;
+
+      c.innerHTML =
+        '<div class="overview-grid">' +
+
+        /* ── AI Analysis Banner ── */
+        '<div class="briefing-card" id="metrics-ai-card">' +
+          '<div class="briefing-header">' +
+            '<div class="briefing-label">' + IC.brain + ' AI Performance Analysis</div>' +
+            '<button class="briefing-refresh" onclick="Views.metrics.runAnalysis(true)">' + IC.refresh + ' Analyze</button>' +
+          '</div>' +
+          '<div class="briefing-text" id="metrics-ai-text" style="min-height:40px">' +
+            '<span style="color:var(--text-tertiary)">Click Analyze for AI-powered performance insights</span>' +
+          '</div>' +
+        '</div>' +
+
+        /* ── Top Stats Row ── */
+        '<div class="metrics-hero-row" id="metrics-hero">' +
+          heroStat('m-cpu', 'CPU', IC.cpu, '#22d3ee', '0%') +
+          heroStat('m-mem', 'MEMORY', IC.mem, '#a78bfa', '0%') +
+          heroStat('m-cores', 'CORES', IC.cpu, '#3b82f6', '0') +
+          heroStat('m-uptime', 'UPTIME', IC.clock, '#f59e0b', '--') +
+        '</div>' +
+
+        /* ── Time Range Bar ── */
+        '<div class="metrics-toolbar">' +
+          '<div class="metrics-toolbar-left">' + IC.activity + ' <span>Real-time Telemetry</span></div>' +
+          '<div class="metrics-range-bar">' +
+            rangeBtn(30, '5m') + rangeBtn(60, '15m', true) + rangeBtn(120, '1h') + rangeBtn(360, '6h') +
+          '</div>' +
+        '</div>' +
+
+        /* ── CPU Section ── */
+        '<div class="overview-row overview-row-2">' +
+          '<div class="metrics-panel">' +
+            '<div class="metrics-panel-header"><span>' + IC.cpu + ' CPU Aggregate</span><span class="metrics-live-dot"></span></div>' +
+            '<div class="metrics-chart-wrap"><canvas id="m-cpu-chart" height="200"></canvas></div>' +
+          '</div>' +
+          '<div class="metrics-panel">' +
+            '<div class="metrics-panel-header"><span>' + IC.cpu + ' Core Heatmap</span><span id="m-core-count" class="metrics-badge">0 cores</span></div>' +
+            '<div id="m-core-heatmap" class="core-heatmap"></div>' +
+            '<div id="m-core-legend" class="core-legend"></div>' +
+          '</div>' +
+        '</div>' +
+
+        /* ── Memory + System Section ── */
+        '<div class="overview-row overview-row-2">' +
+          '<div class="metrics-panel">' +
+            '<div class="metrics-panel-header"><span>' + IC.mem + ' Memory Usage</span><span class="metrics-live-dot"></span></div>' +
+            '<div class="metrics-chart-wrap"><canvas id="m-mem-chart" height="200"></canvas></div>' +
+            '<div class="metrics-mem-bar-wrap">' +
+              '<div class="metrics-mem-bar" id="m-mem-bar"><div class="metrics-mem-fill" id="m-mem-fill"></div></div>' +
+              '<div class="metrics-mem-labels"><span id="m-mem-used">0 MB</span><span id="m-mem-total">0 MB</span></div>' +
             '</div>' +
           '</div>' +
-          /* ── Charts 2x2 Grid ── */
-          '<div class="grid-2">' +
-            /* CPU Panel */
-            '<div class="card">' +
-              '<div class="card-header"><span class="card-title">CPU Usage</span><span class="badge badge-cyan">%</span></div>' +
-              '<canvas id="metrics-cpu-line" height="180"></canvas>' +
-              '<div style="margin-top:var(--space-4)">' +
-                '<div style="font-size:var(--font-size-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:var(--space-2)">Per-Core Utilization</div>' +
-                '<div id="metrics-cpu-cores"><div style="color:var(--text-tertiary);font-size:var(--font-size-xs)">Waiting for data...</div></div>' +
-              '</div>' +
-            '</div>' +
-            /* Memory Panel */
-            '<div class="card">' +
-              '<div class="card-header"><span class="card-title">Memory Usage</span><span class="badge badge-purple">%</span></div>' +
-              '<canvas id="metrics-mem-line" height="180"></canvas>' +
-              '<div style="margin-top:var(--space-4)">' +
-                '<div style="font-size:var(--font-size-xs);color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:var(--space-2)">Top Processes (by Memory)</div>' +
-                '<div id="metrics-top-procs"><div style="color:var(--text-tertiary);font-size:var(--font-size-xs)">Waiting for data...</div></div>' +
-              '</div>' +
-            '</div>' +
-            /* Network Panel */
-            '<div class="card">' +
-              '<div class="card-header"><span class="card-title">Network I/O</span><span class="badge badge-cyan">RX</span><span class="badge badge-orange" style="margin-left:4px">TX</span></div>' +
-              '<canvas id="metrics-net-line" height="220"></canvas>' +
-            '</div>' +
-            /* Disk Panel */
-            '<div class="card">' +
-              '<div class="card-header"><span class="card-title">Disk Usage</span></div>' +
-              '<div style="display:flex;align-items:center;gap:var(--space-6)">' +
-                '<div style="position:relative;width:160px;height:160px">' +
-                  '<canvas id="metrics-disk-donut" width="160" height="160"></canvas>' +
-                  '<div id="metrics-disk-label" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:var(--font-size-lg);font-weight:700;color:var(--text-primary)">--</div>' +
-                '</div>' +
-                '<div style="flex:1;font-size:var(--font-size-xs);color:var(--text-tertiary)">Disk utilization across primary mount point.</div>' +
-              '</div>' +
-            '</div>' +
-          '</div>';
-      }
+          '<div class="metrics-panel">' +
+            '<div class="metrics-panel-header"><span>' + IC.disc + ' System Info</span></div>' +
+            '<div id="m-sysinfo" class="sysinfo-grid"></div>' +
+          '</div>' +
+        '</div>' +
+
+        /* ── Per-Core History (sparklines) ── */
+        '<div class="metrics-panel">' +
+          '<div class="metrics-panel-header"><span>' + IC.zap + ' Per-Core Activity (last ' + timeRange + ' readings)</span></div>' +
+          '<div id="m-core-sparks" class="core-sparks-grid"></div>' +
+        '</div>' +
+
+        '</div>'; // end overview-grid
     },
 
     show: function () {
-      if (!initialized) {
-        initCharts();
-        initialized = true;
-      }
-      fetchMetrics();
+      initCharts();
+      fetchAll();
     },
 
     hide: function () {},
 
     update: function (data) {
-      if (data && data.system) {
-        var s = data.system;
-        var now = new Date().toLocaleTimeString();
-        if (s.cpu !== undefined) {
-          Charts.appendPoint('metrics-cpu-line', now, typeof s.cpu === 'number' ? s.cpu : s.cpu.percent || 0, timeRange);
-        }
-        if (s.memory) {
-          var memPct = s.memory.percent || (s.memory.used / s.memory.total * 100);
-          Charts.appendPoint('metrics-mem-line', now, memPct, timeRange);
-        }
-        if (s.network) {
-          Charts.appendPoint('metrics-net-line', now, [s.network.rx || 0, s.network.tx || 0], timeRange);
+      if (!data || !data.system) return;
+      var s = data.system;
+      var cpu = s.cpuPct || 0;
+      var mem = s.usedMemPct || s.memPct || 0;
+      var now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+      // Track history
+      cpuHistory.push({ t: now, v: cpu });
+      memHistory.push({ t: now, v: mem });
+      if (cpuHistory.length > MAX_HISTORY) cpuHistory.shift();
+      if (memHistory.length > MAX_HISTORY) memHistory.shift();
+
+      // Update charts
+      Charts.appendPoint('m-cpu-chart', now, cpu, timeRange);
+      Charts.appendPoint('m-mem-chart', now, mem, timeRange);
+
+      // Hero stats
+      setHero('m-cpu', cpu.toFixed(1) + '%', cpu);
+      setHero('m-mem', mem.toFixed(1) + '%', mem);
+      if (s.usedMemMB) {
+        var usedEl = document.getElementById('m-mem-used');
+        var totalEl = document.getElementById('m-mem-total');
+        var fillEl = document.getElementById('m-mem-fill');
+        if (usedEl) usedEl.textContent = formatMB(s.usedMemMB) + ' used';
+        if (totalEl) totalEl.textContent = formatMB(s.totalMemMB) + ' total';
+        if (fillEl) fillEl.style.width = mem + '%';
+      }
+      if (s.uptimeHours !== undefined) {
+        setHeroText('m-uptime', formatUptime(s.uptimeHours));
+      }
+
+      // Extended metrics (per-core) from socket
+      if (data.extended && data.extended.perCore) {
+        updateCoreHeatmap(data.extended.perCore);
+        trackCoreHistory(data.extended.perCore);
+      }
+    },
+
+    // ── AI Analysis ──────────────────────────────────────────────────
+    runAnalysis: function (force) {
+      var el = document.getElementById('metrics-ai-text');
+      if (!el) return;
+
+      if (!force && aiAnalysisCache && Date.now() - aiCacheTime < 120000) {
+        el.textContent = aiAnalysisCache;
+        return;
+      }
+
+      el.innerHTML = '<div class="briefing-shimmer" style="width:90%"></div><div class="briefing-shimmer" style="width:65%"></div>';
+
+      // Build context from current data
+      var ctx = {
+        cpu: cpuHistory.slice(-30).map(function (h) { return h.v; }),
+        mem: memHistory.slice(-30).map(function (h) { return h.v; }),
+        cores: coreHistory.length ? coreHistory[coreHistory.length - 1] : [],
+        cpuAvg: cpuHistory.length ? (cpuHistory.reduce(function (s, h) { return s + h.v; }, 0) / cpuHistory.length).toFixed(1) : 0,
+        memAvg: memHistory.length ? (memHistory.reduce(function (s, h) { return s + h.v; }, 0) / memHistory.length).toFixed(1) : 0,
+        cpuMax: cpuHistory.length ? Math.max.apply(null, cpuHistory.map(function (h) { return h.v; })) : 0,
+        memMax: memHistory.length ? Math.max.apply(null, memHistory.map(function (h) { return h.v; })) : 0
+      };
+
+      var prompt = 'Analyze this real-time system performance data and give a 2-3 sentence assessment. ' +
+        'CPU history (last 30 readings): [' + ctx.cpu.join(',') + ']. ' +
+        'Memory history: [' + ctx.mem.join(',') + ']. ' +
+        'CPU avg: ' + ctx.cpuAvg + '%, max: ' + ctx.cpuMax + '%. ' +
+        'Memory avg: ' + ctx.memAvg + '%, max: ' + ctx.memMax + '%. ' +
+        'Cores (' + ctx.cores.length + '): [' + ctx.cores.join(',') + ']. ' +
+        'Identify any anomalies, hot cores, memory pressure, or optimization opportunities. Be specific with numbers. No markdown.';
+
+      fetch('/api/db/assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: prompt })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        var text = d.response || d.error || 'Analysis unavailable';
+        aiAnalysisCache = text;
+        aiCacheTime = Date.now();
+        typeWriter(el, text);
+      }).catch(function () {
+        el.textContent = 'AI analysis unavailable — Claude CLI not responding';
+      });
+    }
+  };
+
+  // ── Chart initialization ───────────────────────────────────────────
+  function initCharts() {
+    Charts.create('m-cpu-chart', 'line', {
+      data: {
+        labels: cpuHistory.map(function (h) { return h.t; }),
+        datasets: [Object.assign({ data: cpuHistory.map(function (h) { return h.v; }), label: 'CPU %' }, Charts.defaultLineConfig('#22d3ee'))]
+      },
+      options: { scales: { y: { min: 0, max: 100 } } }
+    });
+    Charts.create('m-mem-chart', 'line', {
+      data: {
+        labels: memHistory.map(function (h) { return h.t; }),
+        datasets: [Object.assign({ data: memHistory.map(function (h) { return h.v; }), label: 'Memory %' }, Charts.defaultLineConfig('#a78bfa'))]
+      },
+      options: { scales: { y: { min: 0, max: 100 } } }
+    });
+  }
+
+  // ── Fetch initial data ─────────────────────────────────────────────
+  function fetchAll() {
+    // System info
+    fetch('/api/system').then(function (r) { return r.json(); }).then(function (s) {
+      setHero('m-cpu', (s.cpuPct || 0).toFixed(1) + '%', s.cpuPct || 0);
+      setHero('m-mem', (s.usedMemPct || 0).toFixed(1) + '%', s.usedMemPct || 0);
+      setHero('m-cores', s.cpuCount || 0);
+      setHeroText('m-uptime', formatUptime(s.uptimeHours || 0));
+
+      var usedEl = document.getElementById('m-mem-used');
+      var totalEl = document.getElementById('m-mem-total');
+      var fillEl = document.getElementById('m-mem-fill');
+      if (usedEl) usedEl.textContent = formatMB(s.usedMemMB || 0) + ' used';
+      if (totalEl) totalEl.textContent = formatMB(s.totalMemMB || 0) + ' total';
+      if (fillEl) fillEl.style.width = (s.usedMemPct || 0) + '%';
+
+      renderSysInfo(s);
+    }).catch(function () {});
+
+    // History
+    fetch('/api/metrics/history?type=cpu&count=' + timeRange).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.data && d.data.length) {
+        cpuHistory = d.data.map(function (p) {
+          return { t: new Date(p.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), v: p.value || p };
+        });
+        Charts.update('m-cpu-chart',
+          cpuHistory.map(function (h) { return h.t; }),
+          [{ data: cpuHistory.map(function (h) { return h.v; }) }]
+        );
+        // Core history from first fetch
+        if (d.data[0] && d.data[0].perCore) {
+          d.data.forEach(function (p) { if (p.perCore) coreHistory.push(p.perCore); });
+          if (coreHistory.length > MAX_HISTORY) coreHistory = coreHistory.slice(-MAX_HISTORY);
+          updateCoreHeatmap(d.data[d.data.length - 1].perCore);
+          setHero('m-cores', d.data[d.data.length - 1].perCore.length);
+          document.getElementById('m-core-count').textContent = d.data[d.data.length - 1].perCore.length + ' cores';
+          renderCoreSparklines();
         }
       }
+    }).catch(function () {});
+
+    fetch('/api/metrics/history?type=memory&count=' + timeRange).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.data && d.data.length) {
+        memHistory = d.data.map(function (p) {
+          return { t: new Date(p.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), v: p.value || p };
+        });
+        Charts.update('m-mem-chart',
+          memHistory.map(function (h) { return h.t; }),
+          [{ data: memHistory.map(function (h) { return h.v; }) }]
+        );
+      }
+    }).catch(function () {});
+
+    // Extended (per-core live)
+    fetch('/api/metrics/extended').then(function (r) { return r.json(); }).then(function (d) {
+      if (d.perCore) {
+        updateCoreHeatmap(d.perCore);
+        trackCoreHistory(d.perCore);
+        setHero('m-cores', d.perCore.length);
+        var cc = document.getElementById('m-core-count');
+        if (cc) cc.textContent = d.perCore.length + ' cores';
+      }
+    }).catch(function () {});
+  }
+
+  // ── Core Heatmap ───────────────────────────────────────────────────
+  function updateCoreHeatmap(cores) {
+    var el = document.getElementById('m-core-heatmap');
+    if (!el) return;
+    el.innerHTML = cores.map(function (pct, i) {
+      var bg = coreColor(pct);
+      return '<div class="core-cell" style="background:' + bg + ';opacity:' + coreOpacity(pct) + '" title="Core ' + i + ': ' + pct + '%">' +
+        '<div class="core-cell-id">' + i + '</div>' +
+        '<div class="core-cell-pct">' + pct + '%</div>' +
+      '</div>';
+    }).join('');
+
+    // Legend
+    var leg = document.getElementById('m-core-legend');
+    if (leg) {
+      var avg = cores.reduce(function (s, v) { return s + v; }, 0) / cores.length;
+      var max = Math.max.apply(null, cores);
+      var hot = cores.filter(function (v) { return v > 50; }).length;
+      leg.innerHTML =
+        '<span>Avg: <b>' + avg.toFixed(1) + '%</b></span>' +
+        '<span>Peak: <b style="color:' + coreColor(max) + '">' + max + '%</b></span>' +
+        '<span>Hot cores: <b style="color:' + (hot > 0 ? '#ff6b2b' : '#22d3ee') + '">' + hot + '</b></span>';
     }
-  };
-
-  function initCharts() {
-    // CPU Line
-    Charts.create('metrics-cpu-line', 'line', {
-      data: { labels: [], datasets: [Object.assign({ data: [], label: 'CPU %' }, Charts.defaultLineConfig(Charts.colors.cyan))] },
-      options: { scales: { y: { min: 0, max: 100 } } }
-    });
-    // Memory Line
-    Charts.create('metrics-mem-line', 'line', {
-      data: { labels: [], datasets: [Object.assign({ data: [], label: 'Memory %' }, Charts.defaultLineConfig(Charts.colors.purple))] },
-      options: { scales: { y: { min: 0, max: 100 } } }
-    });
-    // Network Line (RX + TX)
-    Charts.create('metrics-net-line', 'line', {
-      data: { labels: [], datasets: [
-        Object.assign({ data: [], label: 'RX' }, Charts.defaultLineConfig(Charts.colors.cyan)),
-        Object.assign({ data: [], label: 'TX' }, Charts.defaultLineConfig(Charts.colors.orange))
-      ] },
-      options: { plugins: { legend: { display: true, labels: { color: '#94a3b8', font: { size: 10 } } } } }
-    });
-    // Disk Donut
-    Charts.create('metrics-disk-donut', 'doughnut', {
-      data: {
-        labels: ['Used', 'Free'],
-        datasets: [{ data: [0, 100], backgroundColor: [Charts.colors.cyan, 'rgba(255,255,255,0.06)'], borderWidth: 0 }]
-      },
-      options: { cutout: '70%', plugins: { legend: { display: false } } }
-    });
   }
 
-  function fetchMetrics() {
-    // Extended metrics
-    fetch('/api/metrics/extended')
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        // CPU per-core bars
-        var cpuEl = document.getElementById('metrics-cpu-cores');
-        if (cpuEl && d.cpuPerCore) {
-          cpuEl.innerHTML = d.cpuPerCore.map(function (pct, i) {
-            var w = Math.min(pct, 100);
-            return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="width:40px;font-size:10px;color:var(--text3)">Core ' + i + '</span>' +
-              '<div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + w + '%;background:var(--cyan);border-radius:4px;transition:width 0.5s"></div></div>' +
-              '<span style="width:35px;text-align:right;font-size:10px;color:var(--text2)">' + pct.toFixed(0) + '%</span></div>';
-          }).join('');
-        }
-        // Top processes
-        var procEl = document.getElementById('metrics-top-procs');
-        if (procEl && d.topProcesses) {
-          procEl.innerHTML = d.topProcesses.slice(0, 5).map(function (p) {
-            return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:11px"><span>' + esc(p.name || p.command || '') + '</span><span style="color:var(--text3)">' + (p.mem || p.memory || 0) + ' MB</span></div>';
-          }).join('');
-        }
-      })
-      .catch(function () {});
-
-    // Disk usage
-    fetch('/api/metrics/disk')
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        var disks = d.disks || [];
-        if (disks.length) {
-          var disk = disks[0];
-          var pct = disk.percent || disk.use || 0;
-          Charts.update('metrics-disk-donut', null, [{ data: [pct, 100 - pct] }]);
-          var label = document.getElementById('metrics-disk-label');
-          if (label) label.textContent = pct + '% used';
-        }
-      })
-      .catch(function () {});
-
-    // History for charts
-    fetch('/api/metrics/history?type=cpu&count=' + timeRange)
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (d.data && d.data.length) {
-          var labels = d.data.map(function (_, i) { return i; });
-          Charts.update('metrics-cpu-line', labels, [{ data: d.data }]);
-        }
-      })
-      .catch(function () {});
-
-    fetch('/api/metrics/history?type=memory&count=' + timeRange)
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (d.data && d.data.length) {
-          var labels = d.data.map(function (_, i) { return i; });
-          Charts.update('metrics-mem-line', labels, [{ data: d.data }]);
-        }
-      })
-      .catch(function () {});
+  function trackCoreHistory(cores) {
+    coreHistory.push(cores.slice());
+    if (coreHistory.length > MAX_HISTORY) coreHistory.shift();
   }
 
-  window.setMetricsRange = function (points) {
-    timeRange = points;
+  // ── Per-Core Sparklines ────────────────────────────────────────────
+  function renderCoreSparklines() {
+    var el = document.getElementById('m-core-sparks');
+    if (!el || coreHistory.length < 2) { if (el) el.innerHTML = '<div style="color:var(--text-tertiary);font-size:11px;padding:12px">Collecting data...</div>'; return; }
+
+    var numCores = coreHistory[0].length;
+    var html = '';
+    for (var i = 0; i < numCores; i++) {
+      var vals = coreHistory.map(function (snap) { return snap[i] || 0; });
+      var max = Math.max.apply(null, vals);
+      var avg = vals.reduce(function (s, v) { return s + v; }, 0) / vals.length;
+      html += '<div class="core-spark-row">' +
+        '<span class="core-spark-label">Core ' + i + '</span>' +
+        '<svg class="core-spark-svg" viewBox="0 0 ' + vals.length + ' 50" preserveAspectRatio="none">' +
+          '<polyline points="' + vals.map(function (v, j) { return j + ',' + (50 - v * 0.5); }).join(' ') + '" ' +
+          'fill="none" stroke="' + coreColor(avg) + '" stroke-width="1.5" stroke-linecap="round"/>' +
+        '</svg>' +
+        '<span class="core-spark-avg" style="color:' + coreColor(avg) + '">' + avg.toFixed(0) + '%</span>' +
+      '</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  // ── System Info Panel ──────────────────────────────────────────────
+  function renderSysInfo(s) {
+    var el = document.getElementById('m-sysinfo');
+    if (!el) return;
+    var items = [
+      ['Hostname', s.hostname || '--'],
+      ['Platform', s.platform || '--'],
+      ['Architecture', s.arch || '--'],
+      ['CPU Model', (s.cpuModel || '--').trim()],
+      ['Cores', s.cpuCount || 0],
+      ['Node.js', s.nodeVersion || '--'],
+      ['Uptime', formatUptime(s.uptimeHours || 0)],
+      ['Load Avg', (s.loadAvg || []).map(function (l) { return parseFloat(l).toFixed(2); }).join(' / ')]
+    ];
+    el.innerHTML = items.map(function (item) {
+      return '<div class="sysinfo-item">' +
+        '<div class="sysinfo-label">' + item[0] + '</div>' +
+        '<div class="sysinfo-value">' + esc(String(item[1])) + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Hero stat helpers ──────────────────────────────────────────────
+  function heroStat(id, label, icon, color, val) {
+    return '<div class="metrics-hero-stat" id="' + id + '">' +
+      '<div class="metrics-hero-icon" style="color:' + color + '">' + icon + '</div>' +
+      '<div class="metrics-hero-value" id="' + id + '-val">' + val + '</div>' +
+      '<div class="metrics-hero-label">' + label + '</div>' +
+      '<div class="metrics-hero-bar"><div class="metrics-hero-fill" id="' + id + '-fill" style="background:' + color + ';width:0%"></div></div>' +
+    '</div>';
+  }
+
+  function setHero(id, text, pct) {
+    var v = document.getElementById(id + '-val');
+    var f = document.getElementById(id + '-fill');
+    if (v) v.textContent = text;
+    if (f && pct !== undefined) f.style.width = Math.min(100, pct) + '%';
+  }
+
+  function setHeroText(id, text) {
+    var v = document.getElementById(id + '-val');
+    if (v) v.textContent = text;
+  }
+
+  // ── Utilities ──────────────────────────────────────────────────────
+  function formatMB(mb) {
+    if (mb >= 1024) return (mb / 1024).toFixed(1) + ' GB';
+    return Math.round(mb) + ' MB';
+  }
+
+  function formatUptime(hours) {
+    if (hours >= 24) return Math.floor(hours / 24) + 'd ' + Math.floor(hours % 24) + 'h';
+    if (hours >= 1) return hours.toFixed(1) + 'h';
+    return Math.round(hours * 60) + 'm';
+  }
+
+  function esc(str) {
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(str || ''));
+    return d.innerHTML;
+  }
+
+  function typeWriter(el, text, speed) {
+    speed = speed || 18;
+    el.innerHTML = '';
+    var i = 0;
+    var cursor = document.createElement('span');
+    cursor.className = 'briefing-cursor';
+    var timer = setInterval(function () {
+      if (i < text.length) {
+        el.textContent = text.substring(0, i + 1);
+        el.appendChild(cursor);
+        i++;
+      } else {
+        clearInterval(timer);
+        setTimeout(function () { if (cursor.parentNode) cursor.remove(); }, 2000);
+      }
+    }, speed);
+  }
+
+  function rangeBtn(pts, label, active) {
+    return '<button class="metrics-range-btn' + (active ? ' active' : '') + '" data-range="' + pts + '" onclick="Views.metrics.setRange(' + pts + ')">' + label + '</button>';
+  }
+
+  Views.metrics.setRange = function (pts) {
+    timeRange = pts;
     var btns = document.querySelectorAll('.metrics-range-btn');
     for (var i = 0; i < btns.length; i++) {
-      btns[i].className = btns[i].dataset.range == points ? 'btn btn-sm btn-primary metrics-range-btn' : 'btn btn-sm metrics-range-btn';
+      btns[i].className = 'metrics-range-btn' + (parseInt(btns[i].dataset.range) === pts ? ' active' : '');
     }
-    fetchMetrics();
+    // Re-fetch with new range
+    fetch('/api/metrics/history?type=cpu&count=' + pts).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.data && d.data.length) {
+        cpuHistory = d.data.map(function (p) {
+          return { t: new Date(p.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), v: p.value || p };
+        });
+        Charts.update('m-cpu-chart', cpuHistory.map(function (h) { return h.t; }), [{ data: cpuHistory.map(function (h) { return h.v; }) }]);
+        if (d.data[0] && d.data[0].perCore) {
+          coreHistory = d.data.filter(function (p) { return p.perCore; }).map(function (p) { return p.perCore; });
+          renderCoreSparklines();
+        }
+      }
+    }).catch(function () {});
+    fetch('/api/metrics/history?type=memory&count=' + pts).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.data && d.data.length) {
+        memHistory = d.data.map(function (p) {
+          return { t: new Date(p.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), v: p.value || p };
+        });
+        Charts.update('m-mem-chart', memHistory.map(function (h) { return h.t; }), [{ data: memHistory.map(function (h) { return h.v; }) }]);
+      }
+    }).catch(function () {});
+    // Update sparkline header
+    var hdr = document.querySelector('#m-core-sparks').parentNode.querySelector('.metrics-panel-header span');
+    if (hdr) hdr.innerHTML = IC.zap + ' Per-Core Activity (last ' + pts + ' readings)';
   };
 
-  function esc(str) { var d = document.createElement('div'); d.appendChild(document.createTextNode(str || '')); return d.innerHTML; }
 })();

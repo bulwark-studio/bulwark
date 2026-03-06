@@ -219,7 +219,7 @@
           '<button class="btn btn-sm" onclick="Modal.close();switchView(\'db-projects\')">+ Add / Manage Projects</button>' +
         '</div>';
 
-      Modal.open({ title: 'Select Database', body: html, actions: [{ label: 'Cancel', close: true }] });
+      Modal.open({ title: 'Select Database', body: html, footer: '<button class="btn btn-sm" onclick="Modal.close()">Cancel</button>' });
     },
 
     pick: function (id) {
@@ -366,10 +366,7 @@
       Modal.open({
         title: 'Add Database Project',
         body: DbProjectsMgr._form(null, color),
-        actions: [
-          { label: 'Cancel', close: true },
-          { label: 'Add Project', primary: true, onClick: function () { DbProjectsMgr.save(null); } },
-        ],
+        footer: '<button class="btn btn-sm" onclick="Modal.close()">Cancel</button><button class="btn btn-sm btn-primary" onclick="DbProjectsMgr.save(null)">Add Project</button>',
       });
     },
 
@@ -379,10 +376,7 @@
       Modal.open({
         title: 'Edit — ' + p.name,
         body: DbProjectsMgr._form(p, p.color),
-        actions: [
-          { label: 'Cancel', close: true },
-          { label: 'Save', primary: true, onClick: function () { DbProjectsMgr.save(id); } },
-        ],
+        footer: '<button class="btn btn-sm" onclick="Modal.close()">Cancel</button><button class="btn btn-sm btn-primary" onclick="DbProjectsMgr.save(\'' + id + '\')">Save</button>',
       });
     },
 
@@ -443,7 +437,7 @@
       if (!name.trim()) { Toast.error('Name is required'); return; }
       if (!url.trim())  { Toast.error('Database URL is required'); return; }
 
-      Modal.loading('Saving...');
+      Toast.info('Saving...');
       fetch(id ? '/api/db/projects/' + id : '/api/db/projects', {
         method: id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -464,7 +458,8 @@
     },
 
     del: function (id, name) {
-      Modal.confirm('Delete "' + name + '"?', 'The actual database is not affected.', function () {
+      Modal.confirm({ title: 'Delete Project', message: 'Delete "' + name + '"? The actual database is not affected.', dangerous: true, confirmText: 'Delete' }).then(function (yes) {
+        if (!yes) return;
         if (window.DbProjects.activeId === id) window.DbProjects.setActive(null);
         fetch('/api/db/projects/' + id, { method: 'DELETE' })
           .then(function () {

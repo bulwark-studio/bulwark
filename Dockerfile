@@ -24,6 +24,9 @@ RUN npm install --production
 # Copy application files
 COPY server.js ./
 COPY write-config.js ./
+COPY routes/ ./routes/
+COPY lib/ ./lib/
+COPY data/ ./data/
 COPY public/ ./public/
 
 ENV NODE_ENV=production

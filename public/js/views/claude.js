@@ -1,6 +1,7 @@
 /**
- * Chester Dev Monitor v2.0 — Claude CLI View
- * Prompt input, streaming output, run/stop controls
+ * Chester Dev Monitor — Claude CLI View
+ * Now redirects to the floating Command Center's Chester AI tab.
+ * Legacy claude_output/claude_done socket events still handled for backwards compat.
  */
 (function () {
   'use strict';
@@ -10,85 +11,37 @@
       var container = document.getElementById('view-claude');
       if (container) {
         container.innerHTML =
-          '<div class="card" style="margin-bottom:16px;padding:16px">' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
-              '<div style="display:flex;align-items:center;gap:8px">' +
-                '<span style="font-weight:600;color:var(--text-primary)">Claude CLI</span>' +
-                '<span id="claude-status" style="font-size:12px;color:var(--text-tertiary)">Idle -- ready for prompts</span>' +
-              '</div>' +
-              '<div style="display:flex;gap:8px">' +
-                '<button class="btn btn-sm btn-cyan" id="claude-run-btn" onclick="runClaude()">Run</button>' +
-                '<button class="btn btn-sm btn-orange" id="claude-stop-btn" onclick="stopClaude()" style="display:none">Stop</button>' +
-              '</div>' +
-            '</div>' +
-            '<textarea id="claude-prompt" class="form-input" rows="4" placeholder="Enter your prompt for Claude..." style="width:100%;margin-bottom:12px;background:var(--surface-solid);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:12px;font-family:monospace;font-size:13px;resize:vertical"></textarea>' +
-          '</div>' +
-          '<div class="card" style="padding:0">' +
-            '<div style="padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;font-size:12px;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.5px">Output</div>' +
-            '<pre id="claude-output" style="margin:0;padding:16px;background:var(--canvas);color:var(--text-secondary);font-family:\'JetBrains Mono\',monospace;font-size:12px;line-height:1.6;min-height:300px;max-height:60vh;overflow:auto;white-space:pre-wrap;word-break:break-word">Waiting for input...\n</pre>' +
+          '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:60vh;gap:16px">' +
+            '<svg viewBox="0 0 48 48" width="56" height="56" fill="none" stroke="var(--cyan)" stroke-width="1"><circle cx="24" cy="24" r="20"/><path d="M16 20h0M32 20h0M18 30c3 3 9 3 12 0"/><path d="M24 4v4M24 40v4M4 24h4M40 24h4" stroke-opacity="0.2"/></svg>' +
+            '<div style="color:var(--text-primary);font-size:18px;font-weight:600">Chester AI</div>' +
+            '<div class="text-secondary" style="max-width:320px;text-align:center;line-height:1.5">Chester AI lives in the floating Command Center now. Open the terminal drawer and switch to the Chester AI tab.</div>' +
+            '<button class="btn btn-cyan" onclick="Views.terminal.toggleDrawer();setTimeout(function(){Views.terminal.switchTab(\'chester\')},200)">Open Chester AI</button>' +
+            '<div class="text-tertiary" style="font-size:11px;margin-top:4px">Keyboard: <kbd style="background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:3px;font-size:10px">Ctrl + `</kbd> then click Chester AI tab</div>' +
           '</div>';
       }
     },
-
     show: function () {
-      var statusEl = document.getElementById('claude-status');
-      if (statusEl && state.claudeRunning) {
-        statusEl.innerHTML = '<div class="spinner spinner-sm"></div> <span style="color:var(--cyan)">Running...</span>';
-      } else if (statusEl) {
-        statusEl.innerHTML = '<span style="color:var(--text-tertiary)">Idle -- ready for prompts</span>';
+      // Auto-open the command center Chester tab
+      if (Views.terminal && Views.terminal.openDrawer) {
+        Views.terminal.openDrawer();
+        setTimeout(function () { Views.terminal.switchTab('chester'); }, 200);
       }
     },
-
     hide: function () {},
-
     update: function (data) {
-      if (!data) return;
-      var outputEl = document.getElementById('claude-output');
-      var statusEl = document.getElementById('claude-status');
-      var runBtn = document.getElementById('claude-run-btn');
-      var stopBtn = document.getElementById('claude-stop-btn');
-
-      if (data.type === 'output' && outputEl) {
-        if (outputEl.textContent === 'Waiting for input...\n') outputEl.textContent = '';
-        outputEl.textContent += data.data;
-        outputEl.scrollTop = outputEl.scrollHeight;
-        if (statusEl) statusEl.innerHTML = '<div class="spinner spinner-sm"></div> <span style="color:var(--cyan)">Running...</span>';
-        if (runBtn) runBtn.disabled = true;
-        if (stopBtn) stopBtn.style.display = '';
-      }
-
-      if (data.type === 'done') {
-        state.claudeRunning = false;
-        if (statusEl) {
-          var code = data.data ? data.data.code : null;
-          var color = code === 0 ? 'var(--cyan)' : 'var(--orange)';
-          statusEl.innerHTML = '<span style="color:' + color + '">Done (exit ' + code + ')</span>';
-        }
-        if (runBtn) runBtn.disabled = false;
-        if (stopBtn) stopBtn.style.display = 'none';
-      }
+      // Legacy: handle claude_output and claude_done socket events
+      // These still fire from routes/claude.js for backwards compat
     }
   };
 
+  // Legacy globals for any old callers
   window.runClaude = function () {
-    var promptEl = document.getElementById('claude-prompt');
-    if (!promptEl || !promptEl.value.trim()) { Toast.warning('Enter a prompt first'); return; }
-    var outputEl = document.getElementById('claude-output');
-    if (outputEl) outputEl.textContent = '';
-    state.claudeRunning = true;
-
-    fetch('/api/claude/start', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: promptEl.value.trim() })
-    }).then(function (r) { return r.json(); }).then(function (d) {
-      if (d.error) { Toast.error(d.error); state.claudeRunning = false; }
-    }).catch(function (e) { Toast.error('Failed to start Claude: ' + e.message); state.claudeRunning = false; });
+    if (Views.terminal && Views.terminal.openDrawer) {
+      Views.terminal.openDrawer();
+      setTimeout(function () { Views.terminal.switchTab('chester'); }, 200);
+    }
   };
-
   window.stopClaude = function () {
-    fetch('/api/claude/stop', { method: 'POST' })
-      .then(function (r) { return r.json(); })
-      .then(function () { Toast.info('Claude stopped'); })
-      .catch(function () { Toast.error('Failed to stop Claude'); });
+    fetch('/api/claude/stop', { method: 'POST' }).catch(function () {});
   };
 })();

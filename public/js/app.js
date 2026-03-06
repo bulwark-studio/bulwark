@@ -99,6 +99,11 @@ window.animateValue = function(el, end, duration) {
     if (sbDot) sbDot.className = 'status-dot ok';
     if (sbText) sbText.textContent = 'Connected';
     console.log('[Monitor] Socket connected:', window.socket.id);
+    // Check DB status
+    fetch('/api/db/info').then(function(r){return r.json();}).then(function(d){
+      var dbEl = document.getElementById('sb-db');
+      if (dbEl) dbEl.textContent = (d && !d.error && !d.degraded) ? 'DB: ' + (d.database || 'connected') : 'DB: not connected';
+    }).catch(function(){ var dbEl = document.getElementById('sb-db'); if (dbEl) dbEl.textContent = 'DB: not connected'; });
   });
 
   window.socket.on('disconnect', function () {
@@ -179,7 +184,7 @@ window.animateValue = function(el, end, duration) {
       window.Views.dashboard.update({ system: sys });
     }
     if (window.Views.metrics && typeof window.Views.metrics.update === 'function') {
-      window.Views.metrics.update({ system: sys });
+      window.Views.metrics.update({ system: sys, extended: data.extended || null });
     }
 
     // Update status bar timestamp
@@ -246,6 +251,9 @@ window.animateValue = function(el, end, duration) {
     if (window.Views.dashboard && typeof window.Views.dashboard.update === 'function') {
       window.Views.dashboard.update({ servers: window.state.servers });
     }
+    if (window.Views.uptime && typeof window.Views.uptime.update === 'function') {
+      window.Views.uptime.update({ servers: window.state.servers });
+    }
   });
 
   window.socket.on('claude_output', function (data) {
@@ -259,6 +267,12 @@ window.animateValue = function(el, end, duration) {
     window.state.claudeRunning = false;
     if (window.Views.claude && typeof window.Views.claude.update === 'function') {
       window.Views.claude.update({ type: 'done', data: data });
+    }
+  });
+
+  window.socket.on('cache_stats', function (data) {
+    if (window.Views.cache && typeof window.Views.cache.update === 'function') {
+      window.Views.cache.update(data);
     }
   });
 

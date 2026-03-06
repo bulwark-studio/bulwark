@@ -655,6 +655,16 @@ module.exports = function (app, ctx) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  // Backup delete
+  app.delete("/api/db/backups/:name", requireAdmin, (req, res) => {
+    const filepath = path.join(BACKUPS_DIR, req.params.name);
+    if (!fs.existsSync(filepath)) return res.status(404).json({ error: "File not found" });
+    try {
+      fs.unlinkSync(filepath);
+      res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
   // Backup download
   app.get("/api/db/backups/:name/download", requireAdmin, (req, res) => {
     const filepath = path.join(BACKUPS_DIR, req.params.name);
@@ -691,6 +701,191 @@ module.exports = function (app, ctx) {
       res.status(404).json({ error: "Query not found" });
     }
   });
+
+  // ── AI Role Security Audit ───────────────────────────────────────────────
+  app.get("/api/db/roles/ai/audit", requireAdmin, async (req, res) => {
+    const p = getPool(req);
+    if (!p) return res.json({ error: "No database connection", degraded: true });
+    try {
+      // Gather role data
+      const roles = await runQuery(p, `
+        SELECT r.rolname, r.rolsuper, r.rolcanlogin, r.rolcreatedb, r.rolcreaterole,
+          r.rolconnlimit, r.rolvaliduntil,
+          (SELECT count(*) FROM pg_stat_activity WHERE usename = r.rolname) as active_connections,
+          ARRAY(SELECT b.rolname FROM pg_auth_members m JOIN pg_roles b ON m.roleid = b.oid WHERE m.member = r.oid) as member_of
+        FROM pg_roles r WHERE r.rolname NOT LIKE 'pg_%' ORDER BY r.rolname
+      `);
+      // Permission summary
+      const perms = await runQuery(p, `
+        SELECT grantee, count(DISTINCT table_name) as table_count,
+          array_agg(DISTINCT privilege_type) as privileges
+        FROM information_schema.role_table_grants
+        WHERE table_schema = 'public' AND grantee NOT LIKE 'pg_%'
+        GROUP BY grantee
+      `);
+      const permMap = {};
+      perms.forEach(p => { permMap[p.grantee] = { table_count: parseInt(p.table_count), privileges: p.privileges }; });
+
+      // Build analysis prompt
+      const roleData = roles.map(r => {
+        const p = permMap[r.rolname] || { table_count: 0, privileges: [] };
+        return `${r.rolname}: super=${r.rolsuper}, login=${r.rolcanlogin}, createdb=${r.rolcreatedb}, ` +
+          `createrole=${r.rolcreaterole}, conn_limit=${r.rolconnlimit}, active=${r.active_connections}, ` +
+          `tables=${p.table_count}, privs=[${(p.privileges || []).join(',')}], member_of=[${(r.member_of || []).join(',')}]` +
+          (r.rolvaliduntil ? `, expires=${r.rolvaliduntil}` : '');
+      }).join('\n');
+
+      const prompt = `You are a PostgreSQL security auditor. Analyze these database roles and return a JSON object (no markdown, ONLY valid JSON):
+
+${roleData}
+
+Return this exact JSON structure:
+{
+  "score": <0-100 security score>,
+  "grade": "<A/B/C/D/F>",
+  "summary": "<2-3 sentence overall assessment>",
+  "findings": [
+    {"severity": "critical|warning|info", "role": "<rolename>", "issue": "<description>", "fix": "<SQL fix command>"}
+  ],
+  "recommendations": ["<actionable recommendation>"],
+  "stats": {
+    "total_roles": <n>,
+    "superusers": <n>,
+    "login_roles": <n>,
+    "no_password_expiry": <n>,
+    "excessive_privileges": <n>,
+    "dormant_roles": <n>
+  }
+}
+
+Check for: superuser proliferation, roles with all privileges, no password expiry, dormant roles (0 connections + login), excessive CREATE DB/ROLE grants, missing connection limits on login roles.`;
+
+      const result = await askClaudeJSON(prompt);
+      res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── AI Backup Strategy ──────────────────────────────────────────────────
+  app.get("/api/db/backups/ai/strategy", requireAdmin, async (req, res) => {
+    const p = getPool(req);
+    if (!p) return res.json({ error: "No database connection", degraded: true });
+    try {
+      // Gather DB stats
+      const [dbSize] = await runQuery(p, "SELECT pg_size_pretty(pg_database_size(current_database())) as size, pg_database_size(current_database()) as bytes");
+      const [tableCount] = await runQuery(p, "SELECT count(*) as count FROM pg_tables WHERE schemaname = 'public'");
+      const [uptime] = await runQuery(p, "SELECT date_trunc('second', current_timestamp - pg_postmaster_start_time()) as uptime");
+      const [conns] = await runQuery(p, "SELECT count(*) as count FROM pg_stat_activity");
+      const [txns] = await runQuery(p, "SELECT xact_commit + xact_rollback as total FROM pg_stat_database WHERE datname = current_database()");
+
+      // Largest tables
+      const largeTables = await runQuery(p, `
+        SELECT tablename, pg_size_pretty(pg_total_relation_size('public.' || quote_ident(tablename))) as size,
+          pg_total_relation_size('public.' || quote_ident(tablename)) as bytes
+        FROM pg_tables WHERE schemaname = 'public'
+        ORDER BY pg_total_relation_size('public.' || quote_ident(tablename)) DESC LIMIT 10
+      `);
+
+      // Existing backups
+      let backups = [];
+      try {
+        if (fs.existsSync(BACKUPS_DIR)) {
+          backups = fs.readdirSync(BACKUPS_DIR)
+            .filter(f => f.endsWith(".sql") || f.endsWith(".sql.gz") || f.endsWith(".dump"))
+            .map(f => {
+              const stat = fs.statSync(path.join(BACKUPS_DIR, f));
+              return { name: f, size: stat.size, created: stat.mtime.toISOString() };
+            })
+            .sort((a, b) => new Date(b.created) - new Date(a.created));
+        }
+      } catch {}
+
+      const prompt = `You are a PostgreSQL backup strategist. Analyze this database and return a JSON object (no markdown, ONLY valid JSON):
+
+Database: size=${dbSize.size} (${dbSize.bytes} bytes), tables=${tableCount.count}, uptime=${uptime.uptime}, connections=${conns.count}, total_txns=${txns?.total || 'unknown'}
+
+Top 10 tables by size:
+${largeTables.map(t => `  ${t.tablename}: ${t.size}`).join('\n')}
+
+Existing backups (${backups.length}):
+${backups.slice(0, 10).map(b => `  ${b.name}: ${(b.size / 1024 / 1024).toFixed(1)}MB, created=${b.created}`).join('\n') || '  None'}
+
+Return this exact JSON structure:
+{
+  "health_score": <0-100>,
+  "summary": "<2-3 sentence backup health assessment>",
+  "strategy": {
+    "recommended_frequency": "<e.g. daily, every 6 hours>",
+    "retention_policy": "<e.g. keep 7 daily, 4 weekly, 3 monthly>",
+    "estimated_backup_size": "<human readable>",
+    "backup_window": "<recommended time>"
+  },
+  "risks": [
+    {"level": "critical|warning|info", "issue": "<description>", "mitigation": "<action>"}
+  ],
+  "disaster_recovery": {
+    "rto_estimate": "<recovery time objective>",
+    "rpo_current": "<recovery point objective based on backup frequency>",
+    "recommendations": ["<specific DR recommendation>"]
+  },
+  "storage_analysis": {
+    "current_usage": "<total backup storage>",
+    "projected_30d": "<projected storage in 30 days>",
+    "cleanup_candidates": ["<old backup files that could be removed>"]
+  }
+}`;
+
+      const result = await askClaudeJSON(prompt);
+      res.json(result);
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── AI Generate Role SQL ────────────────────────────────────────────────
+  app.post("/api/db/roles/ai/generate", requireAdmin, async (req, res) => {
+    const { description } = req.body;
+    if (!description) return res.status(400).json({ error: "Description required" });
+    const p = getPool(req);
+    if (!p) return res.json({ error: "No database connection", degraded: true });
+
+    try {
+      const tables = await runQuery(p, "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename");
+      const tableList = tables.map(t => t.tablename).join(', ');
+      const prompt = `Generate PostgreSQL SQL to create a role based on this description: "${description}"
+
+Available tables: ${tableList}
+
+Return ONLY the SQL commands (CREATE ROLE, GRANT, etc.), no markdown, no explanation. Follow least-privilege principle.`;
+
+      const result = await execCommand(
+        `claude --print "${prompt.replace(/"/g, '\\"')}"`,
+        { timeout: 30000 }
+      );
+      const sql = (result.stdout || "").trim().replace(/^```sql\n?/i, "").replace(/\n?```$/i, "").trim();
+      res.json({ sql, description });
+    } catch (e) { res.json({ error: "AI unavailable: " + e.message }); }
+  });
+
+  // Helper: ask Claude and parse JSON response
+  async function askClaudeJSON(prompt) {
+    try {
+      const result = await execCommand(
+        `claude --print "${prompt.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,
+        { timeout: 45000 }
+      );
+      const raw = (result.stdout || "").trim();
+      // Extract JSON from response (may have ```json wrapper)
+      const jsonStr = raw.replace(/^```json\n?/i, "").replace(/\n?```$/i, "").trim();
+      try {
+        return JSON.parse(jsonStr);
+      } catch {
+        // Try to find JSON object in response
+        const match = jsonStr.match(/\{[\s\S]*\}/);
+        if (match) return JSON.parse(match[0]);
+        return { error: "Could not parse AI response", raw: raw.substring(0, 500) };
+      }
+    } catch (e) {
+      return { error: "AI unavailable: " + e.message };
+    }
+  }
 
   // ── Claude SQL Assistant ─────────────────────────────────────────────────
   app.post("/api/db/claude/generate", requireAdmin, async (req, res) => {

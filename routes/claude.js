@@ -34,6 +34,39 @@ module.exports = function (app, ctx) {
     res.json({ started: true });
   });
 
+  // Chester AI — conversational assistant (used by floating terminal)
+  app.post("/api/chester/ask", ctx.requireAdmin, async (req, res) => {
+    const { prompt } = req.body;
+    if (!prompt) return res.status(400).json({ error: "prompt required" });
+    try {
+      const neuralCache = require('../lib/neural-cache');
+      const cached = neuralCache.semanticGet(prompt);
+      if (cached) return res.json({ response: cached.response, cached: true });
+
+      const cleanEnv = { ...process.env };
+      delete cleanEnv.CLAUDECODE;
+      const result = await new Promise((resolve, reject) => {
+        const child = spawn("claude", ["--print"], { stdio: ["pipe", "pipe", "pipe"], shell: true, timeout: 30000, env: cleanEnv });
+        let stdout = "", stderr = "";
+        child.stdout.on("data", d => { stdout += d; });
+        child.stderr.on("data", d => { stderr += d; });
+        child.on("close", code => resolve({ stdout, stderr, code }));
+        child.on("error", reject);
+        child.stdin.on("error", () => {});
+        child.stdin.write(prompt);
+        child.stdin.end();
+      });
+
+      const response = result.stdout.trim() || result.stderr.trim() || "Analysis unavailable";
+      if (result.code === 0 && result.stdout.trim()) {
+        neuralCache.semanticSet(prompt, response);
+      }
+      res.json({ response, cached: false });
+    } catch (e) {
+      res.json({ response: "Chester is temporarily unavailable: " + e.message, fallback: true });
+    }
+  });
+
   app.post("/api/claude/stop", (req, res) => {
     if (activeClaudeProc) {
       activeClaudeProc.kill("SIGTERM");

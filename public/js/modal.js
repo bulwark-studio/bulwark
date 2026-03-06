@@ -137,6 +137,10 @@
    * @param {HTMLElement} overlay
    */
   Modal.close = function (overlay) {
+    // If no overlay specified, close the topmost modal
+    if (!overlay && Modal._active.length > 0) {
+      overlay = Modal._active[Modal._active.length - 1];
+    }
     if (!overlay || !overlay.parentNode) return;
 
     // Remove from active list

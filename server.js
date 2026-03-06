@@ -10,6 +10,16 @@
 // Access: http://localhost:3001 or https://monitor.autopilotaitech.com
 // =============================================================================
 
+// Load .env file if present (no dotenv dependency needed)
+const fs_env = require("fs");
+const envPath = require("path").join(__dirname, ".env");
+if (fs_env.existsSync(envPath)) {
+  fs_env.readFileSync(envPath, "utf8").split("\n").forEach(line => {
+    const m = line.match(/^\s*([^#=]+?)\s*=\s*(.*?)\s*$/);
+    if (m && !process.env[m[1]]) process.env[m[1]] = m[2];
+  });
+}
+
 const express = require("express");
 const http = require("http");
 const os = require("os");
@@ -24,6 +34,7 @@ const { execCommand, REPO_DIR } = require("./lib/exec");
 const { callAdapter } = require("./lib/adapter-client");
 const { getSystemInfo, collectMetrics, getDiskUsage } = require("./lib/metrics-collector");
 const uptimeStore = require("./lib/uptime-store");
+const neuralCache = require("./lib/neural-cache");
 
 // ── Express + Socket.IO setup ────────────────────────────────────────────────
 const PORT = process.env.MONITOR_PORT || 3001;
@@ -86,6 +97,7 @@ require("./routes/databases")(app, ctx);
 require("./routes/db-studio")(app, ctx);
 require("./routes/db-projects")(app, ctx);
 require("./routes/db-assistant")(app, ctx);
+require("./routes/briefing")(app, ctx);
 require("./routes/security")(app, ctx);
 require("./routes/ssl")(app, ctx);
 require("./routes/envvars")(app, ctx);
@@ -95,6 +107,20 @@ require("./routes/ftp")(app, ctx);
 require("./routes/notifications")(app, ctx);
 require("./routes/multi-server")(app, ctx);
 require("./routes/uptime")(app, ctx);
+require("./routes/cloudflare")(app, ctx);
+require("./routes/docker-direct")(app, ctx);
+require("./routes/credentials")(app, ctx);
+require("./routes/git-enhanced")(app, ctx);
+require("./routes/deploy")(app, ctx);
+require("./routes/cron-enhanced")(app, ctx);
+require("./routes/files-enhanced")(app, ctx);
+require("./routes/envvars-enhanced")(app, ctx);
+require("./routes/security-enhanced")(app, ctx);
+require("./routes/notification-center")(app, ctx);
+require("./routes/calendar")(app, ctx);
+
+// Neural Cache — register API routes
+neuralCache.registerRoutes(app, ctx);
 
 // ── Socket.IO auth + handlers ────────────────────────────────────────────────
 let pty = null;
@@ -188,6 +214,12 @@ setInterval(async () => {
   if (io.engine.clientsCount === 0) return;
   if (ctx.getServerHealth) io.emit("server_health", { servers: await ctx.getServerHealth() });
 }, 30000);
+
+// Broadcast cache stats every 10s
+setInterval(() => {
+  if (io.engine.clientsCount === 0) return;
+  try { io.emit("cache_stats", { cache_stats: neuralCache.getStats() }); } catch {}
+}, 10000);
 
 // ── Cleanup & Uptime ─────────────────────────────────────────────────────────
 setInterval(cleanupSessions, 5 * 60 * 1000);

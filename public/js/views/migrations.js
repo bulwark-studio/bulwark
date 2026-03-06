@@ -126,23 +126,24 @@
   window.applyMigration = function (name) {
     Modal.confirm({
       title: 'Apply Migration',
-      message: 'Apply <strong>' + esc(name) + '</strong> to <strong>' + currentPool + '</strong> database?<br><br>This will execute the SQL directly against the live database.',
-      confirmLabel: 'Apply Migration',
-      onConfirm: function () {
-        Toast.info('Applying migration...');
-        fetch('/api/db/migrations/run?' + dbParam(), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: name })
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          if (d.error) { Toast.error('Migration failed: ' + d.error); return; }
-          Toast.success('Migration applied: ' + name);
-          loadMigrations();
-        })
-        .catch(function (e) { Toast.error(e.message); });
-      }
+      message: 'Apply "' + name + '" to ' + currentPool + ' database? This will execute the SQL directly against the live database.',
+      confirmText: 'Apply Migration',
+      dangerous: true
+    }).then(function (yes) {
+      if (!yes) return;
+      Toast.info('Applying migration...');
+      fetch('/api/db/migrations/run?' + dbParam(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name })
+      })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.error) { Toast.error('Migration failed: ' + d.error); return; }
+        Toast.success('Migration applied: ' + name);
+        loadMigrations();
+      })
+      .catch(function (e) { Toast.error(e.message); });
     });
   };
 

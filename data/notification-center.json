@@ -1,0 +1,11 @@
+[
+  {
+    "id": "6cfb1fce-9414-4fc2-88ad-dd148fcf6305",
+    "category": "security",
+    "title": "Test Alert",
+    "message": "Testing notification bell",
+    "severity": "info",
+    "read": true,
+    "timestamp": "2026-03-05T20:46:42.417Z"
+  }
+]

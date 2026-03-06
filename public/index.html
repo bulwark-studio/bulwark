@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="/css/terminal.css">
   <link rel="stylesheet" href="/css/modal.css">
   <link rel="stylesheet" href="/css/db-studio.css">
+  <link rel="stylesheet" href="/css/overview.css">
 
   <!-- CodeMirror (SQL Editor) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
@@ -90,6 +91,10 @@
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 016 0v3"/></svg>
               <span>SSL / Domains</span>
             </div>
+            <div class="nav-item" data-view="cloudflare" onclick="switchView('cloudflare')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M2 10h16M10 3a12 12 0 013 7 12 12 0 01-3 7 12 12 0 01-3-7A12 12 0 0110 3z"/></svg>
+              <span>Cloudflare</span>
+            </div>
           </div>
         </div>
 
@@ -135,20 +140,16 @@
           </div>
         </div>
 
-        <!-- Operations -->
-        <div class="nav-group" id="nav-group-operations">
-          <div class="nav-group-header" onclick="toggleNavGroup('operations')">
-            <span>Operations</span>
+        <!-- DevOps -->
+        <div class="nav-group" id="nav-group-devops">
+          <div class="nav-group-header" onclick="toggleNavGroup('devops')">
+            <span>DevOps</span>
             <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
           </div>
           <div class="nav-group-items">
             <div class="nav-item" data-view="terminal" onclick="switchView('terminal')">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><polyline points="6 9 9 12 6 15"/><line x1="12" y1="15" x2="16" y2="15"/></svg>
               <span>Terminal</span>
-            </div>
-            <div class="nav-item" data-view="claude" onclick="switchView('claude')">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M7 8h0M13 8h0M7 12c1.5 1.5 4.5 1.5 6 0"/></svg>
-              <span>Claude</span>
             </div>
             <div class="nav-item" data-view="tickets" onclick="switchView('tickets')">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="2" width="14" height="16" rx="2"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="14" x2="11" y2="14"/></svg>
@@ -174,6 +175,24 @@
             <div class="nav-item" data-view="envvars" onclick="switchView('envvars')">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="2"/><line x1="7" y1="7" x2="7" y2="7.01"/><line x1="10" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="7" y2="10.01"/><line x1="10" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="7" y2="13.01"/><line x1="10" y1="13" x2="13" y2="13"/></svg>
               <span>Env Variables</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workspace -->
+        <div class="nav-group" id="nav-group-workspace">
+          <div class="nav-group-header" onclick="toggleNavGroup('workspace')">
+            <span>Workspace</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="calendar" onclick="switchView('calendar')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="4" width="14" height="13" rx="2"/><line x1="3" y1="8" x2="17" y2="8"/><line x1="7" y1="2" x2="7" y2="6"/><line x1="13" y1="2" x2="13" y2="6"/></svg>
+              <span>Calendar</span>
+            </div>
+            <div class="nav-item" data-view="notes" onclick="switchView('notes')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><line x1="7" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="10" y2="13"/></svg>
+              <span>Notes</span>
             </div>
           </div>
         </div>
@@ -207,6 +226,10 @@
             <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
           </div>
           <div class="nav-group-items">
+            <div class="nav-item" data-view="cache" onclick="switchView('cache')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M3 3h14v4H3zM3 9h14v4H3zM3 15h14v4H3z"/><circle cx="6" cy="5" r="1" fill="currentColor"/><circle cx="6" cy="11" r="1" fill="var(--cyan)"/><circle cx="6" cy="17" r="1" fill="currentColor"/></svg>
+              <span>Cache</span>
+            </div>
             <div class="nav-item" data-view="logs" onclick="switchView('logs')">
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="2" width="14" height="16" rx="2"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="10" x2="11" y2="10"/></svg>
               <span>Logs</span>
@@ -239,6 +262,22 @@
           <h2 class="topbar-title" id="topbar-title">Dashboard</h2>
         </div>
         <div class="topbar-actions">
+          <div class="notif-bell-wrap" id="notif-bell-wrap">
+            <button class="notif-bell-btn" onclick="toggleNotifPanel()" title="Notifications">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><path d="M10 2a5 5 0 00-5 5v3l-1.5 2.5h13L15 10V7a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+              <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+            </button>
+            <div class="notif-panel" id="notif-panel" style="display:none">
+              <div class="notif-panel-header">
+                <span>Notifications</span>
+                <div class="notif-panel-actions">
+                  <button onclick="markAllNotifsRead()" title="Mark all read">Read All</button>
+                  <button onclick="clearAllNotifs()" title="Clear all">Clear</button>
+                </div>
+              </div>
+              <div class="notif-panel-list" id="notif-panel-list"></div>
+            </div>
+          </div>
           <button class="btn btn-sm btn-ghost" onclick="refreshCurrentView()" title="Refresh">Refresh</button>
           <a href="/logout" class="btn btn-sm btn-ghost">Logout</a>
         </div>
@@ -265,8 +304,8 @@
         <div class="view" id="view-db-assistant"></div>
         <div class="view" id="view-pm2"></div>
         <div class="view" id="view-ssl"></div>
+        <div class="view" id="view-cloudflare"></div>
         <div class="view" id="view-terminal"></div>
-        <div class="view" id="view-claude"></div>
         <div class="view" id="view-tickets"></div>
         <div class="view" id="view-git"></div>
         <div class="view" id="view-deploy"></div>
@@ -276,6 +315,9 @@
         <div class="view" id="view-security"></div>
         <div class="view" id="view-ftp"></div>
         <div class="view" id="view-notifications"></div>
+        <div class="view" id="view-calendar"></div>
+        <div class="view" id="view-notes"></div>
+        <div class="view" id="view-cache"></div>
         <div class="view" id="view-logs"></div>
         <div class="view" id="view-multi-server"></div>
         <div class="view" id="view-settings"></div>
@@ -292,7 +334,7 @@
       <div class="status-bar-right">
         <span id="sb-last-update">--</span>
         <span class="status-sep">|</span>
-        <span id="sb-db">DB: connected</span>
+        <span id="sb-db">DB: checking...</span>
       </div>
     </footer>
   </div>
@@ -320,8 +362,9 @@
   <script src="/js/views/db-assistant.js"></script>
   <script src="/js/views/pm2.js"></script>
   <script src="/js/views/ssl.js"></script>
+  <script src="/js/views/cloudflare.js"></script>
   <script src="/js/views/terminal.js"></script>
-  <script src="/js/views/claude.js"></script>
+  <script src="/js/views/claude.js"></script><!-- kept: redirects to floating terminal -->
   <script src="/js/views/tickets.js"></script>
   <script src="/js/views/git.js"></script>
   <script src="/js/views/deploy.js"></script>
@@ -331,8 +374,12 @@
   <script src="/js/views/security.js"></script>
   <script src="/js/views/ftp.js"></script>
   <script src="/js/views/notifications.js"></script>
+  <script src="/js/views/calendar.js"></script>
+  <script src="/js/views/notes.js"></script>
+  <script src="/js/views/cache.js"></script>
   <script src="/js/views/logs.js"></script>
   <script src="/js/views/multi-server.js"></script>
   <script src="/js/views/settings.js"></script>
+  <script src="/js/notification-bell.js"></script>
 </body>
 </html>
