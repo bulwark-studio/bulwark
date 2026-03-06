@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Notifications View
+ * Bulwark v2.1 — Notifications View
  * Webhook channels: Discord/Slack/Telegram, test, enable/disable
  */
 (function () {

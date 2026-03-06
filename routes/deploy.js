@@ -4,7 +4,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { askAI } = require('../lib/ai');
 
 const DATA = path.join(__dirname, '..', 'data');
 const TARGETS_PATH = path.join(DATA, 'deploy-targets.json');
@@ -18,14 +18,14 @@ function readJSON(p, fallback) {
 function writeJSON(p, data) { fs.writeFileSync(p, JSON.stringify(data, null, 2), 'utf8'); }
 
 module.exports = function (app, ctx) {
-  const { requireAdmin, execCommand, REPO_DIR } = ctx;
+  const { requireAdmin, requireRole, execCommand, REPO_DIR } = ctx;
 
   // ── Deploy Targets ──
   app.get('/api/deploy/targets', requireAdmin, (req, res) => {
     res.json({ targets: readJSON(TARGETS_PATH, []) });
   });
 
-  app.post('/api/deploy/targets', requireAdmin, (req, res) => {
+  app.post('/api/deploy/targets', requireRole('editor'), (req, res) => {
     const targets = readJSON(TARGETS_PATH, []);
     const { id, name, host, method, branch, credentialId, buildCmd, deployCmd, verifyUrl, preCmd, postCmd } = req.body;
     if (!name || !method) return res.status(400).json({ error: 'name and method required' });
@@ -97,7 +97,7 @@ module.exports = function (app, ctx) {
   });
 
   // ── Execute Deploy ──
-  app.post('/api/deploy/execute/:id', requireAdmin, async (req, res) => {
+  app.post('/api/deploy/execute/:id', requireRole('editor'), async (req, res) => {
     const targets = readJSON(TARGETS_PATH, []);
     const target = targets.find(t => t.id === req.params.id);
     if (!target) return res.status(404).json({ error: 'Target not found' });
@@ -213,7 +213,7 @@ module.exports = function (app, ctx) {
     res.json({ profiles });
   });
 
-  app.post('/api/deploy/profiles', requireAdmin, (req, res) => {
+  app.post('/api/deploy/profiles', requireRole('editor'), (req, res) => {
     const profiles = readJSON(PROFILES_PATH, []);
     const { id, name, buildCmd, deployCmd, icon } = req.body;
     const profile = { id: id || require('crypto').randomUUID(), name, buildCmd, deployCmd, icon: icon || 'custom' };
@@ -225,7 +225,7 @@ module.exports = function (app, ctx) {
   });
 
   // ── AI Deploy Review ──
-  app.post('/api/deploy/ai-review', requireAdmin, async (req, res) => {
+  app.post('/api/deploy/ai-review', requireRole('editor'), async (req, res) => {
     try {
       const [status, diff, branch] = await Promise.all([
         execCommand('git status --short', { cwd: REPO_DIR }),
@@ -235,19 +235,7 @@ module.exports = function (app, ctx) {
 
       const prompt = `You are a deploy readiness advisor. Assess if this codebase is ready to deploy.\nBranch: ${branch.stdout.trim()}\nUncommitted changes:\n${status.stdout || 'None'}\nStaged changes:\n${diff.stdout || 'None'}\n\nGive 3-5 sentences: deploy readiness (go/no-go), risk assessment, recommendations. No markdown.`;
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
+      const result = await askAI(prompt, { timeout: 20000 });
 
       res.json({ review: result.trim() || 'Review unavailable.' });
     } catch (e) { res.json({ review: 'Review unavailable: ' + e.message }); }

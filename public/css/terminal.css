@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Chester Command Center — Floating Terminal Drawer
+   Bulwark Command Center — Floating Terminal Drawer
    Glass theme, neon signals, slides up from bottom over any page
    ========================================================================== */
 
@@ -215,7 +215,7 @@
 .cmd-terminal-wrap .xterm-viewport::-webkit-scrollbar-track { background: transparent; }
 .cmd-terminal-wrap .xterm-viewport::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.15); border-radius: 3px; }
 
-/* ── Chester AI Chat ── */
+/* ── Bulwark AI Chat ── */
 .cht-panel { display: flex; flex-direction: column; height: 100%; }
 .cht-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .cht-messages::-webkit-scrollbar { width: 4px; }

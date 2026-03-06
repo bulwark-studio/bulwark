@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Table Browser View
+ * Bulwark v2.1 — Table Browser View
  * Two-panel: table list (left) + columns/data/constraints/FK/indexes (right)
  */
 (function () {

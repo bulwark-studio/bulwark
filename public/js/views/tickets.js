@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Tickets View (Kanban Board)
+ * Bulwark v2.1 — Tickets View (Kanban Board)
  * 7-column drag-drop kanban: Pending, Analyzing, Fixing, Testing, Awaiting Approval, Approved, Deployed
  */
 (function () {

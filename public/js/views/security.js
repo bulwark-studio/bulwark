@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor — Security Intelligence Center
+ * Bulwark — Security Intelligence Center
  * AI threat analysis, posture scoring, secret scanning, dependency audit, event log
  */
 (function () {
@@ -16,9 +16,9 @@
         '<div class="sec-dashboard">' +
           // AI Analysis
           '<div class="sec-ai-card">' +
-            '<div class="sec-ai-header"><div class="ai-dot"></div><span>Chester Security Advisor</span></div>' +
+            '<div class="sec-ai-header"><div class="ai-dot"></div><span>Bulwark Security Advisor <span id="security-ai-freshness"></span></span></div>' +
             '<div class="sec-ai-body" id="sec-ai-body">Click analyze for AI-powered security assessment...</div>' +
-            '<button class="sec-ai-btn" onclick="secAiAnalysis()">Analyze Security Posture</button>' +
+            '<button class="sec-ai-btn" onclick="secAiAnalysis(true)">Analyze Security Posture</button>' +
           '</div>' +
           // Tabs
           '<div class="sec-tabs">' +
@@ -32,7 +32,7 @@
           '<div id="sec-tab-content"></div>' +
         '</div>';
     },
-    show: function () { renderSecTab(); },
+    show: function () { renderSecTab(); secAiAnalysis(false); },
     hide: function () {},
     update: function () {}
   };
@@ -253,12 +253,27 @@
 
   // ── AI Actions ──
 
-  window.secAiAnalysis = function () {
+  window.secAiAnalysis = function (force) {
     var body = document.getElementById('sec-ai-body');
     if (!body) return;
+    if (!force && window.AICache) {
+      var restored = window.AICache.restore('security');
+      if (restored) {
+        body.textContent = restored.response;
+        var fb = document.getElementById('security-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('security');
+        return;
+      }
+    }
     body.innerHTML = 'Analyzing security posture...<span class="cursor-blink"></span>';
     fetch('/api/security/ai-analysis').then(function (r) { return r.json(); }).then(function (d) {
-      typewriter(body, d.analysis || 'No analysis available.');
+      var text = d.analysis || 'No analysis available.';
+      typewriter(body, text);
+      if (window.AICache) {
+        window.AICache.set('security', {}, text);
+        var fb = document.getElementById('security-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('security');
+      }
     }).catch(function () { body.textContent = 'Analysis unavailable.'; });
   };
 

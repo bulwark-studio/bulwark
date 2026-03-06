@@ -1,5 +1,5 @@
 {
-  "name": "dev-monitor-adapter",
+  "name": "bulwark-adapter",
   "version": "0.1.0",
   "private": true,
   "main": "index.js",

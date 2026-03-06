@@ -1,5 +1,5 @@
 module.exports = function (app, ctx) {
-  const { dbQuery, vpsQuery, vpsPool, io, execCommand, REPO_DIR } = ctx;
+  const { dbQuery, vpsQuery, vpsPool, io, execCommand, REPO_DIR, requireRole } = ctx;
 
   async function getTicketSummary() {
     const localTickets = await dbQuery(`
@@ -60,7 +60,7 @@ module.exports = function (app, ctx) {
 
   app.get("/api/tickets", async (req, res) => res.json(await getTicketSummary()));
 
-  app.patch("/api/tickets/:id/status", async (req, res) => {
+  app.patch("/api/tickets/:id/status", requireRole('editor'), async (req, res) => {
     const { id } = req.params;
     const { fix_status, notes } = req.body;
     const valid = ["pending", "analyzing", "fixing", "testing", "awaiting_approval", "approved", "deployed"];
@@ -74,7 +74,7 @@ module.exports = function (app, ctx) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.delete("/api/tickets/:id", async (req, res) => {
+  app.delete("/api/tickets/:id", requireRole('admin'), async (req, res) => {
     const { id } = req.params;
     try {
       const result = await updateTicket(id, `DELETE FROM support_tickets WHERE id = $1`, [id]);
@@ -83,7 +83,7 @@ module.exports = function (app, ctx) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post("/api/tickets/:id/approve", async (req, res) => {
+  app.post("/api/tickets/:id/approve", requireRole('admin'), async (req, res) => {
     const { id } = req.params;
     try {
       await updateTicket(id, `UPDATE support_tickets SET fix_status = 'approved', approved_at = NOW(), updated_at = NOW() WHERE id = $1`, [id]);
@@ -103,7 +103,7 @@ module.exports = function (app, ctx) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post("/api/tickets/:id/reject", async (req, res) => {
+  app.post("/api/tickets/:id/reject", requireRole('admin'), async (req, res) => {
     const { id } = req.params;
     const { reason } = req.body;
     try {

@@ -4,7 +4,7 @@
 const vault = require('../lib/credential-vault');
 
 module.exports = function (app, ctx) {
-  const { requireAdmin } = ctx;
+  const { requireAdmin, requireRole } = ctx;
 
   // List all credentials (metadata only)
   app.get('/api/credentials', requireAdmin, (req, res) => {
@@ -27,7 +27,7 @@ module.exports = function (app, ctx) {
   });
 
   // Add new credential
-  app.post('/api/credentials', requireAdmin, (req, res) => {
+  app.post('/api/credentials', requireRole('editor'), (req, res) => {
     try {
       const { name, type, host, port, username, secret, tags } = req.body;
       if (!name || !type || !secret) return res.status(400).json({ error: 'name, type, and secret are required' });
@@ -39,7 +39,7 @@ module.exports = function (app, ctx) {
   });
 
   // Update credential
-  app.put('/api/credentials/:id', requireAdmin, (req, res) => {
+  app.put('/api/credentials/:id', requireRole('editor'), (req, res) => {
     try {
       const ok = vault.updateCredential(req.params.id, req.body);
       if (!ok) return res.status(404).json({ error: 'Credential not found' });
@@ -50,7 +50,7 @@ module.exports = function (app, ctx) {
   });
 
   // Delete credential
-  app.delete('/api/credentials/:id', requireAdmin, (req, res) => {
+  app.delete('/api/credentials/:id', requireRole('editor'), (req, res) => {
     try {
       const ok = vault.deleteCredential(req.params.id);
       if (!ok) return res.status(404).json({ error: 'Credential not found' });
@@ -61,7 +61,7 @@ module.exports = function (app, ctx) {
   });
 
   // Inject credential into terminal session (returns command to execute)
-  app.post('/api/credentials/:id/inject', requireAdmin, (req, res) => {
+  app.post('/api/credentials/:id/inject', requireRole('editor'), (req, res) => {
     try {
       const cred = vault.getCredential(req.params.id);
       if (!cred) return res.status(404).json({ error: 'Credential not found' });
@@ -70,7 +70,7 @@ module.exports = function (app, ctx) {
       switch (cred.type) {
         case 'ssh_key': {
           // Write temp key, return SSH command
-          const tmpKey = require('path').join(require('os').tmpdir(), `chester-ssh-${cred.id}.pem`);
+          const tmpKey = require('path').join(require('os').tmpdir(), `bulwark-ssh-${cred.id}.pem`);
           require('fs').writeFileSync(tmpKey, cred.secret, { mode: 0o600 });
           const port = cred.port ? `-p ${cred.port} ` : '';
           const user = cred.username ? `${cred.username}@` : '';

@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { execCommand } = require("../lib/exec");
 const { getProjectPool, readProjects } = require("../lib/db");
+const { askAI, askAIJSON, getAICommand } = require("../lib/ai");
 
 const DATA_DIR = path.join(__dirname, "..", "data");
 const HISTORY_FILE = path.join(DATA_DIR, "query-history.json");
@@ -19,7 +20,7 @@ function writeJSON(file, data) {
 }
 
 module.exports = function (app, ctx) {
-  const { pool, vpsPool, requireAdmin, REPO_DIR } = ctx;
+  const { pool, vpsPool, requireAdmin, requireRole, REPO_DIR } = ctx;
 
   // Resolve which pool to use — project takes priority over legacy pool param
   function getPool(req) {
@@ -173,7 +174,7 @@ module.exports = function (app, ctx) {
   });
 
   // ── Execute SQL ──────────────────────────────────────────────────────────
-  app.post("/api/db/query", requireAdmin, async (req, res) => {
+  app.post("/api/db/query", requireRole('editor'), async (req, res) => {
     const p = getPool(req);
     if (!p) return res.json({ error: "No database connection", degraded: true });
     const { sql } = req.body;
@@ -183,8 +184,11 @@ module.exports = function (app, ctx) {
     const isDDL = /^(DROP|TRUNCATE|ALTER|CREATE)\s/i.test(sql.trim());
     const isDML = /^(INSERT|UPDATE|DELETE)\s/i.test(sql.trim());
 
-    if (isDDL && req.query.allow_ddl !== "true") {
-      return res.status(403).json({ error: "DDL requires ?allow_ddl=true confirmation", type: "ddl_blocked" });
+    if (isDDL) {
+      // DDL requires admin role
+      const userLevel = require('../lib/rbac').getRoleLevel(req.user?.role);
+      if (userLevel < 3) return res.status(403).json({ error: "DDL requires admin role", type: "ddl_blocked" });
+      if (req.query.allow_ddl !== "true") return res.status(403).json({ error: "DDL requires ?allow_ddl=true confirmation", type: "ddl_blocked" });
     }
 
     const start = Date.now();
@@ -418,7 +422,7 @@ module.exports = function (app, ctx) {
   });
 
   // Run a migration
-  app.post("/api/db/migrations/run", requireAdmin, async (req, res) => {
+  app.post("/api/db/migrations/run", requireRole('admin'), async (req, res) => {
     const p = getPool(req);
     if (!p) return res.json({ error: "No database connection", degraded: true });
     const { name } = req.body;
@@ -444,7 +448,7 @@ module.exports = function (app, ctx) {
   });
 
   // Docker test-run a migration
-  app.post("/api/db/migrations/test", requireAdmin, async (req, res) => {
+  app.post("/api/db/migrations/test", requireRole('editor'), async (req, res) => {
     const { name, sql: rawSql } = req.body;
     let migrationSql = rawSql;
 
@@ -455,7 +459,7 @@ module.exports = function (app, ctx) {
     }
     if (!migrationSql) return res.status(400).json({ error: "Migration SQL required" });
 
-    const containerName = "chester-migration-test-" + Date.now();
+    const containerName = "bulwark-migration-test-" + Date.now();
     const containerPort = 54320 + Math.floor(Math.random() * 100);
 
     try {
@@ -538,7 +542,7 @@ module.exports = function (app, ctx) {
   });
 
   // Schema diff
-  app.post("/api/db/migrations/diff", requireAdmin, async (req, res) => {
+  app.post("/api/db/migrations/diff", requireRole('editor'), async (req, res) => {
     const p = getPool(req);
     if (!p) return res.json({ error: "No database connection", degraded: true });
 
@@ -609,7 +613,7 @@ module.exports = function (app, ctx) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post("/api/db/backup", requireAdmin, async (req, res) => {
+  app.post("/api/db/backup", requireRole('editor'), async (req, res) => {
     const dbUrl = resolveDbUrl(req);
     if (!dbUrl) return res.status(400).json({ error: "No database URL configured for this project" });
 
@@ -634,7 +638,7 @@ module.exports = function (app, ctx) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post("/api/db/backup/restore", requireAdmin, async (req, res) => {
+  app.post("/api/db/backup/restore", requireRole('admin'), async (req, res) => {
     const { filename } = req.body;
     if (!filename) return res.status(400).json({ error: "Filename required" });
     const filepath = path.join(BACKUPS_DIR, filename);
@@ -656,7 +660,7 @@ module.exports = function (app, ctx) {
   });
 
   // Backup delete
-  app.delete("/api/db/backups/:name", requireAdmin, (req, res) => {
+  app.delete("/api/db/backups/:name", requireRole('admin'), (req, res) => {
     const filepath = path.join(BACKUPS_DIR, req.params.name);
     if (!fs.existsSync(filepath)) return res.status(404).json({ error: "File not found" });
     try {
@@ -681,7 +685,7 @@ module.exports = function (app, ctx) {
     res.json({ queries: readJSON(SAVED_FILE, []) });
   });
 
-  app.post("/api/db/query/save", requireAdmin, (req, res) => {
+  app.post("/api/db/query/save", requireRole('editor'), (req, res) => {
     const { name, sql } = req.body;
     if (!name || !sql) return res.status(400).json({ error: "Name and SQL required" });
     const saved = readJSON(SAVED_FILE, []);
@@ -690,7 +694,7 @@ module.exports = function (app, ctx) {
     res.json({ success: true });
   });
 
-  app.delete("/api/db/query/saved/:index", requireAdmin, (req, res) => {
+  app.delete("/api/db/query/saved/:index", requireRole('editor'), (req, res) => {
     const idx = parseInt(req.params.index);
     const saved = readJSON(SAVED_FILE, []);
     if (idx >= 0 && idx < saved.length) {
@@ -840,7 +844,7 @@ Return this exact JSON structure:
   });
 
   // ── AI Generate Role SQL ────────────────────────────────────────────────
-  app.post("/api/db/roles/ai/generate", requireAdmin, async (req, res) => {
+  app.post("/api/db/roles/ai/generate", requireRole('editor'), async (req, res) => {
     const { description } = req.body;
     if (!description) return res.status(400).json({ error: "Description required" });
     const p = getPool(req);
@@ -855,40 +859,17 @@ Available tables: ${tableList}
 
 Return ONLY the SQL commands (CREATE ROLE, GRANT, etc.), no markdown, no explanation. Follow least-privilege principle.`;
 
-      const result = await execCommand(
-        `claude --print "${prompt.replace(/"/g, '\\"')}"`,
-        { timeout: 30000 }
-      );
-      const sql = (result.stdout || "").trim().replace(/^```sql\n?/i, "").replace(/\n?```$/i, "").trim();
+      const raw = await askAI(prompt, { timeout: 30000 });
+      const sql = raw.replace(/^```sql\n?/i, "").replace(/\n?```$/i, "").trim();
       res.json({ sql, description });
     } catch (e) { res.json({ error: "AI unavailable: " + e.message }); }
   });
 
-  // Helper: ask Claude and parse JSON response
-  async function askClaudeJSON(prompt) {
-    try {
-      const result = await execCommand(
-        `claude --print "${prompt.replace(/"/g, '\\"').replace(/\n/g, '\\n')}"`,
-        { timeout: 45000 }
-      );
-      const raw = (result.stdout || "").trim();
-      // Extract JSON from response (may have ```json wrapper)
-      const jsonStr = raw.replace(/^```json\n?/i, "").replace(/\n?```$/i, "").trim();
-      try {
-        return JSON.parse(jsonStr);
-      } catch {
-        // Try to find JSON object in response
-        const match = jsonStr.match(/\{[\s\S]*\}/);
-        if (match) return JSON.parse(match[0]);
-        return { error: "Could not parse AI response", raw: raw.substring(0, 500) };
-      }
-    } catch (e) {
-      return { error: "AI unavailable: " + e.message };
-    }
-  }
+  // Use shared AI wrapper (supports Claude CLI, Codex CLI, or none)
+  var askClaudeJSON = askAIJSON;
 
   // ── Claude SQL Assistant ─────────────────────────────────────────────────
-  app.post("/api/db/claude/generate", requireAdmin, async (req, res) => {
+  app.post("/api/db/claude/generate", requireRole('editor'), async (req, res) => {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ error: "Prompt required" });
 
@@ -912,14 +893,11 @@ Return ONLY the SQL commands (CREATE ROLE, GRANT, etc.), no markdown, no explana
     const fullPrompt = `You are a PostgreSQL expert. Generate ONLY the SQL query (no explanation, no markdown) for this request:\n\n"${prompt}"\n\nAvailable tables and columns:\n${tableContext}\n\nReturn ONLY the SQL query.`;
 
     try {
-      const result = await execCommand(
-        `claude --print "${fullPrompt.replace(/"/g, '\\"')}"`,
-        { timeout: 30000 }
-      );
-      const sql = (result.stdout || "").trim().replace(/^```sql\n?/i, "").replace(/\n?```$/i, "").trim();
+      const raw = await askAI(fullPrompt, { timeout: 30000 });
+      const sql = raw.replace(/^```sql\n?/i, "").replace(/\n?```$/i, "").trim();
       res.json({ sql, prompt });
     } catch (e) {
-      res.json({ error: "Claude CLI not available: " + e.message, prompt });
+      res.json({ error: "AI CLI not available: " + e.message, prompt });
     }
   });
 };

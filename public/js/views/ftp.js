@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — FTP Management View
+ * Bulwark v2.1 — FTP Management View
  * Service status toggle, user management, active sessions
  */
 (function () {

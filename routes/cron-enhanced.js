@@ -4,7 +4,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { askAI } = require('../lib/ai');
 const crypto = require('crypto');
 
 const DATA = path.join(__dirname, '..', 'data');
@@ -65,7 +65,7 @@ function nextRun(expr) {
 }
 
 module.exports = function (app, ctx) {
-  const { requireAdmin, execCommand, REPO_DIR } = ctx;
+  const { requireAdmin, requireRole, execCommand, REPO_DIR } = ctx;
 
   // List all jobs
   app.get('/api/cron/jobs', requireAdmin, (req, res) => {
@@ -90,7 +90,7 @@ module.exports = function (app, ctx) {
   });
 
   // Create/update job
-  app.post('/api/cron/jobs', requireAdmin, (req, res) => {
+  app.post('/api/cron/jobs', requireRole('editor'), (req, res) => {
     const jobs = readJSON(JOBS_PATH, []);
     const { id, name, schedule, command, description, category, tags } = req.body;
     if (!schedule || !command) return res.status(400).json({ error: 'schedule and command required' });
@@ -117,7 +117,7 @@ module.exports = function (app, ctx) {
   });
 
   // Toggle job
-  app.post('/api/cron/jobs/:id/toggle', requireAdmin, (req, res) => {
+  app.post('/api/cron/jobs/:id/toggle', requireRole('editor'), (req, res) => {
     const jobs = readJSON(JOBS_PATH, []);
     const job = jobs.find(j => j.id === req.params.id);
     if (!job) return res.status(404).json({ error: 'Job not found' });
@@ -128,7 +128,7 @@ module.exports = function (app, ctx) {
   });
 
   // Delete job
-  app.delete('/api/cron/jobs/:id', requireAdmin, (req, res) => {
+  app.delete('/api/cron/jobs/:id', requireRole('editor'), (req, res) => {
     let jobs = readJSON(JOBS_PATH, []);
     const before = jobs.length;
     jobs = jobs.filter(j => j.id !== req.params.id);
@@ -137,7 +137,7 @@ module.exports = function (app, ctx) {
   });
 
   // Run job manually
-  app.post('/api/cron/jobs/:id/run', requireAdmin, async (req, res) => {
+  app.post('/api/cron/jobs/:id/run', requireRole('editor'), async (req, res) => {
     const jobs = readJSON(JOBS_PATH, []);
     const job = jobs.find(j => j.id === req.params.id);
     if (!job) return res.status(404).json({ error: 'Job not found' });
@@ -203,7 +203,7 @@ module.exports = function (app, ctx) {
   });
 
   // AI: Natural language to cron
-  app.post('/api/cron/ai-parse', requireAdmin, async (req, res) => {
+  app.post('/api/cron/ai-parse', requireRole('editor'), async (req, res) => {
     try {
       const { text } = req.body;
       if (!text) return res.status(400).json({ error: 'text required' });
@@ -214,19 +214,7 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ schedule: cached.response.trim(), cached: true });
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 15000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
+      const result = await askAI(prompt, { timeout: 15000 });
 
       const schedule = result.trim().split('\n')[0].replace(/[`"']/g, '').trim();
       if (/^[\d*\/,\-]+\s+[\d*\/,\-]+\s+[\d*\/,\-]+\s+[\d*\/,\-]+\s+[\d*\/,\-]+$/.test(schedule)) {
@@ -251,19 +239,7 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ analysis: cached.response, cached: true });
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
+      const result = await askAI(prompt, { timeout: 20000 });
 
       const analysis = result.trim() || 'Analysis unavailable.';
       neuralCache.semanticSet(prompt, analysis);

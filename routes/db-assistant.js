@@ -215,7 +215,7 @@ module.exports = function (app, ctx) {
         if (proj) projectName = proj.name;
       }
 
-      const systemPrompt = `You are an expert PostgreSQL DBA and AI database assistant built into Chester Dev Monitor's DB Studio.
+      const systemPrompt = `You are an expert PostgreSQL DBA and AI database assistant built into Bulwark's DB Studio.
 You are connected to project "${projectName}", database "${dbInfo.name}" running ${dbInfo.ver.split(" ").slice(0, 2).join(" ")}.
 
 FULL SCHEMA (${schema.tables.length} tables):
@@ -247,31 +247,12 @@ INSTRUCTIONS:
         (conversationCtx ? "Recent conversation:\n" + conversationCtx + "\n\n" : "") +
         "User: " + message;
 
-      // Pipe prompt directly to Claude CLI stdin (no temp file)
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = require("child_process").spawn("claude", ["--print"], {
-          stdio: ["pipe", "pipe", "pipe"],
-          shell: true,
-          timeout: 120000,
-          env: cleanEnv,
-        });
-        let stdout = "", stderr = "";
-        child.stdout.on("data", d => { stdout += d; });
-        child.stderr.on("data", d => { stderr += d; });
-        child.on("close", code => resolve({ stdout, stderr, code }));
-        child.on("error", reject);
-        child.stdin.on("error", () => {}); // prevent unhandled write EOF crash
-        child.stdin.write(fullPrompt);
-        child.stdin.end();
-      });
+      const { askAI } = require("../lib/ai");
+      const response = await askAI(fullPrompt, { timeout: 120000 });
 
-      if (result.code !== 0 && !result.stdout) {
-        return res.json({ error: "Claude CLI error: " + (result.stderr || "process exited " + result.code) });
+      if (!response || response === 'No response from AI') {
+        return res.json({ error: "AI unavailable or returned no response" });
       }
-
-      const response = result.stdout.trim();
 
       // Extract SQL blocks for one-click execution
       const sqlBlocks = [];

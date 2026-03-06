@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Logs View
+ * Bulwark v2.1 — Logs View
  * Service selector, log output area, auto-scroll
  */
 (function () {
@@ -21,12 +21,13 @@
               '<div class="form-group" style="margin:0;flex:1;min-width:160px">' +
                 '<label class="form-label" style="margin-bottom:4px;font-size:11px">Service</label>' +
                 '<select id="log-service" class="form-input" onchange="fetchLogs()">' +
+                  '<option value="bulwark">Bulwark</option>' +
+                  '<option value="system">System</option>' +
                   '<option value="pm2">PM2</option>' +
                   '<option value="nginx">Nginx</option>' +
-                  '<option value="system">System</option>' +
-                  '<option value="auth">Auth</option>' +
-                  '<option value="postgres">PostgreSQL</option>' +
                   '<option value="docker">Docker</option>' +
+                  '<option value="postgres">PostgreSQL</option>' +
+                  '<option value="auth">Auth</option>' +
                 '</select>' +
               '</div>' +
               '<div class="form-group" style="margin:0;min-width:80px">' +

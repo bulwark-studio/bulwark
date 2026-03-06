@@ -1,8 +1,15 @@
 {
-  "name": "chester-dev-monitor",
-  "version": "1.0.0",
-  "description": "Dev server monitor — ticket pipeline, Claude activity, real-time logs",
+  "name": "bulwark",
+  "version": "2.1.0",
+  "description": "AI-powered, self-hosted server management platform",
   "main": "server.js",
+  "homepage": "https://bulwark.studio",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/autopilotaitech/bulwark.git"
+  },
+  "license": "AGPL-3.0",
+  "keywords": ["devops", "server-management", "self-hosted", "ai", "docker", "terminal", "monitoring", "dashboard"],
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"

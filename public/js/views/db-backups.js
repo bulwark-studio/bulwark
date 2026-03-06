@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.1 — Backup Intelligence Center
+ * Bulwark v2.1 — Backup Intelligence Center
  * AI-powered backup strategy, disaster recovery analysis, retention management
  */
 (function () {

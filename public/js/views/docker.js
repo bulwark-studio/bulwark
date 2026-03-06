@@ -22,6 +22,7 @@
     show: function () {
       this.init();
       checkDocker();
+      Views.docker.runAI(false);
       refreshTimer = setInterval(refreshActive, 10000);
     },
     hide: function () {
@@ -37,8 +38,8 @@
         '<div class="briefing-card glass-card">' +
           '<div class="briefing-header">' +
             '<div class="briefing-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5" width="22" height="22"><rect x="2" y="10" width="5" height="5"/><rect x="9" y="10" width="5" height="5"/><rect x="16" y="10" width="5" height="5"/><rect x="5.5" y="4" width="5" height="5"/><rect x="12.5" y="4" width="5" height="5"/><path d="M0 18c3 4 18 4 24 0"/></svg></div>' +
-            '<div class="briefing-title">Docker Fleet Intelligence</div>' +
-            '<button class="btn btn-sm btn-ghost" onclick="Views.docker.runAI()" id="docker-ai-btn">Analyze</button>' +
+            '<div class="briefing-title">Docker Fleet Intelligence <span id="docker-ai-freshness"></span></div>' +
+            '<button class="btn btn-sm btn-ghost" onclick="Views.docker.runAI(true)" id="docker-ai-btn">Analyze</button>' +
           '</div>' +
           '<div class="briefing-body" id="docker-ai-body"><span class="text-secondary">Click Analyze for AI-powered container fleet insights.</span></div>' +
         '</div>' +
@@ -52,7 +53,7 @@
         tabBtn('images', 'Images') +
         tabBtn('networks', 'Networks & Volumes') +
         tabBtn('system', 'System') +
-        tabBtn('chester', 'AI Chester') +
+        tabBtn('bulwark-ai', 'AI Assistant') +
       '</div>' +
       // Tab panels
       '<div class="docker-tab-panel" id="docker-panel-containers"></div>' +
@@ -60,7 +61,7 @@
       '<div class="docker-tab-panel" id="docker-panel-images" style="display:none"></div>' +
       '<div class="docker-tab-panel" id="docker-panel-networks" style="display:none"></div>' +
       '<div class="docker-tab-panel" id="docker-panel-system" style="display:none"></div>' +
-      '<div class="docker-tab-panel" id="docker-panel-chester" style="display:none"></div>' +
+      '<div class="docker-tab-panel" id="docker-panel-bulwark-ai" style="display:none"></div>' +
     '</div>';
   }
 
@@ -71,14 +72,14 @@
   Views.docker.switchTab = function (tab) {
     activeTab = tab;
     document.querySelectorAll('.docker-tab-btn').forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-tab') === tab); });
-    ['containers', 'deploy', 'images', 'networks', 'system', 'chester'].forEach(function (t) {
+    ['containers', 'deploy', 'images', 'networks', 'system', 'bulwark-ai'].forEach(function (t) {
       var p = document.getElementById('docker-panel-' + t);
       if (p) p.style.display = t === tab ? '' : 'none';
     });
     if (tab === 'images' && images.length === 0) loadImages();
     if (tab === 'networks') loadNetworksVolumes();
     if (tab === 'system') loadSystem();
-    if (tab === 'chester') renderChester();
+    if (tab === 'bulwark-ai') renderBulwark();
   };
 
   // ── Docker Status Check ──
@@ -95,16 +96,236 @@
     }).catch(function () { renderUnavailable(); });
   }
 
-  function renderUnavailable() {
+  function renderUnavailable(statusError) {
     var el = document.getElementById('docker-panel-containers');
     if (!el) return;
-    el.innerHTML = '<div class="glass-card" style="text-align:center;padding:40px">' +
-      '<svg viewBox="0 0 48 48" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5" width="48" height="48" style="margin-bottom:12px"><rect x="4" y="20" width="10" height="10"/><rect x="18" y="20" width="10" height="10"/><rect x="32" y="20" width="10" height="10"/><rect x="11" y="8" width="10" height="10"/><rect x="25" y="8" width="10" height="10"/><path d="M0 36c6 8 36 8 48 0"/></svg>' +
-      '<h3 style="color:var(--text-primary);margin-bottom:8px">Docker Not Available</h3>' +
-      '<p class="text-secondary">Docker Engine is not running or the socket is not accessible.</p>' +
-      '<p class="text-tertiary" style="font-size:11px;margin-top:8px">Expected socket: ' + esc(navigator.platform.indexOf('Win') >= 0 ? '\\\\.\\pipe\\docker_engine' : '/var/run/docker.sock') + '</p>' +
-    '</div>';
+    var isWin = navigator.platform.indexOf('Win') >= 0;
+    var defaultSocket = isWin ? '\\\\.\\pipe\\docker_engine' : '/var/run/docker.sock';
+
+    el.innerHTML =
+      '<div class="docker-setup-wizard">' +
+
+      // Header
+      '<div class="glass-card" style="text-align:center;padding:32px 24px 24px">' +
+        '<svg viewBox="0 0 48 48" fill="none" stroke="var(--cyan)" stroke-width="1.5" width="56" height="56" style="margin-bottom:16px;opacity:0.8"><rect x="4" y="20" width="10" height="10"/><rect x="18" y="20" width="10" height="10"/><rect x="32" y="20" width="10" height="10"/><rect x="11" y="8" width="10" height="10"/><rect x="25" y="8" width="10" height="10"/><path d="M0 36c6 8 36 8 48 0"/></svg>' +
+        '<h2 style="color:var(--text-primary);margin:0 0 6px;font-size:20px">Connect to Docker</h2>' +
+        '<p class="text-secondary" style="font-size:13px;margin:0">Add a local or remote Docker engine to manage containers, images, and networks.</p>' +
+      '</div>' +
+
+      // Connection Type Picker
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">' +
+
+        // Local
+        '<div class="glass-card docker-conn-card" id="docker-conn-local" onclick="Views.docker.pickConn(\'local\')" style="cursor:pointer;padding:20px;border:2px solid rgba(34,211,238,0.3);transition:all 0.2s">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22d3ee" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>' +
+            '<span style="color:#22d3ee;font-weight:600;font-size:14px">Local Docker</span>' +
+          '</div>' +
+          '<p class="text-secondary" style="font-size:12px;margin:0;line-height:1.5">Docker Desktop or Docker Engine running on this machine. Connects via Unix socket or Windows named pipe.</p>' +
+          '<div style="margin-top:10px;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);background:rgba(0,0,0,0.2);padding:6px 10px;border-radius:6px">' + esc(defaultSocket) + '</div>' +
+        '</div>' +
+
+        // Remote
+        '<div class="glass-card docker-conn-card" id="docker-conn-remote" onclick="Views.docker.pickConn(\'remote\')" style="cursor:pointer;padding:20px;border:2px solid transparent;transition:all 0.2s">' +
+          '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">' +
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-secondary)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
+            '<span style="color:var(--text-primary);font-weight:600;font-size:14px">Remote Docker</span>' +
+          '</div>' +
+          '<p class="text-secondary" style="font-size:12px;margin:0;line-height:1.5">Docker Engine on a remote server. Connects via TCP (port 2375 unencrypted, 2376 TLS).</p>' +
+          '<div style="margin-top:10px;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);background:rgba(0,0,0,0.2);padding:6px 10px;border-radius:6px">tcp://your-server:2375</div>' +
+        '</div>' +
+      '</div>' +
+
+      // Connection Form
+      '<div class="glass-card" id="docker-conn-form" style="margin-top:12px;padding:20px">' +
+        // Local form (default)
+        '<div id="docker-form-local">' +
+          '<label style="display:block;margin-bottom:12px">' +
+            '<span class="text-secondary" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">Socket Path</span>' +
+            '<input type="text" id="docker-socket-input" class="form-input" value="' + esc(defaultSocket) + '" placeholder="' + esc(defaultSocket) + '" style="font-family:var(--font-mono);font-size:12px">' +
+          '</label>' +
+        '</div>' +
+        // Remote form (hidden)
+        '<div id="docker-form-remote" style="display:none">' +
+          '<div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:12px">' +
+            '<label>' +
+              '<span class="text-secondary" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">Host / IP</span>' +
+              '<input type="text" id="docker-host-input" class="form-input" placeholder="192.168.1.100 or docker.example.com" style="font-family:var(--font-mono);font-size:12px">' +
+            '</label>' +
+            '<label>' +
+              '<span class="text-secondary" style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;display:block;margin-bottom:4px">Port</span>' +
+              '<input type="number" id="docker-port-input" class="form-input" value="2375" placeholder="2375" style="font-family:var(--font-mono);font-size:12px">' +
+            '</label>' +
+          '</div>' +
+        '</div>' +
+
+        // Action buttons
+        '<div style="display:flex;gap:10px;align-items:center">' +
+          '<button class="btn btn-cyan" id="docker-test-btn" onclick="Views.docker.testConnection()" style="min-width:140px">Test Connection</button>' +
+          '<button class="btn btn-ghost" id="docker-save-btn" onclick="Views.docker.saveConnection()" style="display:none;min-width:100px">Save & Connect</button>' +
+          '<span id="docker-test-status" style="font-size:12px;font-family:var(--font-mono)"></span>' +
+        '</div>' +
+      '</div>' +
+
+      // AI Diagnosis Panel (hidden until error)
+      '<div id="docker-ai-diagnosis" style="display:none;margin-top:12px"></div>' +
+
+      '</div>';
   }
+
+  // Connection type picker
+  Views.docker.pickConn = function (type) {
+    var local = document.getElementById('docker-conn-local');
+    var remote = document.getElementById('docker-conn-remote');
+    var formLocal = document.getElementById('docker-form-local');
+    var formRemote = document.getElementById('docker-form-remote');
+    if (!local || !remote) return;
+
+    if (type === 'local') {
+      local.style.borderColor = 'rgba(34,211,238,0.3)';
+      remote.style.borderColor = 'transparent';
+      local.querySelector('svg').setAttribute('stroke', '#22d3ee');
+      remote.querySelector('svg').setAttribute('stroke', 'var(--text-secondary)');
+      if (formLocal) formLocal.style.display = '';
+      if (formRemote) formRemote.style.display = 'none';
+    } else {
+      local.style.borderColor = 'transparent';
+      remote.style.borderColor = 'rgba(34,211,238,0.3)';
+      local.querySelector('svg').setAttribute('stroke', 'var(--text-secondary)');
+      remote.querySelector('svg').setAttribute('stroke', '#22d3ee');
+      if (formLocal) formLocal.style.display = 'none';
+      if (formRemote) formRemote.style.display = '';
+    }
+    // Reset status
+    var s = document.getElementById('docker-test-status');
+    if (s) s.innerHTML = '';
+    var saveBtn = document.getElementById('docker-save-btn');
+    if (saveBtn) saveBtn.style.display = 'none';
+    // Hide diagnosis
+    var diag = document.getElementById('docker-ai-diagnosis');
+    if (diag) diag.style.display = 'none';
+  };
+
+  // Test connection
+  Views.docker.testConnection = function () {
+    var btn = document.getElementById('docker-test-btn');
+    var status = document.getElementById('docker-test-status');
+    var saveBtn = document.getElementById('docker-save-btn');
+    if (!btn) return;
+
+    var isRemote = document.getElementById('docker-form-remote').style.display !== 'none';
+    var config = {};
+    if (isRemote) {
+      config.type = 'remote';
+      config.host = (document.getElementById('docker-host-input') || {}).value || '';
+      config.port = parseInt((document.getElementById('docker-port-input') || {}).value) || 2375;
+      if (!config.host) { if (status) status.innerHTML = '<span style="color:#ff6b2b">Enter a host address</span>'; return; }
+    } else {
+      config.type = 'local';
+      config.socketPath = (document.getElementById('docker-socket-input') || {}).value || '';
+    }
+    config.platform = navigator.platform;
+
+    btn.disabled = true;
+    btn.textContent = 'Testing...';
+    if (status) status.innerHTML = '<span class="text-secondary">Connecting to Docker Engine...</span>';
+
+    fetch('/api/docker/test-connection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(config)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      btn.disabled = false;
+      btn.textContent = 'Test Connection';
+
+      if (d.success) {
+        if (status) status.innerHTML = '<span style="color:#22d3ee">✓ Connected — Docker ' + esc(d.version) + ' (' + esc(d.os) + ')</span>';
+        if (saveBtn) saveBtn.style.display = '';
+        // Store tested config for save
+        Views.docker._testedConfig = config;
+        // Hide diagnosis on success
+        var diag = document.getElementById('docker-ai-diagnosis');
+        if (diag) diag.style.display = 'none';
+      } else {
+        if (status) status.innerHTML = '<span style="color:#ff6b2b">✗ ' + esc(d.error || 'Connection failed') + '</span>';
+        if (saveBtn) saveBtn.style.display = 'none';
+        // Auto-trigger AI diagnosis
+        Views.docker.diagnoseError(d.error || 'Connection failed', config);
+      }
+    }).catch(function (e) {
+      btn.disabled = false;
+      btn.textContent = 'Test Connection';
+      if (status) status.innerHTML = '<span style="color:#ff6b2b">✗ Network error</span>';
+      Views.docker.diagnoseError(e.message || 'Network error', config);
+    });
+  };
+
+  // AI diagnose connection error
+  Views.docker.diagnoseError = function (error, config) {
+    var panel = document.getElementById('docker-ai-diagnosis');
+    if (!panel) return;
+
+    panel.style.display = '';
+    panel.innerHTML =
+      '<div class="briefing-card">' +
+        '<div class="briefing-header">' +
+          '<div class="briefing-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a7 7 0 0 0-7 7c0 2.4 1.2 4.5 3 5.7V17a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-2.3c1.8-1.2 3-3.3 3-5.7a7 7 0 0 0-7-7z"/><path d="M9 21h6"/></svg> AI Troubleshooter</div>' +
+        '</div>' +
+        '<div class="briefing-text" id="docker-diag-text" style="min-height:40px">' +
+          '<div class="briefing-shimmer" style="width:85%"></div><div class="briefing-shimmer" style="width:60%"></div><div class="briefing-shimmer" style="width:70%"></div>' +
+        '</div>' +
+      '</div>';
+
+    fetch('/api/docker/ai-diagnose', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        error: error,
+        type: config.type,
+        socketPath: config.socketPath,
+        host: config.host,
+        port: config.port,
+        platform: navigator.platform
+      })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      var el = document.getElementById('docker-diag-text');
+      if (el) {
+        el.style.whiteSpace = 'pre-wrap';
+        el.style.lineHeight = '1.6';
+        el.textContent = d.diagnosis || 'Unable to diagnose the issue.';
+      }
+    }).catch(function () {
+      var el = document.getElementById('docker-diag-text');
+      if (el) el.textContent = 'AI diagnosis unavailable. Check that Docker is installed and the daemon is running.';
+    });
+  };
+
+  // Save connection
+  Views.docker.saveConnection = function () {
+    var config = Views.docker._testedConfig;
+    if (!config) return;
+
+    var saveData = {};
+    if (config.type === 'remote') {
+      saveData = { host: config.host, port: config.port, socketPath: null };
+    } else {
+      saveData = { socketPath: config.socketPath, host: null, port: null };
+    }
+
+    fetch('/api/docker/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(saveData)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.success) {
+        Toast.success('Docker connection saved');
+        dockerAvailable = true;
+        checkDocker(); // Reload everything
+      } else {
+        Toast.error('Failed to save: ' + (d.error || 'Unknown error'));
+      }
+    }).catch(function () { Toast.error('Failed to save connection'); });
+  };
 
   function refreshActive() {
     if (!dockerAvailable) return;
@@ -449,15 +670,31 @@
   }
 
   // ── AI Analysis ──
-  Views.docker.runAI = function () {
+  Views.docker.runAI = function (force) {
     var btn = document.getElementById('docker-ai-btn');
     var body = document.getElementById('docker-ai-body');
     if (!btn || !body) return;
+    if (!force && window.AICache) {
+      var restored = window.AICache.restore('docker');
+      if (restored) {
+        body.textContent = restored.response;
+        var fb = document.getElementById('docker-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('docker');
+        return;
+      }
+    }
     btn.disabled = true; btn.textContent = 'Analyzing...';
     body.innerHTML = '<span class="text-secondary">Analyzing container fleet...</span>';
     fetch('/api/docker/ai-analysis').then(function (r) { return r.json(); }).then(function (d) {
       btn.disabled = false; btn.textContent = 'Analyze';
-      if (d.analysis) { typewriter(body, d.analysis); } else { body.innerHTML = '<span class="text-secondary">Analysis unavailable</span>'; }
+      if (d.analysis) {
+        typewriter(body, d.analysis);
+        if (window.AICache) {
+          window.AICache.set('docker', {}, d.analysis);
+          var fb = document.getElementById('docker-ai-freshness');
+          if (fb) fb.innerHTML = window.AICache.freshnessBadge('docker');
+        }
+      } else { body.innerHTML = '<span class="text-secondary">Analysis unavailable</span>'; }
     }).catch(function () { btn.disabled = false; btn.textContent = 'Analyze'; });
   };
 
@@ -568,53 +805,53 @@
       }).catch(function () { Toast.error('System prune failed'); });
   };
 
-  // ── AI Chester — Conversational Docker Management ──
-  var chesterInited = false;
-  var chesterHistory = [];
+  // ── AI Assistant — Conversational Docker Management ──
+  var bulwarkInited = false;
+  var bulwarkHistory = [];
 
-  function renderChester() {
-    var el = document.getElementById('docker-panel-chester');
+  function renderBulwark() {
+    var el = document.getElementById('docker-panel-bulwark-ai');
     if (!el) return;
-    if (!chesterInited) {
+    if (!bulwarkInited) {
       el.innerHTML =
-        '<div class="docker-chester">' +
-          '<div class="glass-card docker-chester-header">' +
+        '<div class="docker-bulwark">' +
+          '<div class="glass-card docker-bulwark-header">' +
             '<div style="display:flex;align-items:center;gap:10px">' +
-              '<div class="docker-chester-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="10"/><path d="M8 9h0M16 9h0M9 15c1.5 1.5 4.5 1.5 6 0"/></svg></div>' +
-              '<div><div style="color:var(--text-primary);font-weight:600;font-size:15px">Chester AI</div>' +
+              '<div class="docker-bulwark-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5" width="28" height="28"><circle cx="12" cy="12" r="10"/><path d="M8 9h0M16 9h0M9 15c1.5 1.5 4.5 1.5 6 0"/></svg></div>' +
+              '<div><div style="color:var(--text-primary);font-weight:600;font-size:15px">Bulwark AI</div>' +
               '<div class="text-tertiary" style="font-size:11px">Docker fleet intelligence — natural language container management</div></div>' +
             '</div>' +
           '</div>' +
-          '<div class="docker-chester-chat" id="chester-chat">' +
-            '<div class="chester-msg chester-system">I\'m Chester, your AI Docker assistant. Ask me anything about your containers, images, or fleet health. Try:<br>' +
-              '<span class="chester-suggestion" onclick="Views.docker.chesterSend(\'Show me container resource usage\')">Show me container resource usage</span>' +
-              '<span class="chester-suggestion" onclick="Views.docker.chesterSend(\'Which containers should I clean up?\')">Which containers should I clean up?</span>' +
-              '<span class="chester-suggestion" onclick="Views.docker.chesterSend(\'Analyze my Docker disk usage\')">Analyze my Docker disk usage</span>' +
-              '<span class="chester-suggestion" onclick="Views.docker.chesterSend(\'Are any containers unhealthy?\')">Are any containers unhealthy?</span>' +
+          '<div class="docker-bulwark-chat" id="bulwark-chat">' +
+            '<div class="bulwark-msg bulwark-system">I\'m Bulwark, your AI Docker assistant. Ask me anything about your containers, images, or fleet health. Try:<br>' +
+              '<span class="bulwark-suggestion" onclick="Views.docker.bulwarkSend(\'Show me container resource usage\')">Show me container resource usage</span>' +
+              '<span class="bulwark-suggestion" onclick="Views.docker.bulwarkSend(\'Which containers should I clean up?\')">Which containers should I clean up?</span>' +
+              '<span class="bulwark-suggestion" onclick="Views.docker.bulwarkSend(\'Analyze my Docker disk usage\')">Analyze my Docker disk usage</span>' +
+              '<span class="bulwark-suggestion" onclick="Views.docker.bulwarkSend(\'Are any containers unhealthy?\')">Are any containers unhealthy?</span>' +
             '</div>' +
           '</div>' +
-          '<div class="docker-chester-input">' +
-            '<input type="text" id="chester-input" placeholder="Ask Chester about your Docker fleet..." onkeydown="if(event.key===\'Enter\')Views.docker.chesterSend()" />' +
-            '<button class="btn btn-sm btn-cyan" onclick="Views.docker.chesterSend()" id="chester-send-btn">Send</button>' +
+          '<div class="docker-bulwark-input">' +
+            '<input type="text" id="bulwark-input" placeholder="Ask Bulwark about your Docker fleet..." onkeydown="if(event.key===\'Enter\')Views.docker.bulwarkSend()" />' +
+            '<button class="btn btn-sm btn-cyan" onclick="Views.docker.bulwarkSend()" id="bulwark-send-btn">Send</button>' +
           '</div>' +
         '</div>';
-      chesterInited = true;
+      bulwarkInited = true;
     }
   }
 
-  Views.docker.chesterSend = function (preset) {
-    var input = document.getElementById('chester-input');
-    var chat = document.getElementById('chester-chat');
-    var btn = document.getElementById('chester-send-btn');
+  Views.docker.bulwarkSend = function (preset) {
+    var input = document.getElementById('bulwark-input');
+    var chat = document.getElementById('bulwark-chat');
+    var btn = document.getElementById('bulwark-send-btn');
     var msg = preset || (input ? input.value.trim() : '');
     if (!msg || !chat) return;
     if (input) input.value = '';
 
     // Add user message
-    chat.innerHTML += '<div class="chester-msg chester-user">' + esc(msg) + '</div>';
+    chat.innerHTML += '<div class="bulwark-msg bulwark-user">' + esc(msg) + '</div>';
     var responseDiv = document.createElement('div');
-    responseDiv.className = 'chester-msg chester-assistant';
-    responseDiv.innerHTML = '<span class="text-secondary chester-thinking">Analyzing fleet...</span>';
+    responseDiv.className = 'bulwark-msg bulwark-assistant';
+    responseDiv.innerHTML = '<span class="text-secondary bulwark-thinking">Analyzing fleet...</span>';
     chat.appendChild(responseDiv);
     chat.scrollTop = chat.scrollHeight;
     if (btn) { btn.disabled = true; btn.textContent = '...'; }
@@ -638,20 +875,20 @@
       if (df.Images) context += 'Disk: Images=' + fmtBytes(sumSize(df.Images)) + ', Containers=' + fmtBytes(sumSize(df.Containers)) + ', Volumes=' + fmtBytes(sumVolSize(df.Volumes)) + '\n';
 
       // Conversation history for multi-turn
-      var historyStr = chesterHistory.slice(-6).map(function (h) { return h.role + ': ' + h.text; }).join('\n');
+      var historyStr = bulwarkHistory.slice(-6).map(function (h) { return h.role + ': ' + h.text; }).join('\n');
       var prompt = context + '\n' + (historyStr ? 'Previous conversation:\n' + historyStr + '\n\n' : '') +
-        'User asks: ' + msg + '\n\nRespond as Chester, a Docker AI assistant. Be concise (3-6 sentences). Reference specific container names, images, sizes. If the user asks to perform an action (prune, restart, stop), explain what would happen and which API endpoint to use. No markdown formatting.';
+        'User asks: ' + msg + '\n\nRespond as Bulwark, a Docker AI assistant. Be concise (3-6 sentences). Reference specific container names, images, sizes. If the user asks to perform an action (prune, restart, stop), explain what would happen and which API endpoint to use. No markdown formatting.';
 
-      chesterHistory.push({ role: 'user', text: msg });
+      bulwarkHistory.push({ role: 'user', text: msg });
 
-      return fetch('/api/docker/chester', {
+      return fetch('/api/docker/assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt })
       });
     }).then(function (r) { return r.json(); }).then(function (d) {
       var text = d.response || 'I couldn\'t analyze the fleet right now. Try again in a moment.';
-      chesterHistory.push({ role: 'chester', text: text });
+      bulwarkHistory.push({ role: 'bulwark-ai', text: text });
       responseDiv.innerHTML = '';
       typewriter(responseDiv, text);
       if (btn) { btn.disabled = false; btn.textContent = 'Send'; }

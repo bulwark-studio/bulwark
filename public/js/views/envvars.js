@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor — Environment Variables Intelligence
+ * Bulwark — Environment Variables Intelligence
  * AI security analysis, categorization, secret detection, .env export, comparison
  */
 (function () {
@@ -17,9 +17,9 @@
         '<div class="env-dashboard">' +
           // AI Analysis
           '<div class="env-ai-card" id="env-ai-card">' +
-            '<div class="env-ai-header"><div class="ai-dot"></div><span>Chester Env Security</span></div>' +
+            '<div class="env-ai-header"><div class="ai-dot"></div><span>Bulwark Env Security <span id="envvars-ai-freshness"></span></span></div>' +
             '<div class="env-ai-body" id="env-ai-body">Select an app and click analyze for AI security insights...</div>' +
-            '<button class="env-ai-btn" onclick="envAiAnalysis()">Analyze Security</button>' +
+            '<button class="env-ai-btn" onclick="envAiAnalysis(true)">Analyze Security</button>' +
           '</div>' +
           // Tabs
           '<div class="env-tabs">' +
@@ -35,7 +35,7 @@
           '<div id="env-tab-content"></div>' +
         '</div>';
     },
-    show: function () { loadApps(); },
+    show: function () { loadApps(); envAiAnalysis(false); },
     hide: function () {},
     update: function () {}
   };
@@ -374,14 +374,31 @@
       });
   };
 
-  window.envAiAnalysis = function () {
-    if (!currentApp) { Toast.warning('Select an app first'); return; }
+  window.envAiAnalysis = function (force) {
+    if (!currentApp) { if (force) Toast.warning('Select an app first'); return; }
     var body = document.getElementById('env-ai-body');
     if (!body) return;
+    if (!force && window.AICache) {
+      var restored = window.AICache.restore('envvars');
+      if (restored) {
+        body.textContent = restored.response;
+        var fb = document.getElementById('envvars-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('envvars');
+        return;
+      }
+    }
     body.innerHTML = 'Analyzing environment security...<span class="cursor-blink"></span>';
     fetch('/api/envvars/' + encodeURIComponent(currentApp) + '/ai-analysis')
       .then(function (r) { return r.json(); })
-      .then(function (d) { typewriter(body, d.analysis || 'No analysis available.'); })
+      .then(function (d) {
+        var text = d.analysis || 'No analysis available.';
+        typewriter(body, text);
+        if (window.AICache) {
+          window.AICache.set('envvars', {}, text);
+          var fb = document.getElementById('envvars-ai-freshness');
+          if (fb) fb.innerHTML = window.AICache.freshnessBadge('envvars');
+        }
+      })
       .catch(function () { body.textContent = 'Analysis unavailable.'; });
   };
 

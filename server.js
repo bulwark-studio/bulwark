@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // =============================================================================
-// Chester Dev Monitor v2.0 — Enterprise Server Management Platform
+// Bulwark v2.1 — Enterprise Server Management Platform
 // Express.js + Socket.IO | Port 3001
 //
 // Usage:
@@ -35,9 +35,12 @@ const { callAdapter } = require("./lib/adapter-client");
 const { getSystemInfo, collectMetrics, getDiskUsage } = require("./lib/metrics-collector");
 const uptimeStore = require("./lib/uptime-store");
 const neuralCache = require("./lib/neural-cache");
+const { requireRole, requireAction } = require("./lib/rbac");
+const audit = require("./lib/audit");
 
 // ── Express + Socket.IO setup ────────────────────────────────────────────────
 const PORT = process.env.MONITOR_PORT || 3001;
+const APP_NAME = process.env.APP_NAME || "Bulwark";
 const app = express();
 const server = http.createServer(app);
 const io = new SocketServer(server, { cors: { origin: false } });
@@ -45,6 +48,23 @@ const io = new SocketServer(server, { cors: { origin: false } });
 app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// ── Security Headers ──────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-XSS-Protection", "1; mode=block");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Content-Security-Policy",
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.socket.io https://cdn.jsdelivr.net; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data:; " +
+    "connect-src 'self' ws: wss:;"
+  );
+  next();
+});
 
 // ── Auth middleware ───────────────────────────────────────────────────────────
 function requireAuth(req, res, next) {
@@ -69,7 +89,7 @@ function requireAdmin(req, res, next) {
 const ctx = {
   pool, vpsPool, dbQuery, vpsQuery, io,
   execCommand, REPO_DIR, callAdapter,
-  requireAuth, requireAdmin,
+  requireAuth, requireAdmin, requireRole, requireAction,
   // These get populated by route modules:
   getTicketSummary: null,
   getRecentActivity: null,
@@ -86,23 +106,82 @@ require("./routes/auth")(app, ctx);
 
 // Protected routes (requireAuth applied globally after auth routes)
 app.use(requireAuth);
+app.use(audit.auditMiddleware);
 app.use(express.static(path.join(__dirname, "public")));
+
+// ── Audit log API ─────────────────────────────────────────────────────────────
+app.get("/api/audit", requireAdmin, (req, res) => {
+  const { user, action, from, to, limit, offset } = req.query;
+  res.json(audit.getLog({ user, action, from, to, limit: parseInt(limit) || 100, offset: parseInt(offset) || 0 }));
+});
+app.get("/api/audit/stats", requireAdmin, (req, res) => {
+  res.json(audit.getStats());
+});
+app.get("/api/audit/export", requireAdmin, (req, res) => {
+  const format = req.query.format || 'json';
+  const data = audit.getLog({ limit: 10000 });
+  if (format === 'csv') {
+    const header = 'timestamp,user,role,action,resource,method,ip,result\n';
+    const rows = data.entries.map(e => `${e.timestamp},${e.user},${e.role},"${e.action}",${e.resource},${e.method},${e.ip},${e.result}`).join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=audit-log.csv');
+    return res.send(header + rows);
+  }
+  res.setHeader('Content-Disposition', 'attachment; filename=audit-log.json');
+  res.json(data.entries);
+});
+
+// ── AI Provider Settings API ─────────────────────────────────────────────────
+const settingsFile = path.join(__dirname, "data", "settings.json");
+function loadSettings() {
+  try { if (fs_env.existsSync(settingsFile)) return JSON.parse(fs_env.readFileSync(settingsFile, "utf8")); } catch {}
+  return { aiProvider: "claude-cli" };
+}
+function saveSettings(s) {
+  const dir = path.dirname(settingsFile);
+  if (!fs_env.existsSync(dir)) fs_env.mkdirSync(dir, { recursive: true });
+  fs_env.writeFileSync(settingsFile, JSON.stringify(s, null, 2), "utf8");
+}
+
+app.get("/api/branding", (req, res) => { res.json({ name: APP_NAME, version: "2.1.0" }); });
+app.get("/api/settings", (req, res) => { res.json(loadSettings()); });
+app.put("/api/settings", requireAdmin, (req, res) => {
+  const current = loadSettings();
+  const updated = { ...current, ...req.body };
+  // Whitelist allowed keys
+  const allowed = { aiProvider: updated.aiProvider || "claude-cli" };
+  saveSettings(allowed);
+  res.json(allowed);
+});
+app.get("/api/settings/ai/detect", requireAdmin, async (req, res) => {
+  const results = {};
+  const { execCommand } = ctx;
+  for (const [name, cmd] of [["claude-cli", "claude --version"], ["codex-cli", "codex --version"]]) {
+    try {
+      const out = await execCommand(cmd);
+      results[name] = { installed: true, version: out.trim() };
+    } catch {
+      results[name] = { installed: false };
+    }
+  }
+  res.json(results);
+});
 
 require("./routes/system")(app, ctx);
 require("./routes/tickets")(app, ctx);
 require("./routes/claude")(app, ctx);
 require("./routes/servers")(app, ctx);
-require("./routes/docker")(app, ctx);
-require("./routes/databases")(app, ctx);
+// require("./routes/docker")(app, ctx);       // LEGACY adapter proxy — superseded by docker-direct.js
+// require("./routes/databases")(app, ctx);    // LEGACY adapter proxy — superseded by db-studio.js
 require("./routes/db-studio")(app, ctx);
 require("./routes/db-projects")(app, ctx);
 require("./routes/db-assistant")(app, ctx);
 require("./routes/briefing")(app, ctx);
 require("./routes/security")(app, ctx);
 require("./routes/ssl")(app, ctx);
-require("./routes/envvars")(app, ctx);
-require("./routes/files")(app, ctx);
-require("./routes/cron")(app, ctx);
+require("./routes/envvars")(app, ctx);        // LEGACY but has unique CRUD endpoints not in envvars-enhanced.js
+require("./routes/files")(app, ctx);          // LEGACY but has unique CRUD endpoints not in files-enhanced.js
+// require("./routes/cron")(app, ctx);         // LEGACY adapter proxy — superseded by cron-enhanced.js
 require("./routes/ftp")(app, ctx);
 require("./routes/notifications")(app, ctx);
 require("./routes/multi-server")(app, ctx);
@@ -170,7 +249,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("claude_run", ({ prompt }) => {
-    if (!isSocketAdmin(socket)) { socket.emit("claude_output", "\r\n[ERROR] Claude CLI requires admin role.\r\n"); return; }
+    const role = socket?.data?.session?.role;
+    if (role !== "admin" && role !== "editor") { socket.emit("claude_output", "\r\n[ERROR] AI requires editor role or higher.\r\n"); return; }
     if (prompt && ctx.runClaude) ctx.runClaude(prompt);
   });
 
@@ -228,12 +308,10 @@ uptimeStore.start();
 // ── Start ────────────────────────────────────────────────────────────────────
 const users = ensureDefaultAdmin();
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n  Chester Dev Monitor v2.0 running on http://0.0.0.0:${PORT}`);
+  console.log(`\n  Bulwark v2.1 running on http://0.0.0.0:${PORT}`);
   console.log(`  Dev DB: ${pool ? "connected" : "NOT connected (set DATABASE_URL)"}`);
   console.log(`  VPS DB: ${vpsPool ? "connected" : "NOT connected (set VPS_DATABASE_URL)"}`);
-  console.log(`  Users: ${users.length} (stored in users.json)`);
-  console.log(`  Repo: ${REPO_DIR}`);
-  console.log(`  PTY: ${pty ? "available" : "disabled"}`);
-  console.log(`  Routes: 16 modules loaded`);
-  console.log(`  Views: 22 sidebar panels\n`);
+  console.log(`  Users: ${users.length} | AI: ${loadSettings().aiProvider}`);
+  console.log(`  Repo: ${REPO_DIR} | PTY: ${pty ? "available" : "disabled"}`);
+  console.log(`  Routes: 28 modules | Views: 34 | Libs: 15\n`);
 });

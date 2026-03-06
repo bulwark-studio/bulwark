@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Chester Dev Monitor v2.0 — Layout
+   Bulwark v2.1 — Layout
    Sidebar (240px, collapsible groups) + Topbar + Content area
    ========================================================================== */
 
@@ -199,6 +199,8 @@
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 1px solid var(--border);
   z-index: 30;
+  position: relative;
+  overflow: visible;
 }
 
 .topbar-left {

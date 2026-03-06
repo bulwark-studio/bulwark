@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.1 — Roles & Permissions Intelligence
+ * Bulwark v2.1 — Roles & Permissions Intelligence
  * AI-powered security audit, permission heatmap, least-privilege analysis
  */
 (function () {

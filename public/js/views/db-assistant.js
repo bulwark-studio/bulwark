@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor — AI Database Assistant
+ * Bulwark — AI Database Assistant
  * Claude-powered chat with full schema context, diagnostics, deploy readiness
  */
 (function () {

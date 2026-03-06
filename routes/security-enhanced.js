@@ -4,7 +4,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { askAI } = require('../lib/ai');
 const crypto = require('crypto');
 
 const DATA = path.join(__dirname, '..', 'data');
@@ -21,7 +21,7 @@ function writeJSON(p, data) {
 }
 
 module.exports = function (app, ctx) {
-  const { requireAdmin, execCommand, REPO_DIR } = ctx;
+  const { requireAdmin, requireRole, execCommand, REPO_DIR } = ctx;
 
   // Security posture score
   app.get('/api/security/posture', requireAdmin, async (req, res) => {
@@ -138,7 +138,7 @@ module.exports = function (app, ctx) {
   });
 
   // Log a security event
-  app.post('/api/security/events', requireAdmin, (req, res) => {
+  app.post('/api/security/events', requireRole('editor'), (req, res) => {
     const { type, severity, message, source } = req.body;
     const events = readJSON(EVENTS_PATH, []);
     events.push({
@@ -208,19 +208,7 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ analysis: cached.response, cached: true });
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
+      const result = await askAI(prompt, { timeout: 20000 });
 
       const analysis = result.trim() || 'Analysis unavailable.';
       neuralCache.semanticSet(prompt, analysis);
@@ -229,24 +217,12 @@ module.exports = function (app, ctx) {
   });
 
   // AI: Fix recommendation for a specific finding
-  app.post('/api/security/ai-fix', requireAdmin, async (req, res) => {
+  app.post('/api/security/ai-fix', requireRole('editor'), async (req, res) => {
     try {
       const { finding, context } = req.body;
       const prompt = `Give a specific, actionable fix for this security finding in 2-3 sentences. No markdown.\n\nFinding: ${finding}\nContext: ${context || 'Node.js server application'}`;
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 15000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
+      const result = await askAI(prompt, { timeout: 15000 });
 
       res.json({ fix: result.trim() || 'No recommendation available.' });
     } catch (e) { res.json({ fix: 'Recommendation unavailable: ' + e.message }); }

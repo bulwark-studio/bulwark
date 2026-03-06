@@ -188,7 +188,7 @@
       el.innerHTML =
         '<div class="notes-ai-gen">' +
           '<div class="notes-ai-gen-header">AI Note Generator</div>' +
-          '<p class="notes-ai-gen-desc">Describe what you want to document and Chester will generate a structured note.</p>' +
+          '<p class="notes-ai-gen-desc">Describe what you want to document and Bulwark will generate a structured note.</p>' +
           '<div class="notes-ai-gen-row">' +
             '<input id="notes-ai-prompt" class="glass-input" placeholder="e.g. Document our API authentication flow and security measures..." style="flex:1"/>' +
             '<button class="notes-ai-gen-btn" onclick="Views.notes.aiGenerate()">Generate</button>' +

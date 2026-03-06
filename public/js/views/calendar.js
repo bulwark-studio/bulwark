@@ -404,7 +404,7 @@
       el.innerHTML =
         '<div class="cal-ai-planner">' +
           '<div class="cal-ai-planner-header">AI Schedule Assistant</div>' +
-          '<p class="cal-ai-planner-desc">Describe what you need to schedule and Chester will suggest events.</p>' +
+          '<p class="cal-ai-planner-desc">Describe what you need to schedule and Bulwark will suggest events.</p>' +
           '<div class="cal-ai-planner-input-row">' +
             '<input id="cal-ai-suggest-input" class="glass-input" placeholder="e.g. Plan a deployment cycle for next week with testing and review..." style="flex:1"/>' +
             '<button class="cal-ai-suggest-btn" onclick="Views.calendar.aiSuggest()">Generate Plan</button>' +

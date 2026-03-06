@@ -136,22 +136,8 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ analysis: cached.response, cached: true });
 
-      const { spawn } = require('child_process');
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '', stderr = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', d => { stderr += d; });
-        child.on('close', code => resolve({ stdout, stderr, code }));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      const analysis = result.stdout.trim() || 'Analysis unavailable';
+      const { askAI } = require('../lib/ai');
+      const analysis = await askAI(prompt, { timeout: 20000 }) || 'Analysis unavailable';
       neuralCache.semanticSet(prompt, analysis);
       res.json({ analysis, cached: false });
     } catch (e) {

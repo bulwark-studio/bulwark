@@ -3,7 +3,7 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { askAI } = require('../lib/ai');
 
 const CAL_FILE = path.join(__dirname, '..', 'data', 'calendar.json');
 const NOTES_FILE = path.join(__dirname, '..', 'data', 'notes.json');
@@ -12,22 +12,11 @@ function loadJSON(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8'))
 function saveJSON(file, data) { fs.writeFileSync(file, JSON.stringify(data, null, 2)); }
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
-function askClaude(prompt) {
-  return new Promise(function (resolve) {
-    var env = Object.assign({}, process.env);
-    delete env.CLAUDECODE;
-    var proc = spawn('claude', ['--print'], { env: env, shell: true });
-    var out = '';
-    proc.stdin.write(prompt);
-    proc.stdin.end();
-    proc.stdout.on('data', function (d) { out += d; });
-    proc.on('close', function () { resolve(out.trim()); });
-    proc.on('error', function () { resolve('AI unavailable'); });
-    setTimeout(function () { try { proc.kill(); } catch {} resolve(out.trim() || 'AI timeout'); }, 30000);
-  });
-}
+// Alias for backward compat within this file
+var askClaude = askAI;
 
 module.exports = function (app, ctx) {
+  var requireRole = ctx.requireRole;
   // ── Calendar Events ──────────────────────────────────────────────────
   app.get('/api/calendar/events', function (req, res) {
     var events = loadJSON(CAL_FILE);
@@ -41,7 +30,7 @@ module.exports = function (app, ctx) {
     res.json({ events: events });
   });
 
-  app.post('/api/calendar/events', function (req, res) {
+  app.post('/api/calendar/events', requireRole('editor'), function (req, res) {
     var events = loadJSON(CAL_FILE);
     var ev = {
       id: genId(),
@@ -63,7 +52,7 @@ module.exports = function (app, ctx) {
     res.json({ ok: true, event: ev });
   });
 
-  app.put('/api/calendar/events/:id', function (req, res) {
+  app.put('/api/calendar/events/:id', requireRole('editor'), function (req, res) {
     var events = loadJSON(CAL_FILE);
     var idx = events.findIndex(function (e) { return e.id === req.params.id; });
     if (idx < 0) return res.status(404).json({ error: 'Not found' });
@@ -72,7 +61,7 @@ module.exports = function (app, ctx) {
     res.json({ ok: true, event: events[idx] });
   });
 
-  app.delete('/api/calendar/events/:id', function (req, res) {
+  app.delete('/api/calendar/events/:id', requireRole('admin'), function (req, res) {
     var events = loadJSON(CAL_FILE);
     events = events.filter(function (e) { return e.id !== req.params.id; });
     saveJSON(CAL_FILE, events);
@@ -80,7 +69,7 @@ module.exports = function (app, ctx) {
   });
 
   // AI: Generate schedule from natural language
-  app.post('/api/calendar/ai-parse', function (req, res) {
+  app.post('/api/calendar/ai-parse', requireRole('editor'), function (req, res) {
     var text = req.body.text || '';
     askClaude(
       'Parse this into calendar events. Return JSON array with fields: title, date (YYYY-MM-DD), time (HH:MM or empty), category (meeting/deploy/deadline/reminder/general), priority (low/normal/high/critical), description. Today is ' + new Date().toISOString().slice(0, 10) + '. Text: "' + text + '". Return ONLY valid JSON array, no explanation.'
@@ -99,16 +88,16 @@ module.exports = function (app, ctx) {
     var today = new Date().toISOString().slice(0, 10);
     var upcoming = events.filter(function (e) { return e.date >= today && e.date <= nextDays(7); }).slice(0, 15);
     var recentNotes = notes.filter(function (n) { return !n.archived; }).slice(0, 10);
-    var prompt = 'You are Chester, an AI DevOps assistant. Analyze this developer\'s schedule and notes. Give a concise daily briefing: what\'s today, upcoming deadlines, priorities, and any suggestions. Be direct, use bullet points.\n\nToday: ' + today + '\nUpcoming events: ' + JSON.stringify(upcoming) + '\nRecent notes: ' + JSON.stringify(recentNotes.map(function (n) { return { title: n.title, tags: n.tags, pinned: n.pinned }; })) + '\n\nKeep response under 200 words.';
+    var prompt = 'You are Bulwark, an AI DevOps assistant. Analyze this developer\'s schedule and notes. Give a concise daily briefing: what\'s today, upcoming deadlines, priorities, and any suggestions. Be direct, use bullet points.\n\nToday: ' + today + '\nUpcoming events: ' + JSON.stringify(upcoming) + '\nRecent notes: ' + JSON.stringify(recentNotes.map(function (n) { return { title: n.title, tags: n.tags, pinned: n.pinned }; })) + '\n\nKeep response under 200 words.';
     askClaude(prompt).then(function (r) { res.json({ briefing: r }); });
   });
 
   // AI: Smart suggestions for scheduling
-  app.post('/api/calendar/ai-suggest', function (req, res) {
+  app.post('/api/calendar/ai-suggest', requireRole('editor'), function (req, res) {
     var events = loadJSON(CAL_FILE);
     var context = req.body.context || 'weekly planning';
     askClaude(
-      'As Chester DevOps AI, suggest 3-5 calendar events a developer should schedule based on context: "' + context + '". Current events: ' + JSON.stringify(events.slice(-10)) + '. Return JSON array with title, date (YYYY-MM-DD), time, category, priority. Today is ' + new Date().toISOString().slice(0, 10) + '. Return ONLY valid JSON array.'
+      'As BulwarkOps AI, suggest 3-5 calendar events a developer should schedule based on context: "' + context + '". Current events: ' + JSON.stringify(events.slice(-10)) + '. Return JSON array with title, date (YYYY-MM-DD), time, category, priority. Today is ' + new Date().toISOString().slice(0, 10) + '. Return ONLY valid JSON array.'
     ).then(function (r) {
       try {
         var match = r.match(/\[[\s\S]*\]/);
@@ -137,7 +126,7 @@ module.exports = function (app, ctx) {
     res.json({ notes: notes.filter(function (n) { return !n.archived; }), archived: notes.filter(function (n) { return n.archived; }) });
   });
 
-  app.post('/api/notes', function (req, res) {
+  app.post('/api/notes', requireRole('editor'), function (req, res) {
     var notes = loadJSON(NOTES_FILE);
     var note = {
       id: genId(),
@@ -156,7 +145,7 @@ module.exports = function (app, ctx) {
     res.json({ ok: true, note: note });
   });
 
-  app.put('/api/notes/:id', function (req, res) {
+  app.put('/api/notes/:id', requireRole('editor'), function (req, res) {
     var notes = loadJSON(NOTES_FILE);
     var idx = notes.findIndex(function (n) { return n.id === req.params.id; });
     if (idx < 0) return res.status(404).json({ error: 'Not found' });
@@ -165,7 +154,7 @@ module.exports = function (app, ctx) {
     res.json({ ok: true, note: notes[idx] });
   });
 
-  app.delete('/api/notes/:id', function (req, res) {
+  app.delete('/api/notes/:id', requireRole('admin'), function (req, res) {
     var notes = loadJSON(NOTES_FILE);
     notes = notes.filter(function (n) { return n.id !== req.params.id; });
     saveJSON(NOTES_FILE, notes);
@@ -173,7 +162,7 @@ module.exports = function (app, ctx) {
   });
 
   // AI: Generate note from prompt
-  app.post('/api/notes/ai-generate', function (req, res) {
+  app.post('/api/notes/ai-generate', requireRole('editor'), function (req, res) {
     var prompt = req.body.prompt || '';
     askClaude(
       'Generate a developer note about: "' + prompt + '". Return JSON with fields: title (concise), content (markdown, 100-300 words), tags (array of 2-4 relevant tags). Return ONLY valid JSON object.'
@@ -190,7 +179,7 @@ module.exports = function (app, ctx) {
     var notes = loadJSON(NOTES_FILE).filter(function (n) { return !n.archived; });
     if (notes.length === 0) return res.json({ summary: 'No notes yet. Start capturing ideas, meeting notes, and decisions.' });
     askClaude(
-      'As Chester DevOps AI, analyze these developer notes and give a brief knowledge summary: themes, action items, patterns. Under 150 words.\n\nNotes: ' + JSON.stringify(notes.map(function (n) { return { title: n.title, tags: n.tags, content: (n.content || '').substring(0, 200) }; }))
+      'As BulwarkOps AI, analyze these developer notes and give a brief knowledge summary: themes, action items, patterns. Under 150 words.\n\nNotes: ' + JSON.stringify(notes.map(function (n) { return { title: n.title, tags: n.tags, content: (n.content || '').substring(0, 200) }; }))
     ).then(function (r) { res.json({ summary: r }); });
   });
 
@@ -200,7 +189,7 @@ module.exports = function (app, ctx) {
     var notes = loadJSON(NOTES_FILE).filter(function (n) { return !n.archived; });
     var today = new Date().toISOString().slice(0, 10);
     askClaude(
-      'As Chester DevOps AI, analyze this developer workspace (calendar + notes). Provide: workload assessment, upcoming priorities, knowledge gaps, productivity insights. Be concise, use bullet points, under 200 words.\n\nToday: ' + today + '\nEvents (' + events.length + '): ' + JSON.stringify(events.slice(-20).map(function (e) { return { title: e.title, date: e.date, category: e.category, priority: e.priority }; })) + '\nNotes (' + notes.length + '): ' + JSON.stringify(notes.slice(0, 10).map(function (n) { return { title: n.title, tags: n.tags }; }))
+      'As BulwarkOps AI, analyze this developer workspace (calendar + notes). Provide: workload assessment, upcoming priorities, knowledge gaps, productivity insights. Be concise, use bullet points, under 200 words.\n\nToday: ' + today + '\nEvents (' + events.length + '): ' + JSON.stringify(events.slice(-20).map(function (e) { return { title: e.title, date: e.date, category: e.category, priority: e.priority }; })) + '\nNotes (' + notes.length + '): ' + JSON.stringify(notes.slice(0, 10).map(function (n) { return { title: n.title, tags: n.tags }; }))
     ).then(function (r) { res.json({ analysis: r }); });
   });
 

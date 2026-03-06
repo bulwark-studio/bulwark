@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chester Dev Monitor</title>
+  <title>Bulwark</title>
 
   <!-- External Dependencies -->
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -37,8 +37,8 @@
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
-        <h1 class="sidebar-logo">CHESTER DEV</h1>
-        <div class="sidebar-subtitle">Monitor v2.0</div>
+        <h1 class="sidebar-logo">BULWARK</h1>
+        <div class="sidebar-subtitle">v2.1</div>
       </div>
 
       <nav class="sidebar-nav">
@@ -267,16 +267,6 @@
               <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="18" height="18" stroke-width="1.5"><path d="M10 2a5 5 0 00-5 5v3l-1.5 2.5h13L15 10V7a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
               <span class="notif-badge" id="notif-badge" style="display:none">0</span>
             </button>
-            <div class="notif-panel" id="notif-panel" style="display:none">
-              <div class="notif-panel-header">
-                <span>Notifications</span>
-                <div class="notif-panel-actions">
-                  <button onclick="markAllNotifsRead()" title="Mark all read">Read All</button>
-                  <button onclick="clearAllNotifs()" title="Clear all">Clear</button>
-                </div>
-              </div>
-              <div class="notif-panel-list" id="notif-panel-list"></div>
-            </div>
           </div>
           <button class="btn btn-sm btn-ghost" onclick="refreshCurrentView()" title="Refresh">Refresh</button>
           <a href="/logout" class="btn btn-sm btn-ghost">Logout</a>
@@ -340,6 +330,7 @@
   </div>
 
   <!-- Core JS -->
+  <script src="/js/ai-cache.js"></script>
   <script src="/js/app.js"></script>
   <script src="/js/charts.js"></script>
   <script src="/js/modal.js"></script>
@@ -380,6 +371,17 @@
   <script src="/js/views/logs.js"></script>
   <script src="/js/views/multi-server.js"></script>
   <script src="/js/views/settings.js"></script>
+  <!-- Notification panel — outside main-content to avoid overflow clipping -->
+  <div class="notif-panel" id="notif-panel" style="display:none">
+    <div class="notif-panel-header">
+      <span>Notifications</span>
+      <div class="notif-panel-actions">
+        <button onclick="markAllNotifsRead()" title="Mark all read">Read All</button>
+        <button onclick="clearAllNotifs()" title="Clear all">Clear</button>
+      </div>
+    </div>
+    <div class="notif-panel-list" id="notif-panel-list"></div>
+  </div>
   <script src="/js/notification-bell.js"></script>
 </body>
 </html>

@@ -11,9 +11,9 @@ const mp = process.env.MP || 'changeme';
 const dp = process.env.DP || '';
 const vp = process.env.VP || '';
 
-// For local Docker: connect to chester-db container
+// For local Docker: connect to bulwark-db container
 // For AWS/remote: connect via direct hostname
-const dbHost = process.env.DB_HOST || 'chester-db';
+const dbHost = process.env.DB_HOST || 'bulwark-db';
 const dbPort = process.env.DB_PORT || '5432';
 const dbName = process.env.DB_NAME || 'chester';
 const dbUser = process.env.DB_USER || 'chester_admin';

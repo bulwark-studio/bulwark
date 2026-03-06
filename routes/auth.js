@@ -24,7 +24,7 @@ function recordFailedLogin(ip) {
 function getLoginHTML(errorMsg = "") {
   const error = errorMsg ? `<div class="error">${errorMsg}</div>` : "";
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Chester Dev Monitor — Login</title><style>
+<title>Bulwark — Login</title><style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'JetBrains Mono','SF Mono','Cascadia Code',monospace;background:#0a0b10;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh}
 .login-box{background:rgba(14,14,18,0.82);border:1px solid rgba(255,255,255,0.08);border-top:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:40px;width:400px;max-width:90vw;box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 8px 32px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);backdrop-filter:blur(20px)}
@@ -39,17 +39,17 @@ button:hover{background:#06b6d4}
 .error{background:rgba(255,107,43,0.12);color:#ff6b2b;padding:8px 12px;border-radius:8px;font-size:12px;margin-bottom:16px;text-align:center;border:1px solid rgba(255,107,43,0.2)}
 .lock-icon{text-align:center;margin-bottom:16px;font-size:28px;opacity:.25}
 </style></head><body><div class="login-box">
-<div class="lock-icon">&#128274;</div><h1>CHESTER DEV</h1><div class="subtitle">Monitor Control Panel</div>${error}
+<div class="lock-icon">&#128274;</div><h1>BULWARK</h1><div class="subtitle">Monitor Control Panel</div>${error}
 <form method="POST" action="/login">
 <label for="username">Username</label><input type="text" id="username" name="username" required autocomplete="username" autofocus>
 <label for="password">Password</label><input type="password" id="password" name="password" required autocomplete="current-password">
-<button type="submit">Sign In</button></form><div class="ver">v2.0</div></div></body></html>`;
+<button type="submit">Sign In</button></form><div class="ver">v2.1</div></div></body></html>`;
 }
 
 function get2FAHTML(errorMsg = "") {
   const error = errorMsg ? `<div class="error">${errorMsg}</div>` : "";
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Chester Dev Monitor — 2FA</title><style>
+<title>Bulwark — 2FA</title><style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'JetBrains Mono','SF Mono','Cascadia Code',monospace;background:#0a0b10;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh}
 .login-box{background:rgba(14,14,18,0.82);border:1px solid rgba(255,255,255,0.08);border-top:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:40px;width:400px;max-width:90vw;box-shadow:0 0 0 1px rgba(255,255,255,0.05),0 8px 32px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.06);backdrop-filter:blur(20px)}
@@ -139,8 +139,32 @@ module.exports = function (app, ctx) {
     res.redirect("/login");
   });
 
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok", uptime: process.uptime(), db: !!ctx.pool, ts: Date.now() });
+  app.get("/api/health", async (req, res) => {
+    const health = {
+      status: "ok",
+      name: process.env.APP_NAME || "Bulwark",
+      version: "2.1.0",
+      uptime: process.uptime(),
+      db: !!ctx.pool,
+      memory: {
+        rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
+        heap: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+      },
+      ts: Date.now(),
+    };
+    // Check DB latency
+    if (ctx.pool) {
+      try {
+        const start = Date.now();
+        await ctx.pool.query("SELECT 1");
+        health.dbLatencyMs = Date.now() - start;
+      } catch {
+        health.db = false;
+        health.dbLatencyMs = -1;
+      }
+    }
+    health.status = health.db !== false ? "ok" : "degraded";
+    res.json(health);
   });
 
   // User management routes (need requireAuth since auth module loads before global middleware)
@@ -174,6 +198,22 @@ module.exports = function (app, ctx) {
     for (const [token, session] of sessions) { if (session.userId === id) sessions.delete(token); }
     console.log(`[AUTH] User deleted: ${user.username} by ${req.user.user}`);
     res.json({ success: true });
+  });
+
+  app.patch("/api/users/:id/role", ctx.requireAuth, ctx.requireAdmin, (req, res) => {
+    const { id } = req.params;
+    const { role } = req.body;
+    if (!role || !["admin", "editor", "viewer"].includes(role)) return res.status(400).json({ error: "Invalid role. Must be admin, editor, or viewer." });
+    if (id === req.user.userId) return res.status(400).json({ error: "Cannot change your own role" });
+    const users = loadUsers();
+    const user = users.find((u) => u.id === id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    user.role = role;
+    saveUsers(users);
+    // Update active sessions for this user
+    for (const [, session] of sessions) { if (session.userId === id) session.role = role; }
+    console.log(`[AUTH] Role changed: ${user.username} → ${role} by ${req.user.user}`);
+    res.json({ success: true, role });
   });
 
   app.post("/api/users/:id/password", ctx.requireAuth, (req, res) => {

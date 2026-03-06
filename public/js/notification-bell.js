@@ -18,12 +18,13 @@
 
   // Close on click outside
   document.addEventListener('click', function (e) {
+    if (!notifOpen) return;
     var wrap = document.getElementById('notif-bell-wrap');
-    if (wrap && notifOpen && !wrap.contains(e.target)) {
-      notifOpen = false;
-      var panel = document.getElementById('notif-panel');
-      if (panel) panel.style.display = 'none';
-    }
+    var panel = document.getElementById('notif-panel');
+    if (wrap && wrap.contains(e.target)) return;
+    if (panel && panel.contains(e.target)) return;
+    notifOpen = false;
+    if (panel) panel.style.display = 'none';
   });
 
   function loadNotifications() {

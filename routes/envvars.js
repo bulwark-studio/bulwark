@@ -57,7 +57,7 @@ module.exports = function (app, ctx) {
     res.json({ vars });
   });
 
-  app.post("/api/envvars/:app", ctx.requireAdmin, (req, res) => {
+  app.post("/api/envvars/:app", ctx.requireRole('editor'), (req, res) => {
     const { key, value, description } = req.body;
     if (!key || value === undefined) return res.status(400).json({ error: "key and value required" });
     const store = loadStore();
@@ -69,7 +69,7 @@ module.exports = function (app, ctx) {
     res.json({ success: true });
   });
 
-  app.delete("/api/envvars/:app/:key", ctx.requireAdmin, (req, res) => {
+  app.delete("/api/envvars/:app/:key", ctx.requireRole('editor'), (req, res) => {
     const store = loadStore();
     const appData = store.apps[req.params.app];
     if (!appData || !appData.vars[req.params.key]) return res.status(404).json({ error: "Not found" });
@@ -79,7 +79,7 @@ module.exports = function (app, ctx) {
     res.json({ success: true });
   });
 
-  app.post("/api/envvars/:app/bulk", ctx.requireAdmin, (req, res) => {
+  app.post("/api/envvars/:app/bulk", ctx.requireRole('editor'), (req, res) => {
     const { content } = req.body;
     if (!content) return res.status(400).json({ error: "content required" });
     const store = loadStore();

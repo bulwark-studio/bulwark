@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — SQL Editor View
+ * Bulwark v2.1 — SQL Editor View
  * CodeMirror-powered SQL editor with autocomplete, history, Claude integration
  */
 (function () {

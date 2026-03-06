@@ -15,7 +15,7 @@
       if (!el) return;
       el.innerHTML = buildTemplate();
     },
-    show: function () { this.init(); loadAll(); },
+    show: function () { this.init(); loadAll(); Views.git.runAI(false); },
     hide: function () {},
     update: function () {}
   };
@@ -27,8 +27,8 @@
         '<div class="briefing-card glass-card">' +
           '<div class="briefing-header">' +
             '<div class="briefing-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5" width="20" height="20"><circle cx="7" cy="5" r="2.5"/><circle cx="17" cy="12" r="2.5"/><circle cx="7" cy="19" r="2.5"/><path d="M7 7.5v9M9.5 5h5a2.5 2.5 0 010 5h-5"/></svg></div>' +
-            '<div class="briefing-title">Git Intelligence</div>' +
-            '<button class="btn btn-sm btn-ghost" onclick="Views.git.runAI()" id="git-ai-btn">Analyze</button>' +
+            '<div class="briefing-title">Git Intelligence <span id="git-ai-freshness"></span></div>' +
+            '<button class="btn btn-sm btn-ghost" onclick="Views.git.runAI(true)" id="git-ai-btn">Analyze</button>' +
           '</div>' +
           '<div class="briefing-body" id="git-ai-body"><span class="text-secondary">Click Analyze for AI-powered repository insights.</span></div>' +
         '</div>' +
@@ -247,7 +247,7 @@
     var btn = document.getElementById('git-review-btn');
     var out = document.getElementById('git-review-output');
     if (btn) { btn.disabled = true; btn.textContent = 'Reviewing...'; }
-    if (out) out.innerHTML = '<span class="text-secondary">Chester is reviewing your changes...</span>';
+    if (out) out.innerHTML = '<span class="text-secondary">Bulwark is reviewing your changes...</span>';
     fetch('/api/git/ai-review', { method: 'POST' }).then(r2j).then(function (d) {
       if (btn) { btn.disabled = false; btn.textContent = 'Review Changes'; }
       if (out) {
@@ -376,14 +376,30 @@
   }
 
   // ── AI Analysis ──
-  Views.git.runAI = function () {
+  Views.git.runAI = function (force) {
     var btn = document.getElementById('git-ai-btn');
     var body = document.getElementById('git-ai-body');
+    if (!force && window.AICache) {
+      var restored = window.AICache.restore('git-analysis');
+      if (restored) {
+        if (body) body.textContent = restored.response;
+        var fb = document.getElementById('git-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('git-analysis');
+        return;
+      }
+    }
     if (btn) { btn.disabled = true; btn.textContent = 'Analyzing...'; }
     if (body) body.innerHTML = '<span class="text-secondary">Analyzing repository...</span>';
     fetch('/api/git/ai-analysis').then(r2j).then(function (d) {
       if (btn) { btn.disabled = false; btn.textContent = 'Analyze'; }
-      if (body && d.analysis) typewriter(body, d.analysis);
+      if (body && d.analysis) {
+        typewriter(body, d.analysis);
+        if (window.AICache) {
+          window.AICache.set('git-analysis', {}, d.analysis);
+          var fb = document.getElementById('git-ai-freshness');
+          if (fb) fb.innerHTML = window.AICache.freshnessBadge('git-analysis');
+        }
+      }
     }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = 'Analyze'; } });
   };
 

@@ -14,7 +14,7 @@
       if (!el) return;
       el.innerHTML = buildTemplate();
     },
-    show: function () { this.init(); loadAll(); },
+    show: function () { this.init(); loadAll(); Views.deploy.runAI(false); },
     hide: function () {},
     update: function () {}
   };
@@ -26,8 +26,8 @@
         '<div class="briefing-card glass-card">' +
           '<div class="briefing-header">' +
             '<div class="briefing-icon"><svg viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="1.5" width="20" height="20"><path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12M21 7l-9 5-9-5"/></svg></div>' +
-            '<div class="briefing-title">Deploy Intelligence</div>' +
-            '<button class="btn btn-sm btn-ghost" onclick="Views.deploy.runAI()" id="deploy-ai-btn">Assess</button>' +
+            '<div class="briefing-title">Deploy Intelligence <span id="deploy-ai-freshness"></span></div>' +
+            '<button class="btn btn-sm btn-ghost" onclick="Views.deploy.runAI(true)" id="deploy-ai-btn">Assess</button>' +
           '</div>' +
           '<div class="briefing-body" id="deploy-ai-body"><span class="text-secondary">Click Assess for AI-powered deployment readiness analysis.</span></div>' +
         '</div>' +
@@ -342,14 +342,30 @@
   };
 
   // ── AI Analysis ──
-  Views.deploy.runAI = function () {
+  Views.deploy.runAI = function (force) {
     var btn = document.getElementById('deploy-ai-btn');
     var body = document.getElementById('deploy-ai-body');
+    if (!force && window.AICache) {
+      var restored = window.AICache.restore('deploy');
+      if (restored) {
+        if (body) body.textContent = restored.response;
+        var fb = document.getElementById('deploy-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('deploy');
+        return;
+      }
+    }
     if (btn) { btn.disabled = true; btn.textContent = 'Assessing...'; }
     if (body) body.innerHTML = '<span class="text-secondary">Analyzing deploy readiness...</span>';
     fetch('/api/deploy/ai-review', { method: 'POST' }).then(r2j).then(function (d) {
       if (btn) { btn.disabled = false; btn.textContent = 'Assess'; }
-      if (body && d.review) typewriter(body, d.review);
+      if (body && d.review) {
+        typewriter(body, d.review);
+        if (window.AICache) {
+          window.AICache.set('deploy', {}, d.review);
+          var fb = document.getElementById('deploy-ai-freshness');
+          if (fb) fb.innerHTML = window.AICache.freshnessBadge('deploy');
+        }
+      }
     }).catch(function () { if (btn) { btn.disabled = false; btn.textContent = 'Assess'; } });
   };
 

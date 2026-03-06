@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor — Cron Intelligence Center
+ * Bulwark — Cron Intelligence Center
  * AI natural language scheduling, analytics, execution history, job management
  */
 (function () {
@@ -17,9 +17,9 @@
         '<div class="cron-dashboard">' +
           // AI Analysis
           '<div class="cron-ai-card" id="cron-ai-card">' +
-            '<div class="cron-ai-header"><div class="ai-dot"></div><span>Chester Cron Analysis</span></div>' +
+            '<div class="cron-ai-header"><div class="ai-dot"></div><span>Bulwark Cron Analysis <span id="cron-ai-freshness"></span></span></div>' +
             '<div class="cron-ai-body" id="cron-ai-body">Click analyze to get AI insights on your scheduled tasks...</div>' +
-            '<button class="cron-ai-btn" onclick="cronAiAnalysis()">Analyze Schedule Health</button>' +
+            '<button class="cron-ai-btn" onclick="cronAiAnalysis(true)">Analyze Schedule Health</button>' +
           '</div>' +
           // Tabs
           '<div class="cron-tabs">' +
@@ -33,7 +33,7 @@
           '<div id="cron-tab-content"></div>' +
         '</div>';
     },
-    show: function () { loadCronData(); },
+    show: function () { loadCronData(); cronAiAnalysis(false); },
     hide: function () {},
     update: function () {}
   };
@@ -324,12 +324,27 @@
     });
   };
 
-  window.cronAiAnalysis = function () {
+  window.cronAiAnalysis = function (force) {
     var body = document.getElementById('cron-ai-body');
     if (!body) return;
+    if (!force && window.AICache) {
+      var restored = window.AICache.restore('cron');
+      if (restored) {
+        body.textContent = restored.response;
+        var fb = document.getElementById('cron-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('cron');
+        return;
+      }
+    }
     body.innerHTML = 'Analyzing schedule health...<span class="cursor-blink"></span>';
     fetch('/api/cron/ai-analysis').then(function (r) { return r.json(); }).then(function (d) {
-      typewriter(body, d.analysis || 'No analysis available.');
+      var text = d.analysis || 'No analysis available.';
+      typewriter(body, text);
+      if (window.AICache) {
+        window.AICache.set('cron', {}, text);
+        var fb = document.getElementById('cron-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('cron');
+      }
     }).catch(function () { body.textContent = 'Analysis unavailable.'; });
   };
 

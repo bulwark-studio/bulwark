@@ -1,8 +1,8 @@
 /**
- * Chester Command Center — Floating Terminal Drawer
+ * Bulwark Command Center — Floating Terminal Drawer
  * Overlays any page. Toggle with Ctrl+` or bottom bar button.
- * Tabs: Shell PTY, Chester AI, Credential Vault
- * Smart credential injection — Chester auto-resolves SSH/API keys by context.
+ * Tabs: Shell PTY, Bulwark AI, Credential Vault
+ * Smart credential injection — Bulwark auto-resolves SSH/API keys by context.
  * Persists across page switches. Session survives view changes.
  */
 (function () {
@@ -16,7 +16,7 @@
   var drawerSize = 'half'; // 'half' | 'full' | 'mini'
   var activeTab = 'shell';
   var credentials = [];
-  var chesterHistory = [];
+  var bulwarkHistory = [];
   var cmdHistory = [];
   var historyIdx = -1;
   var drawerInited = false;
@@ -42,7 +42,7 @@
             '</div>' +
             '<div class="cmd-tabs">' +
               cmdTab('shell', 'M4,4 L8,8 L4,12', 'Shell', true) +
-              cmdTab('chester', '', 'Chester AI') +
+              cmdTab('bulwark-ai', '', 'Bulwark AI') +
               cmdTab('vault', '', 'Vault') +
             '</div>' +
           '</div>' +
@@ -74,7 +74,7 @@
         // Panel bodies
         '<div class="cmd-body">' +
           '<div class="cmd-panel" id="cmd-panel-shell"><div id="terminal-container" class="cmd-terminal-wrap"></div></div>' +
-          '<div class="cmd-panel" id="cmd-panel-chester" style="display:none">' + buildChesterUI() + '</div>' +
+          '<div class="cmd-panel" id="cmd-panel-bulwark-ai" style="display:none">' + buildBulwarkUI() + '</div>' +
           '<div class="cmd-panel" id="cmd-panel-vault" style="display:none">' + buildVaultUI() + '</div>' +
         '</div>' +
       '</div>';
@@ -94,17 +94,17 @@
   function cmdTab(id, pathD, label, active) {
     var icon = '';
     if (id === 'shell') icon = '<svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="3,3 7,7 3,11"/><line x1="8" y1="11" x2="12" y2="11"/></svg>';
-    else if (id === 'chester') icon = '<svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5.5"/><path d="M5 6.5h0M9 6.5h0M6 9.5c.5.5 1.5.5 2 0"/></svg>';
+    else if (id === 'bulwark-ai') icon = '<svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="5.5"/><path d="M5 6.5h0M9 6.5h0M6 9.5c.5.5 1.5.5 2 0"/></svg>';
     else if (id === 'vault') icon = '<svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="6" width="9" height="6" rx="1.5"/><path d="M4.5 6V4.5a2.5 2.5 0 0 1 5 0V6"/><circle cx="7" cy="9.5" r="1"/></svg>';
     return '<button class="cmd-tab' + (active ? ' active' : '') + '" data-tab="' + id + '" onclick="Views.terminal.switchTab(\'' + id + '\')">' + icon + '<span>' + label + '</span></button>';
   }
 
-  function buildChesterUI() {
+  function buildBulwarkUI() {
     return '<div class="cht-panel">' +
       '<div class="cht-messages" id="cht-messages">' +
         '<div class="cht-welcome">' +
           '<div class="cht-welcome-icon"><svg viewBox="0 0 32 32" width="36" height="36" fill="none" stroke="var(--cyan)" stroke-width="1"><circle cx="16" cy="16" r="13"/><path d="M11 14h0M21 14h0M12 20c2 2.5 6 2.5 8 0"/><path d="M16 3v2M16 27v2M3 16h2M27 16h2" stroke-opacity="0.25"/></svg></div>' +
-          '<div class="cht-welcome-title">Chester Terminal AI</div>' +
+          '<div class="cht-welcome-title">Bulwark Terminal AI</div>' +
           '<div class="cht-welcome-sub">Execute commands, connect to servers, analyze logs — just ask naturally.</div>' +
           '<div class="cht-suggestions">' +
             chtSug('SSH into production') +
@@ -117,7 +117,7 @@
         '</div>' +
       '</div>' +
       '<div class="cht-input-wrap">' +
-        '<input type="text" id="cht-input" class="cht-input" placeholder="Ask Chester anything..." onkeydown="Views.terminal.chtKey(event)" />' +
+        '<input type="text" id="cht-input" class="cht-input" placeholder="Ask Bulwark anything..." onkeydown="Views.terminal.chtKey(event)" />' +
         '<button class="cht-send-btn" id="cht-send-btn" onclick="Views.terminal.chtSend()">' +
           '<svg viewBox="0 0 14 14" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 7h12M9 3l4 4-4 4"/></svg>' +
         '</button>' +
@@ -248,7 +248,7 @@
     document.querySelectorAll('#cmd-drawer .cmd-tab').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
     });
-    ['shell', 'chester', 'vault'].forEach(function (t) {
+    ['shell', 'bulwark-ai', 'vault'].forEach(function (t) {
       var p = document.getElementById('cmd-panel-' + t);
       if (p) p.style.display = t === tab ? '' : 'none';
     });
@@ -257,7 +257,7 @@
       if (!termStarted) setTimeout(startTerminalSession, 100);
     }
     if (tab === 'vault') loadCredentials();
-    if (tab === 'chester') {
+    if (tab === 'bulwark-ai') {
       var inp = document.getElementById('cht-input');
       if (inp) setTimeout(function () { inp.focus(); }, 50);
     }
@@ -314,7 +314,7 @@
         if (term) term.write('\r\n\x1b[33m[Reconnected — session ended]\x1b[0m\r\n');
       }
     });
-    term.write('\x1b[36m  Chester Command Center\x1b[0m\r\n\x1b[90m  Ctrl+` toggle | Ctrl+Shift+` resize\x1b[0m\r\n\r\n');
+    term.write('\x1b[36m  Bulwark Command Center\x1b[0m\r\n\x1b[90m  Ctrl+` toggle | Ctrl+Shift+` resize\x1b[0m\r\n\r\n');
   }
 
   function startTerminalSession() {
@@ -398,7 +398,7 @@
     }).catch(function () { Toast.error('Connection failed'); });
   };
 
-  // ── Chester AI ──
+  // ── Bulwark AI ──
   Views.terminal.chtKey = function (e) {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); Views.terminal.chtSend(); }
     if (e.key === 'ArrowUp' && cmdHistory.length > 0) { historyIdx = Math.min(historyIdx + 1, cmdHistory.length - 1); e.target.value = cmdHistory[historyIdx]; }
@@ -440,8 +440,8 @@
       var credContext = creds.length > 0 ? '\n\nAvailable credentials in vault (use these when user asks to SSH or connect):\n' +
         creds.map(function (c) { return '- ' + c.name + ' (' + c.type + ')' + (c.host ? ' → ' + c.host + (c.port ? ':' + c.port : '') : '') + (c.username ? ' user=' + c.username : ''); }).join('\n') : '';
 
-      var histStr = chesterHistory.slice(-8).map(function (h) { return h.role + ': ' + h.text; }).join('\n');
-      var prompt = 'You are Chester, an AI DevOps assistant in a floating terminal command center. The user manages production servers, Docker, databases, deployments.\n' +
+      var histStr = bulwarkHistory.slice(-8).map(function (h) { return h.role + ': ' + h.text; }).join('\n');
+      var prompt = 'You are Bulwark, an AI DevOps assistant in a floating terminal command center. The user manages production servers, Docker, databases, deployments.\n' +
         credContext + '\n\n' +
         (histStr ? 'Previous:\n' + histStr + '\n\n' : '') +
         'User: ' + msg + '\n\n' +
@@ -453,16 +453,16 @@
         '- Reference real tools: pm2, docker, git, ssh, psql, nginx, systemctl\n' +
         '- No markdown. Plain text only.';
 
-      chesterHistory.push({ role: 'user', text: msg });
+      bulwarkHistory.push({ role: 'user', text: msg });
 
-      return fetch('/api/chester/ask', {
+      return fetch('/api/bulwark/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt })
       });
     }).then(function (r) { return r.json(); }).then(function (d) {
       var text = d.response || 'Couldn\'t process that. Try again.';
-      chesterHistory.push({ role: 'chester', text: text });
+      bulwarkHistory.push({ role: 'bulwark-ai', text: text });
 
       // Parse [CMD]...[/CMD] into executable buttons
       var rendered = h(text).replace(/\[CMD\](.*?)\[\/CMD\]/g, function (_, cmd) {

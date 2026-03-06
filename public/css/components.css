@@ -1,7 +1,14 @@
 /* ==========================================================================
-   Chester Dev Monitor v2.0 — Components
+   Bulwark v2.1 — Components
    Cards, badges, buttons, tables, forms, progress, status dots, etc.
    ========================================================================== */
+
+/* --- RBAC: Hide write actions for viewer role --- */
+body[data-role="viewer"] .btn-danger,
+body[data-role="viewer"] .btn-primary,
+body[data-role="viewer"] .requires-editor {
+  display: none !important;
+}
 
 /* --- Buttons --- */
 .btn {
@@ -42,14 +49,14 @@
 }
 
 .btn-danger {
-  color: #fff;
-  background: var(--orange);
-  border-color: var(--orange);
+  color: var(--orange);
+  background: rgba(255, 107, 43, 0.10);
+  border: 1px solid rgba(255, 107, 43, 0.30);
   font-weight: 600;
 }
 .btn-danger:hover {
-  background: #ff8a57;
-  border-color: #ff8a57;
+  background: rgba(255, 107, 43, 0.20);
+  border-color: rgba(255, 107, 43, 0.50);
   box-shadow: var(--shadow-glow-orange);
 }
 
@@ -391,14 +398,14 @@ select.form-input {
 }
 
 .btn-orange {
-  color: #000;
-  background: var(--orange);
-  border-color: var(--orange);
+  color: var(--orange);
+  background: rgba(255, 107, 43, 0.10);
+  border: 1px solid rgba(255, 107, 43, 0.30);
   font-weight: 600;
 }
 .btn-orange:hover {
-  background: #ff8a57;
-  border-color: #ff8a57;
+  background: rgba(255, 107, 43, 0.20);
+  border-color: rgba(255, 107, 43, 0.50);
   box-shadow: var(--shadow-glow-orange);
 }
 
@@ -624,6 +631,77 @@ select.form-input {
 @keyframes pulseRing {
   0% { transform: scale(0.8); opacity: 0.8; }
   100% { transform: scale(2); opacity: 0; }
+}
+
+/* --- AI Freshness Badges --- */
+.ai-freshness-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  white-space: nowrap;
+  user-select: none;
+}
+.ai-freshness-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.ai-freshness-pulse .ai-freshness-dot {
+  animation: ai-dot-pulse 2s ease-in-out infinite;
+}
+.ai-freshness-label {
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.ai-freshness-age {
+  opacity: 0.7;
+  font-size: 9px;
+}
+@keyframes ai-dot-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+  50% { opacity: 0.5; box-shadow: 0 0 6px 2px currentColor; }
+}
+
+/* --- AI Anomaly Alert Bar --- */
+.ai-anomaly-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(255, 107, 43, 0.08);
+  border: 1px solid rgba(255, 107, 43, 0.25);
+  border-left: 3px solid #ff6b2b;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #fbbf24;
+  animation: anomaly-flash 0.5s ease;
+}
+.ai-anomaly-bar .anomaly-icon { font-size: 14px; }
+.ai-anomaly-bar .anomaly-text { flex: 1; }
+.ai-anomaly-bar .anomaly-action {
+  background: rgba(255, 107, 43, 0.15);
+  border: 1px solid rgba(255, 107, 43, 0.3);
+  color: #ff6b2b;
+  padding: 3px 10px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ai-anomaly-bar .anomaly-action:hover { background: rgba(255, 107, 43, 0.25); }
+@keyframes anomaly-flash {
+  0% { opacity: 0; transform: translateY(-4px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 /* --- Glow Effects for Active/Critical States --- */

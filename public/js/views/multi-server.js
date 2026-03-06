@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Multi-Server View
+ * Bulwark v2.1 — Multi-Server View
  * Agent grid, register/delete, health checks
  */
 (function () {

@@ -1,7 +1,7 @@
 /**
  * AI Briefing — Aggregates all system data + Claude CLI for intelligent summary
  */
-const { spawn } = require("child_process");
+const { askAI } = require("../lib/ai");
 const { getProjectPool, readProjects } = require("../lib/db");
 
 module.exports = function (app, ctx) {
@@ -169,7 +169,7 @@ module.exports = function (app, ctx) {
       // Call Claude CLI
       let briefingText;
       try {
-        briefingText = await callClaude(prompt, 15000);
+        briefingText = await askAI(prompt, { timeout: 15000 });
       } catch {
         briefingText = fallbackBriefing(data, score, subscores);
       }
@@ -220,35 +220,6 @@ module.exports = function (app, ctx) {
       res.status(500).json({ error: e.message });
     }
   });
-
-  function callClaude(prompt, timeout) {
-    return new Promise((resolve, reject) => {
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const child = spawn("claude", ["--print"], {
-        stdio: ["pipe", "pipe", "pipe"],
-        shell: true,
-        timeout,
-        env: cleanEnv,
-      });
-      let stdout = "",
-        stderr = "";
-      child.stdout.on("data", (d) => {
-        stdout += d;
-      });
-      child.stderr.on("data", (d) => {
-        stderr += d;
-      });
-      child.on("close", (code) => {
-        if (code !== 0 && !stdout) reject(new Error(stderr || "exit " + code));
-        else resolve(stdout.trim());
-      });
-      child.on("error", reject);
-      child.stdin.on("error", () => {});
-      child.stdin.write(prompt);
-      child.stdin.end();
-    });
-  }
 
   function fallbackBriefing(data, score, sub) {
     const sys = data.system;

@@ -3,10 +3,10 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { askAI } = require('../lib/ai');
 
 module.exports = function (app, ctx) {
-  const { requireAdmin, execCommand, REPO_DIR } = ctx;
+  const { requireAdmin, requireRole, execCommand, REPO_DIR } = ctx;
 
   // File search (name-based + content grep)
   app.get('/api/files/search', requireAdmin, async (req, res) => {
@@ -113,7 +113,7 @@ module.exports = function (app, ctx) {
   });
 
   // AI: Summarize file
-  app.post('/api/files/ai-summarize', requireAdmin, async (req, res) => {
+  app.post('/api/files/ai-summarize', requireRole('editor'), async (req, res) => {
     try {
       const { filePath } = req.body;
       if (!filePath) return res.status(400).json({ error: 'filePath required' });
@@ -128,21 +128,7 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ summary: cached.response, cached: true });
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      const summary = result.trim() || 'Summary unavailable.';
+      const summary = await askAI(prompt, { timeout: 20000 }) || 'Summary unavailable.';
       neuralCache.semanticSet(prompt, summary);
       res.json({ summary, cached: false });
     } catch (e) { res.json({ summary: 'Summary unavailable: ' + e.message }); }
@@ -160,21 +146,7 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ analysis: cached.response, cached: true });
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      const analysis = result.trim() || 'Analysis unavailable.';
+      const analysis = await askAI(prompt, { timeout: 20000 }) || 'Analysis unavailable.';
       neuralCache.semanticSet(prompt, analysis);
       res.json({ analysis, cached: false });
     } catch (e) { res.json({ analysis: 'Analysis unavailable: ' + e.message }); }

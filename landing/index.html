@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulwark -- Your entire server, one dashboard.</title>
+<meta name="description" content="AI-powered server management platform. Terminal, Docker, Git, Deploy, Database, Security -- all in one glass-dark dashboard.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --canvas: #0a0b10;
+  --surface: rgba(14,14,18,0.65);
+  --surface-solid: #0e0e12;
+  --border: rgba(255,255,255,0.08);
+  --border-glass: rgba(255,255,255,0.10);
+  --border-top: rgba(255,255,255,0.14);
+  --text-primary: #e4e4e7;
+  --text-secondary: #8b8b92;
+  --text-tertiary: #52525a;
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34,211,238,0.15);
+  --orange: #ff6b2b;
+  --orange-dim: rgba(255,107,43,0.15);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--canvas);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(34,211,238,0.06), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+a { color: var(--cyan); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,11,16,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+}
+nav .container {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+}
+.nav-brand {
+  font-size: 18px; font-weight: 700; letter-spacing: 3px;
+  color: var(--cyan);
+}
+.nav-links { display: flex; gap: 24px; align-items: center; }
+.nav-links a { color: var(--text-secondary); font-size: 13px; font-weight: 400; letter-spacing: 0.5px; }
+.nav-links a:hover { color: var(--text-primary); text-decoration: none; }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  padding-top: 56px;
+}
+.hero-inner { max-width: 800px; }
+.hero h1 {
+  font-size: clamp(48px, 10vw, 96px);
+  font-weight: 800;
+  letter-spacing: 12px;
+  color: var(--text-primary);
+  line-height: 1.1;
+  margin-bottom: 16px;
+}
+.hero h1 span { color: var(--cyan); }
+.hero .tagline {
+  font-size: clamp(16px, 2.5vw, 22px);
+  color: var(--text-secondary);
+  font-weight: 300;
+  margin-bottom: 40px;
+  letter-spacing: 1px;
+}
+.hero-buttons { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px; font-weight: 500;
+  letter-spacing: 0.5px;
+  border: none; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-primary {
+  background: var(--orange);
+  color: #fff;
+}
+.btn-primary:hover { background: #e85a1e; text-decoration: none; }
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-glass);
+}
+.btn-secondary:hover { border-color: var(--cyan); color: var(--cyan); text-decoration: none; }
+
+.hero-terminal {
+  margin-top: 48px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2px;
+  backdrop-filter: blur(20px);
+  text-align: left;
+}
+.terminal-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+.terminal-dot:nth-child(1) { background: #ff5f57; }
+.terminal-dot:nth-child(2) { background: #febc2e; }
+.terminal-dot:nth-child(3) { background: #28c840; }
+.terminal-bar span { margin-left: 8px; font-size: 12px; color: var(--text-tertiary); }
+.terminal-body {
+  padding: 16px 20px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+.terminal-body .prompt { color: var(--cyan); }
+.terminal-body .output { color: var(--text-tertiary); }
+.terminal-body .success { color: var(--cyan); }
+
+/* SECTIONS */
+.section { padding: 120px 0; }
+.section-label {
+  font-size: 12px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--cyan); margin-bottom: 12px;
+}
+.section-title {
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.section-desc {
+  font-size: 15px;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin-bottom: 48px;
+}
+
+/* FEATURES */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 1px solid var(--border-top);
+  border-radius: 12px;
+  padding: 28px;
+  backdrop-filter: blur(20px) saturate(180%);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.feature-card:hover {
+  border-color: rgba(34,211,238,0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(34,211,238,0.1);
+}
+.feature-icon {
+  width: 40px; height: 40px;
+  border-radius: 8px;
+  background: var(--cyan-dim);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+  font-size: 18px;
+  color: var(--cyan);
+}
+.feature-card h3 {
+  font-size: 16px; font-weight: 600;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+.feature-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* PRICING */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+.pricing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px 24px;
+  backdrop-filter: blur(20px) saturate(180%);
+  text-align: center;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.04);
+  transition: all 0.3s ease;
+}
+.pricing-card:hover { transform: translateY(-2px); }
+.pricing-card.featured {
+  border-color: var(--cyan);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(34,211,238,0.2);
+}
+.pricing-card .tier {
+  font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.pricing-card.featured .tier { color: var(--cyan); }
+.pricing-card .price {
+  font-size: 36px; font-weight: 700;
+  margin-bottom: 4px;
+}
+.pricing-card .price span {
+  font-size: 14px; font-weight: 400; color: var(--text-tertiary);
+}
+.pricing-card .price-note {
+  font-size: 12px; color: var(--text-tertiary);
+  margin-bottom: 24px;
+}
+.pricing-card ul {
+  list-style: none;
+  text-align: left;
+  margin-bottom: 24px;
+}
+.pricing-card li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.pricing-card li::before {
+  content: '\2713  ';
+  color: var(--cyan);
+  margin-right: 8px;
+}
+
+/* FOOTER */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 0;
+  text-align: center;
+}
+footer p {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+footer a { color: var(--text-secondary); }
+footer .footer-links {
+  display: flex; gap: 24px; justify-content: center;
+  margin-top: 12px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .nav-links { display: none; }
+  .hero h1 { letter-spacing: 6px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .hero-terminal { display: none; }
+  .section { padding: 80px 0; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="container">
+    <div class="nav-brand">BULWARK</div>
+    <div class="nav-links">
+      <a href="#features">Features</a>
+      <a href="#pricing">Pricing</a>
+      <a href="https://github.com/autopilotaitech/bulwark" target="_blank">GitHub</a>
+      <a href="#" class="btn btn-primary" style="padding:8px 20px; font-size:12px;">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <h1>BUL<span>WARK</span></h1>
+      <p class="tagline">Your entire server, one dashboard.</p>
+      <div class="hero-buttons">
+        <a href="#" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/autopilotaitech/bulwark" class="btn btn-secondary" target="_blank">View on GitHub</a>
+      </div>
+      <div class="hero-terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot"></div>
+          <div class="terminal-dot"></div>
+          <div class="terminal-dot"></div>
+          <span>bulwark -- install</span>
+        </div>
+        <div class="terminal-body">
+          <div><span class="prompt">$</span> curl -fsSL https://bulwark.studio/install.sh | bash</div>
+          <div class="output">&nbsp;</div>
+          <div class="success">&nbsp; System: Linux x86_64</div>
+          <div class="success">&nbsp; Node.js v20.11.0</div>
+          <div class="success">&nbsp; PostgreSQL 17.2</div>
+          <div class="output">&nbsp;</div>
+          <div class="success">&nbsp; Bulwark installed successfully!</div>
+          <div class="output">&nbsp; URL:      http://10.0.1.42:3001</div>
+          <div class="output">&nbsp; User:     admin</div>
+          <div class="output">&nbsp; Password: kR7x4mPqW2nJ9vBs</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="container">
+    <div class="section-label">Capabilities</div>
+    <h2 class="section-title">Everything you need. Nothing you don't.</h2>
+    <p class="section-desc">Six pillars of server management, unified under a glass-dark interface with AI woven into every surface.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&gt;_</div>
+        <h3>Terminal</h3>
+        <p>Full PTY terminal in the browser. xterm.js with 256-color support, resize, and session persistence. Run any command without leaving the dashboard.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9683;</div>
+        <h3>AI-Powered DB Studio</h3>
+        <p>Supabase-style database management. SQL editor with autocomplete, table browser, schema explorer, migration manager, and Claude-powered query generation.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9638;</div>
+        <h3>Docker Fleet</h3>
+        <p>Native Docker Engine API integration. Start, stop, inspect, and prune containers. Real-time stats, log streaming, and AI fleet analysis.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#8680;</div>
+        <h3>Git + Deploy</h3>
+        <p>Rich git intelligence center with commit heatmaps, branch management, and AI code review. One-click deploy pipeline with pre-flight checks and rollback.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9737;</div>
+        <h3>Security Center</h3>
+        <p>Posture scoring, secret scanning, dependency audit, and encrypted credential vault. AES-256-GCM encryption at rest. AI-generated fix recommendations.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#9671;</div>
+        <h3>Monitoring</h3>
+        <p>Real-time CPU, memory, and disk metrics. Uptime checks with configurable intervals. Multi-server aggregation. Cron job management with natural language scheduling.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="pricing" style="padding-bottom:80px;">
+  <div class="container">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Start free. Scale when ready.</h2>
+    <p class="section-desc">No vendor lock-in. Self-host forever on the free tier. Pay only when you need team features.</p>
+    <div class="pricing-grid">
+      <div class="pricing-card">
+        <div class="tier">Community</div>
+        <div class="price">Free</div>
+        <div class="price-note">forever, self-hosted</div>
+        <ul>
+          <li>All 30+ views</li>
+          <li>Terminal + Docker + Git</li>
+          <li>DB Studio (full)</li>
+          <li>Security scanning</li>
+          <li>BYOK AI (Claude/Codex)</li>
+          <li>Single user</li>
+        </ul>
+        <a href="#" class="btn btn-secondary" style="width:100%;justify-content:center;">Get Started</a>
+      </div>
+      <div class="pricing-card featured">
+        <div class="tier">Pro</div>
+        <div class="price">$15<span>/seat/mo</span></div>
+        <div class="price-note">billed annually</div>
+        <ul>
+          <li>Everything in Community</li>
+          <li>RBAC (admin/editor/viewer)</li>
+          <li>Audit log</li>
+          <li>TOTP 2FA</li>
+          <li>Multi-server management</li>
+          <li>Priority support</li>
+        </ul>
+        <a href="#" class="btn btn-primary" style="width:100%;justify-content:center;">Start Trial</a>
+      </div>
+      <div class="pricing-card">
+        <div class="tier">Team</div>
+        <div class="price">$49<span>/seat/mo</span></div>
+        <div class="price-note">billed annually</div>
+        <ul>
+          <li>Everything in Pro</li>
+          <li>SSO / SAML</li>
+          <li>Deploy pipelines</li>
+          <li>Backup scheduling</li>
+          <li>Custom dashboards</li>
+          <li>Dedicated support</li>
+        </ul>
+        <a href="#" class="btn btn-secondary" style="width:100%;justify-content:center;">Contact Sales</a>
+      </div>
+      <div class="pricing-card">
+        <div class="tier">Enterprise</div>
+        <div class="price">Custom</div>
+        <div class="price-note">tailored to your needs</div>
+        <ul>
+          <li>Everything in Team</li>
+          <li>On-prem deployment</li>
+          <li>SLA guarantees</li>
+          <li>Compliance packages</li>
+          <li>Custom integrations</li>
+          <li>Dedicated engineer</li>
+        </ul>
+        <a href="#" class="btn btn-secondary" style="width:100%;justify-content:center;">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <p>Built by <a href="https://autopilotaitech.com" target="_blank">AutopilotAI Tech</a></p>
+    <div class="footer-links">
+      <a href="https://github.com/autopilotaitech/bulwark" target="_blank">GitHub</a>
+      <a href="#">Docs</a>
+      <a href="#">Discord</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

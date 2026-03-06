@@ -41,7 +41,7 @@ module.exports = function (app, ctx) {
     if (!ch) return res.status(404).json({ error: "Channel not found" });
     try {
       const { sendDiscord, sendSlack, sendTelegram } = require("../lib/notification-sender");
-      const payload = { title: "Test Notification", message: "This is a test from Chester Dev Monitor.", severity: "info" };
+      const payload = { title: "Test Notification", message: "This is a test from Bulwark.", severity: "info" };
       if (ch.type === "discord") await sendDiscord(ch.webhookUrl, payload);
       else if (ch.type === "slack") await sendSlack(ch.webhookUrl, payload);
       else if (ch.type === "telegram") await sendTelegram(ch.botToken, ch.chatId, payload);

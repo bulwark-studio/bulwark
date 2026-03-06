@@ -2,9 +2,84 @@
  * Docker Direct Routes — Docker Engine API (falls back to adapter)
  */
 const docker = require('../lib/docker-engine');
+const { askAI } = require('../lib/ai');
 
 module.exports = function (app, ctx) {
-  const { requireAdmin } = ctx;
+  const { requireAdmin, requireRole } = ctx;
+
+  // ── Test Docker connection with given config (don't save yet) ──
+  app.post('/api/docker/test-connection', requireRole('editor'), async (req, res) => {
+    const { type, socketPath, host, port, tlsVerify } = req.body;
+    const http = require('http');
+    const testOpts = { method: 'GET', path: '/_ping', timeout: 8000 };
+
+    if (type === 'remote' && host) {
+      testOpts.hostname = host;
+      testOpts.port = port || 2375;
+    } else {
+      testOpts.socketPath = socketPath || (process.platform === 'win32' ? '//./pipe/docker_engine' : '/var/run/docker.sock');
+    }
+
+    try {
+      const result = await new Promise((resolve, reject) => {
+        const r = http.request(testOpts, (resp) => {
+          let d = '';
+          resp.on('data', c => d += c);
+          resp.on('end', () => resolve({ status: resp.statusCode, body: d }));
+        });
+        r.on('error', reject);
+        r.setTimeout(8000, () => { r.destroy(); reject(new Error('Connection timed out after 8s')); });
+        r.end();
+      });
+
+      if (result.status === 200) {
+        // Also grab version info
+        const verResult = await new Promise((resolve, reject) => {
+          const vOpts = { ...testOpts, path: '/version' };
+          const r = http.request(vOpts, (resp) => {
+            let d = '';
+            resp.on('data', c => d += c);
+            resp.on('end', () => { try { resolve(JSON.parse(d)); } catch { resolve({}); } });
+          });
+          r.on('error', () => resolve({}));
+          r.setTimeout(5000, () => { r.destroy(); resolve({}); });
+          r.end();
+        });
+
+        res.json({
+          success: true,
+          version: verResult.Version || 'unknown',
+          apiVersion: verResult.ApiVersion || 'unknown',
+          os: (verResult.Os || '') + '/' + (verResult.Arch || ''),
+          kernel: verResult.KernelVersion || ''
+        });
+      } else {
+        res.json({ success: false, error: 'Docker responded with status ' + result.status });
+      }
+    } catch (e) {
+      res.json({ success: false, error: e.message });
+    }
+  });
+
+  // ── AI diagnose connection failure ──
+  app.post('/api/docker/ai-diagnose', requireRole('editor'), async (req, res) => {
+    const { error, type, socketPath, host, port, platform } = req.body;
+    const prompt = `A user is trying to connect Bulwark (a server management dashboard) to Docker Engine and getting this error:
+
+Error: ${error}
+Connection type: ${type || 'local'}
+${type === 'remote' ? 'Remote host: ' + host + ':' + (port || 2375) : 'Socket path: ' + (socketPath || 'default')}
+Platform: ${platform || process.platform}
+
+Diagnose the problem and give step-by-step instructions to fix it. Be specific with exact commands the user should run. Keep it concise (5-8 steps max). If it's a remote connection, include how to enable Docker TCP and secure it with TLS. No markdown headers, just numbered steps.`;
+
+    try {
+      const diagnosis = await askAI(prompt, { timeout: 25000 });
+      res.json({ diagnosis: diagnosis || 'Unable to diagnose. Check that Docker is installed and running.' });
+    } catch (e) {
+      res.json({ diagnosis: 'AI diagnosis unavailable. Common fixes:\n1. Install Docker: curl -fsSL https://get.docker.com | sh\n2. Start Docker: sudo systemctl start docker\n3. Add your user to docker group: sudo usermod -aG docker $USER\n4. For remote: enable TCP with dockerd -H tcp://0.0.0.0:2375' });
+    }
+  });
 
   // Health check — is Docker available?
   app.get('/api/docker/status', requireAdmin, async (req, res) => {
@@ -17,7 +92,7 @@ module.exports = function (app, ctx) {
   });
 
   // Save config
-  app.post('/api/docker/config', requireAdmin, (req, res) => {
+  app.post('/api/docker/config', requireRole('editor'), (req, res) => {
     try {
       docker.saveConfig(req.body);
       res.json({ success: true });
@@ -75,7 +150,7 @@ module.exports = function (app, ctx) {
   });
 
   // Container actions (start/stop/restart/pause/unpause/kill)
-  app.post('/api/docker/containers/:id/:action', requireAdmin, async (req, res) => {
+  app.post('/api/docker/containers/:id/:action', requireRole('editor'), async (req, res) => {
     const allowed = ['start', 'stop', 'restart', 'pause', 'unpause', 'kill'];
     if (!allowed.includes(req.params.action)) return res.status(400).json({ error: 'Invalid action' });
     try {
@@ -86,8 +161,8 @@ module.exports = function (app, ctx) {
     }
   });
 
-  // Remove container
-  app.delete('/api/docker/containers/:id', requireAdmin, async (req, res) => {
+  // Remove container (admin only — destructive)
+  app.delete('/api/docker/containers/:id', requireRole('admin'), async (req, res) => {
     try {
       const force = req.query.force === 'true';
       const result = await docker.removeContainer(req.params.id, force);
@@ -98,7 +173,7 @@ module.exports = function (app, ctx) {
   });
 
   // Deploy new container
-  app.post('/api/docker/deploy', requireAdmin, async (req, res) => {
+  app.post('/api/docker/deploy', requireRole('editor'), async (req, res) => {
     try {
       const result = await docker.createContainer(req.body);
       res.json({ success: result.status === 201, ...result });
@@ -118,7 +193,7 @@ module.exports = function (app, ctx) {
   });
 
   // Pull image
-  app.post('/api/docker/images/pull', requireAdmin, async (req, res) => {
+  app.post('/api/docker/images/pull', requireRole('editor'), async (req, res) => {
     try {
       const { name, tag } = req.body;
       if (!name) return res.status(400).json({ error: 'Image name required' });
@@ -129,8 +204,8 @@ module.exports = function (app, ctx) {
     }
   });
 
-  // Remove image
-  app.delete('/api/docker/images/:id', requireAdmin, async (req, res) => {
+  // Remove image (admin only — destructive)
+  app.delete('/api/docker/images/:id', requireRole('admin'), async (req, res) => {
     try {
       const force = req.query.force === 'true';
       const result = await docker.removeImage(req.params.id, force);
@@ -174,8 +249,8 @@ module.exports = function (app, ctx) {
     catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  // Full system prune
-  app.post('/api/docker/system/prune', requireAdmin, async (req, res) => {
+  // Full system prune (admin only — destructive)
+  app.post('/api/docker/system/prune', requireRole('admin'), async (req, res) => {
     try {
       const includeVolumes = req.body.includeVolumes === true;
       const result = await docker.systemPrune(includeVolumes);
@@ -184,27 +259,27 @@ module.exports = function (app, ctx) {
   });
 
   // Individual prune operations
-  app.post('/api/docker/prune/containers', requireAdmin, async (req, res) => {
+  app.post('/api/docker/prune/containers', requireRole('admin'), async (req, res) => {
     try { res.json({ success: true, ...(await docker.pruneContainers()) }); }
     catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/docker/prune/images', requireAdmin, async (req, res) => {
+  app.post('/api/docker/prune/images', requireRole('admin'), async (req, res) => {
     try { res.json({ success: true, ...(await docker.pruneImages(req.body.dangling !== false)) }); }
     catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/docker/prune/volumes', requireAdmin, async (req, res) => {
+  app.post('/api/docker/prune/volumes', requireRole('admin'), async (req, res) => {
     try { res.json({ success: true, ...(await docker.pruneVolumes()) }); }
     catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/docker/prune/networks', requireAdmin, async (req, res) => {
+  app.post('/api/docker/prune/networks', requireRole('admin'), async (req, res) => {
     try { res.json({ success: true, ...(await docker.pruneNetworks()) }); }
     catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/docker/prune/buildcache', requireAdmin, async (req, res) => {
+  app.post('/api/docker/prune/buildcache', requireRole('admin'), async (req, res) => {
     try { res.json({ success: true, ...(await docker.pruneBuildCache()) }); }
     catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -222,7 +297,7 @@ module.exports = function (app, ctx) {
   });
 
   // Rename container
-  app.post('/api/docker/containers/:id/rename', requireAdmin, async (req, res) => {
+  app.post('/api/docker/containers/:id/rename', requireRole('editor'), async (req, res) => {
     try {
       const { name } = req.body;
       if (!name) return res.status(400).json({ error: 'Name required' });
@@ -231,8 +306,8 @@ module.exports = function (app, ctx) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  // Chester AI — conversational Docker assistant
-  app.post('/api/docker/chester', requireAdmin, async (req, res) => {
+  // Bulwark AI — conversational Docker assistant
+  app.post('/api/docker/assistant', requireRole('editor'), async (req, res) => {
     try {
       const { prompt } = req.body;
       if (!prompt) return res.status(400).json({ error: 'Prompt required' });
@@ -241,26 +316,12 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ response: cached.response, cached: true });
 
-      const { spawn } = require('child_process');
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 30000, env: cleanEnv });
-        let stdout = '', stderr = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', d => { stderr += d; });
-        child.on('close', code => resolve({ stdout, stderr, code }));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      const response = result.stdout.trim() || 'Analysis unavailable';
+      const { askAI } = require('../lib/ai');
+      const response = await askAI(prompt, { timeout: 30000 }) || 'Analysis unavailable';
       neuralCache.semanticSet(prompt, response);
       res.json({ response, cached: false });
     } catch (e) {
-      res.json({ response: 'Chester is temporarily unavailable: ' + e.message, fallback: true });
+      res.json({ response: 'Bulwark is temporarily unavailable: ' + e.message, fallback: true });
     }
   });
 
@@ -285,22 +346,8 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ analysis: cached.response, cached: true });
 
-      const { spawn } = require('child_process');
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '', stderr = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', d => { stderr += d; });
-        child.on('close', code => resolve({ stdout, stderr, code }));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      const analysis = result.stdout.trim() || 'Analysis unavailable';
+      const { askAI } = require('../lib/ai');
+      const analysis = await askAI(prompt, { timeout: 20000 }) || 'Analysis unavailable';
       neuralCache.semanticSet(prompt, analysis);
       res.json({ analysis, cached: false });
     } catch (e) {

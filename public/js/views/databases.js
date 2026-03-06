@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Databases View
+ * Bulwark v2.1 — Databases View
  * Database list, create database, query console, users, backups
  */
 (function () {

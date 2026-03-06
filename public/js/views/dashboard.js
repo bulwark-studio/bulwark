@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Overview Dashboard (AI Command Center)
+ * Bulwark v2.1 — Overview Dashboard (AI Command Center)
  * 8 sections: Briefing, Health Ring, Commands, Pulse Gauges, Infra Map, DB Stats, Timeline, Tickets
  */
 (function () {
@@ -339,7 +339,7 @@
       var edges = [];
 
       // Local node (center-left)
-      nodes.push({ id: 'local', x: 80, y: 90, label: 'Local', status: 'healthy', detail: 'Dev Monitor' });
+      nodes.push({ id: 'local', x: 80, y: 90, label: 'Local', status: 'healthy', detail: 'Bulwark' });
 
       // Server nodes
       var sx = 250, sy = 50;

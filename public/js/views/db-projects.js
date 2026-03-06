@@ -384,7 +384,7 @@
       return '<div style="display:flex;flex-direction:column;gap:16px">' +
         '<div>' +
           '<label class="form-label">Project Name *</label>' +
-          '<input id="pf-name" class="form-input" placeholder="Admin, Dev Monitor, Security..." value="' + (p ? esc(p.name) : '') + '" autofocus>' +
+          '<input id="pf-name" class="form-input" placeholder="Admin, Bulwark, Security..." value="' + (p ? esc(p.name) : '') + '" autofocus>' +
         '</div>' +
         '<div>' +
           '<label class="form-label">PostgreSQL URL *</label>' +

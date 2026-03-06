@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { spawn } = require('child_process');
+const { askAI } = require('../lib/ai');
 
 const DATA_FILE = path.join(__dirname, '..', 'data', 'envvars.json');
 
@@ -56,7 +56,7 @@ function detectSecretRisk(key, value) {
 }
 
 module.exports = function (app, ctx) {
-  const { requireAdmin, execCommand, REPO_DIR } = ctx;
+  const { requireAdmin, requireRole, execCommand, REPO_DIR } = ctx;
 
   // Export as .env format
   app.get('/api/envvars/:app/export', requireAdmin, (req, res) => {
@@ -67,7 +67,7 @@ module.exports = function (app, ctx) {
       const val = decrypt(entry.value);
       return `${key}=${val.includes(' ') || val.includes('"') ? '"' + val.replace(/"/g, '\\"') + '"' : val}`;
     });
-    const content = '# Exported from Chester Dev Monitor\n# App: ' + req.params.app + '\n# Date: ' + new Date().toISOString() + '\n\n' + lines.join('\n') + '\n';
+    const content = '# Exported from Bulwark\n# App: ' + req.params.app + '\n# Date: ' + new Date().toISOString() + '\n\n' + lines.join('\n') + '\n';
     res.json({ content, count: lines.length });
   });
 
@@ -174,21 +174,7 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ analysis: cached.response, cached: true });
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      const analysis = result.trim() || 'Analysis unavailable.';
+      const analysis = await askAI(prompt, { timeout: 20000 }) || 'Analysis unavailable.';
       neuralCache.semanticSet(prompt, analysis);
       res.json({ analysis, cached: false });
     } catch (e) { res.json({ analysis: 'Analysis unavailable: ' + e.message }); }

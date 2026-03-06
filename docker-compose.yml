@@ -1,33 +1,52 @@
 services:
-  monitor-app:
-    build:
-      context: .
-    container_name: monitor-app
+  bulwark:
+    build: .
+    container_name: bulwark
     ports:
-      - "127.0.0.1:3001:3001"
+      - "3001:3001"
     environment:
       - MONITOR_PORT=3001
-      - DATABASE_URL=${DATABASE_URL:-postgresql://chester_admin:${DB_PASSWORD:-chester_dev_pass}@chester-db:5432/chester}
-      - VPS_DATABASE_URL=${VPS_DATABASE_URL:-}
       - MONITOR_USER=${MONITOR_USER:-admin}
-      - MONITOR_PASS=${MONITOR_PASS:-chester2026}
-      - REPO_DIR=/repo
+      - MONITOR_PASS=${MONITOR_PASS:-changeme}
+      - DATABASE_URL=postgresql://bulwark:bulwark@postgres:5432/bulwark
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
+      - bulwark-data:/app/data
       - ./users.json:/app/users.json
     restart: unless-stopped
     networks:
-      - monitor-net
-      - chester-net
+      - bulwark-net
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
 
+  postgres:
+    image: postgres:17-alpine
+    container_name: bulwark-db
+    environment:
+      - POSTGRES_USER=bulwark
+      - POSTGRES_PASSWORD=bulwark
+      - POSTGRES_DB=bulwark
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bulwark"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - bulwark-net
+
 networks:
-  monitor-net:
+  bulwark-net:
     driver: bridge
-    name: monitor-net
-  chester-net:
-    external: true
-    name: admin-net
+
+volumes:
+  bulwark-data:
+  pg-data:

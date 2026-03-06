@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Metrics Command Center
+ * Bulwark v2.1 — Metrics Command Center
  * AI-powered system intelligence with real-time visualization
  */
 (function () {
@@ -28,11 +28,14 @@
     if (pct > 80) return '#ff6b2b';
     if (pct > 50) return '#f59e0b';
     if (pct > 20) return '#22d3ee';
-    return 'rgba(34,211,238,0.25)';
+    return '#5eead4';
   }
 
-  function coreOpacity(pct) {
-    return Math.max(0.2, pct / 100);
+  function coreBg(pct) {
+    if (pct > 80) return 'rgba(255,107,43,0.25)';
+    if (pct > 50) return 'rgba(245,158,11,0.20)';
+    if (pct > 20) return 'rgba(34,211,238,0.18)';
+    return 'rgba(34,211,238,0.10)';
   }
 
   // ── Build layout ───────────────────────────────────────────────────
@@ -44,10 +47,13 @@
       c.innerHTML =
         '<div class="overview-grid">' +
 
+        /* ── Anomaly Alert Slot ── */
+        '<div id="ai-anomaly-alert"></div>' +
+
         /* ── AI Analysis Banner ── */
         '<div class="briefing-card" id="metrics-ai-card">' +
           '<div class="briefing-header">' +
-            '<div class="briefing-label">' + IC.brain + ' AI Performance Analysis</div>' +
+            '<div class="briefing-label">' + IC.brain + ' AI Performance Analysis <span id="metrics-ai-freshness"></span></div>' +
             '<button class="briefing-refresh" onclick="Views.metrics.runAnalysis(true)">' + IC.refresh + ' Analyze</button>' +
           '</div>' +
           '<div class="briefing-text" id="metrics-ai-text" style="min-height:40px">' +
@@ -112,6 +118,8 @@
     show: function () {
       initCharts();
       fetchAll();
+      // Restore cached AI analysis on nav-back (no re-fetch)
+      this.runAnalysis(false);
     },
 
     hide: function () {},
@@ -158,32 +166,37 @@
     // ── AI Analysis ──────────────────────────────────────────────────
     runAnalysis: function (force) {
       var el = document.getElementById('metrics-ai-text');
+      var badge = document.getElementById('metrics-ai-freshness');
       if (!el) return;
 
-      if (!force && aiAnalysisCache && Date.now() - aiCacheTime < 120000) {
-        el.textContent = aiAnalysisCache;
-        return;
+      // On nav-back (not forced), restore cached response instantly
+      if (!force && window.AICache) {
+        var restored = window.AICache.restore('metrics');
+        if (restored) {
+          el.textContent = restored.response;
+          if (badge) badge.innerHTML = window.AICache.freshnessBadge('metrics');
+          return;
+        }
       }
 
-      el.innerHTML = '<div class="briefing-shimmer" style="width:90%"></div><div class="briefing-shimmer" style="width:65%"></div>';
+      if (!el.style.opacity) {
+        el.innerHTML = '<div class="briefing-shimmer" style="width:90%"></div><div class="briefing-shimmer" style="width:65%"></div>';
+      }
 
-      // Build context from current data
-      var ctx = {
-        cpu: cpuHistory.slice(-30).map(function (h) { return h.v; }),
-        mem: memHistory.slice(-30).map(function (h) { return h.v; }),
-        cores: coreHistory.length ? coreHistory[coreHistory.length - 1] : [],
-        cpuAvg: cpuHistory.length ? (cpuHistory.reduce(function (s, h) { return s + h.v; }, 0) / cpuHistory.length).toFixed(1) : 0,
-        memAvg: memHistory.length ? (memHistory.reduce(function (s, h) { return s + h.v; }, 0) / memHistory.length).toFixed(1) : 0,
-        cpuMax: cpuHistory.length ? Math.max.apply(null, cpuHistory.map(function (h) { return h.v; })) : 0,
-        memMax: memHistory.length ? Math.max.apply(null, memHistory.map(function (h) { return h.v; })) : 0
-      };
+      var cpuArr = cpuHistory.slice(-30).map(function (h) { return h.v; });
+      var memArr = memHistory.slice(-30).map(function (h) { return h.v; });
+      var coresArr = coreHistory.length ? coreHistory[coreHistory.length - 1] : [];
+      var cpuAvg = cpuHistory.length ? +(cpuHistory.reduce(function (s, h) { return s + h.v; }, 0) / cpuHistory.length).toFixed(1) : 0;
+      var memAvg = memHistory.length ? +(memHistory.reduce(function (s, h) { return s + h.v; }, 0) / memHistory.length).toFixed(1) : 0;
+      var cpuMax = cpuHistory.length ? Math.max.apply(null, cpuHistory.map(function (h) { return h.v; })) : 0;
+      var memMax = memHistory.length ? Math.max.apply(null, memHistory.map(function (h) { return h.v; })) : 0;
 
       var prompt = 'Analyze this real-time system performance data and give a 2-3 sentence assessment. ' +
-        'CPU history (last 30 readings): [' + ctx.cpu.join(',') + ']. ' +
-        'Memory history: [' + ctx.mem.join(',') + ']. ' +
-        'CPU avg: ' + ctx.cpuAvg + '%, max: ' + ctx.cpuMax + '%. ' +
-        'Memory avg: ' + ctx.memAvg + '%, max: ' + ctx.memMax + '%. ' +
-        'Cores (' + ctx.cores.length + '): [' + ctx.cores.join(',') + ']. ' +
+        'CPU history (last 30 readings): [' + cpuArr.join(',') + ']. ' +
+        'Memory history: [' + memArr.join(',') + ']. ' +
+        'CPU avg: ' + cpuAvg + '%, max: ' + cpuMax + '%. ' +
+        'Memory avg: ' + memAvg + '%, max: ' + memMax + '%. ' +
+        'Cores (' + coresArr.length + '): [' + coresArr.join(',') + ']. ' +
         'Identify any anomalies, hot cores, memory pressure, or optimization opportunities. Be specific with numbers. No markdown.';
 
       fetch('/api/db/assistant/chat', {
@@ -192,11 +205,19 @@
         body: JSON.stringify({ message: prompt })
       }).then(function (r) { return r.json(); }).then(function (d) {
         var text = d.response || d.error || 'Analysis unavailable';
+        el.style.opacity = '';
+        // Store in AICache
+        if (window.AICache) {
+          window.AICache.set('metrics', {}, text, { sensitivity: 'medium' });
+          if (badge) badge.innerHTML = window.AICache.freshnessBadge('metrics');
+        }
+        // Also keep legacy cache for backwards compat
         aiAnalysisCache = text;
         aiCacheTime = Date.now();
         typeWriter(el, text);
       }).catch(function () {
-        el.textContent = 'AI analysis unavailable — Claude CLI not responding';
+        el.style.opacity = '';
+        el.textContent = 'AI analysis unavailable — check AI provider in Settings';
       });
     }
   };
@@ -289,10 +310,9 @@
     var el = document.getElementById('m-core-heatmap');
     if (!el) return;
     el.innerHTML = cores.map(function (pct, i) {
-      var bg = coreColor(pct);
-      return '<div class="core-cell" style="background:' + bg + ';opacity:' + coreOpacity(pct) + '" title="Core ' + i + ': ' + pct + '%">' +
-        '<div class="core-cell-id">' + i + '</div>' +
-        '<div class="core-cell-pct">' + pct + '%</div>' +
+      return '<div class="core-cell" style="background:' + coreBg(pct) + ';border:1px solid rgba(255,255,255,0.06)" title="Core ' + i + ': ' + pct + '%">' +
+        '<div class="core-cell-id">Core ' + i + '</div>' +
+        '<div class="core-cell-pct" style="color:' + coreColor(pct) + '">' + pct + '%</div>' +
       '</div>';
     }).join('');
 
@@ -325,13 +345,14 @@
       var vals = coreHistory.map(function (snap) { return snap[i] || 0; });
       var max = Math.max.apply(null, vals);
       var avg = vals.reduce(function (s, v) { return s + v; }, 0) / vals.length;
+      var lineColor = coreColor(avg);
       html += '<div class="core-spark-row">' +
         '<span class="core-spark-label">Core ' + i + '</span>' +
         '<svg class="core-spark-svg" viewBox="0 0 ' + vals.length + ' 50" preserveAspectRatio="none">' +
           '<polyline points="' + vals.map(function (v, j) { return j + ',' + (50 - v * 0.5); }).join(' ') + '" ' +
-          'fill="none" stroke="' + coreColor(avg) + '" stroke-width="1.5" stroke-linecap="round"/>' +
+          'fill="none" stroke="' + lineColor + '" stroke-width="1.5" stroke-linecap="round"/>' +
         '</svg>' +
-        '<span class="core-spark-avg" style="color:' + coreColor(avg) + '">' + avg.toFixed(0) + '%</span>' +
+        '<span class="core-spark-avg" style="color:' + lineColor + '">' + avg.toFixed(0) + '%</span>' +
       '</div>';
     }
     el.innerHTML = html;

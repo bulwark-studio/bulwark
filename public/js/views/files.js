@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor — File Intelligence Center
+ * Bulwark — File Intelligence Center
  * AI file analysis, search, git-aware browsing, stats, syntax preview
  */
 (function () {
@@ -16,9 +16,9 @@
         '<div class="files-dashboard">' +
           // AI Analysis
           '<div class="files-ai-card" id="files-ai-card">' +
-            '<div class="files-ai-header"><div class="ai-dot"></div><span>Chester File Analysis</span></div>' +
+            '<div class="files-ai-header"><div class="ai-dot"></div><span>Bulwark File Analysis <span id="files-ai-freshness"></span></span></div>' +
             '<div class="files-ai-body" id="files-ai-body">Click analyze for AI insights on your project structure...</div>' +
-            '<button class="files-ai-btn" onclick="filesAiAnalysis()">Analyze Project Structure</button>' +
+            '<button class="files-ai-btn" onclick="filesAiAnalysis(true)">Analyze Project Structure</button>' +
           '</div>' +
           // Tabs
           '<div class="files-tabs">' +
@@ -31,7 +31,7 @@
           '<div id="files-tab-content"></div>' +
         '</div>';
     },
-    show: function () { renderTab(); },
+    show: function () { renderTab(); filesAiAnalysis(false); },
     hide: function () {},
     update: function () {}
   };
@@ -348,12 +348,27 @@
     });
   };
 
-  window.filesAiAnalysis = function () {
+  window.filesAiAnalysis = function (force) {
     var body = document.getElementById('files-ai-body');
     if (!body) return;
+    if (!force && window.AICache) {
+      var restored = window.AICache.restore('files');
+      if (restored) {
+        body.textContent = restored.response;
+        var fb = document.getElementById('files-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('files');
+        return;
+      }
+    }
     body.innerHTML = 'Analyzing project structure...<span class="cursor-blink"></span>';
     fetch('/api/files/ai-analysis').then(function (r) { return r.json(); }).then(function (d) {
-      typewriter(body, d.analysis || 'No analysis available.');
+      var text = d.analysis || 'No analysis available.';
+      typewriter(body, text);
+      if (window.AICache) {
+        window.AICache.set('files', {}, text);
+        var fb = document.getElementById('files-ai-freshness');
+        if (fb) fb.innerHTML = window.AICache.freshnessBadge('files');
+      }
     }).catch(function () { body.textContent = 'Analysis unavailable.'; });
   };
 

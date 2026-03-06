@@ -35,6 +35,7 @@ function pushNotification(category, title, message, severity) {
 }
 
 module.exports = function (app, ctx) {
+  const { requireRole } = ctx;
   // Expose pushNotification on ctx for other routes
   ctx.pushNotification = pushNotification;
 
@@ -66,7 +67,7 @@ module.exports = function (app, ctx) {
   });
 
   // Delete one
-  app.delete('/api/notification-center/:id', ctx.requireAuth, (req, res) => {
+  app.delete('/api/notification-center/:id', requireRole('editor'), (req, res) => {
     let notifs = readNotifs();
     notifs = notifs.filter(n => n.id !== req.params.id);
     writeNotifs(notifs);
@@ -74,7 +75,7 @@ module.exports = function (app, ctx) {
   });
 
   // Clear all
-  app.delete('/api/notification-center/all', ctx.requireAuth, (req, res) => {
+  app.delete('/api/notification-center/all', requireRole('admin'), (req, res) => {
     writeNotifs([]);
     res.json({ success: true });
   });

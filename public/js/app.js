@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Main Application Controller
+ * Bulwark v2.1 — Main Application Controller
  * Global state, Socket.IO, view registry, navigation
  */
 
@@ -68,8 +68,29 @@ window.animateValue = function(el, end, duration) {
     servers: [],
     claudeRunning: false,
     cpuHistory: [],
-    memHistory: []
+    memHistory: [],
+    userRole: 'viewer',
+    userName: ''
   };
+
+  // ── Load Current User Role ──
+  fetch('/api/me').then(function(r) { return r.json(); }).then(function(u) {
+    window.state.userRole = u.role || 'viewer';
+    window.state.userName = u.username || '';
+    document.body.setAttribute('data-role', u.role || 'viewer');
+  }).catch(function() {});
+
+  // ── Load Branding ──
+  fetch('/api/branding').then(function(r) { return r.json(); }).then(function(b) {
+    window.appName = b.name || 'Bulwark';
+    var logo = document.querySelector('.sidebar-logo');
+    if (logo) logo.textContent = b.name.toUpperCase();
+    document.title = b.name;
+  }).catch(function() { window.appName = 'Bulwark'; });
+
+  // Helper: check if current user can perform an action
+  window.canEdit = function() { return window.state.userRole === 'admin' || window.state.userRole === 'editor'; };
+  window.isAdmin = function() { return window.state.userRole === 'admin'; };
 
   // ── View Registry ──
   // Each view JS file registers itself: Views.viewName = { init(), show(), hide(), update(data) }
@@ -176,6 +197,25 @@ window.animateValue = function(el, end, duration) {
       window.state.memHistory.push(sys.usedMemPct);
       if (window.state.memHistory.length > 30) {
         window.state.memHistory.shift();
+      }
+    }
+
+    // Feed AI anomaly detector
+    if (window.AICache) {
+      var anomaly = window.AICache.ingestMetrics(sys);
+      if (anomaly) {
+        // Show anomaly alert on metrics view if visible
+        var alertEl = document.getElementById('ai-anomaly-alert');
+        if (alertEl) {
+          var a = anomaly.anomalies[0];
+          var label = a.metric === 'cpu' ? 'CPU' : 'Memory';
+          alertEl.innerHTML = '<div class="ai-anomaly-bar">' +
+            '<span class="anomaly-icon">⚡</span>' +
+            '<span class="anomaly-text">' + label + ' anomaly detected: <b>' + a.value.toFixed(1) + '%</b>' + (a.trend ? ' (' + a.trend + ')' : '') + '</span>' +
+            '<button class="anomaly-action" onclick="Views.metrics.runAnalysis(true)">Analyze Now</button>' +
+          '</div>';
+          setTimeout(function () { if (alertEl) alertEl.innerHTML = ''; }, 15000);
+        }
       }
     }
 

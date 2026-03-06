@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════
-# Chester Dev Monitor — Ubuntu 24.04 + Node.js 20
+# Bulwark — Ubuntu 24.04 + Node.js 20
 # Single-stage build (Express.js, no build step)
 # ══════════════════════════════════════════════════════════════════
 

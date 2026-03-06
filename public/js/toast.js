@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Toast Notification System
+ * Bulwark v2.1 — Toast Notification System
  * Global Toast object for success, error, warning, info messages
  */
 

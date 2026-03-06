@@ -1,5 +1,5 @@
 /**
- * Chester Dev Monitor v2.0 — Uptime Intelligence Center
+ * Bulwark v2.1 — Uptime Intelligence Center
  * Real-time server monitoring, latency tracking, AI incident analysis
  */
 (function () {
@@ -36,8 +36,8 @@
         /* ── AI Incident Analysis ── */
         '<div class="briefing-card" id="uptime-ai-card">' +
           '<div class="briefing-header">' +
-            '<div class="briefing-label">' + IC.brain + ' AI Uptime Analysis</div>' +
-            '<button class="briefing-refresh" onclick="Views.uptime.aiAnalysis()">' + IC.zap + ' Analyze</button>' +
+            '<div class="briefing-label">' + IC.brain + ' AI Uptime Analysis <span id="uptime-ai-freshness"></span></div>' +
+            '<button class="briefing-refresh" onclick="Views.uptime.aiAnalysis(true)">' + IC.zap + ' Analyze</button>' +
           '</div>' +
           '<div class="briefing-text" id="uptime-ai-text">' +
             '<span style="color:var(--text-secondary)">Click Analyze for AI-powered uptime and reliability insights</span>' +
@@ -75,6 +75,7 @@
 
     show: function () {
       loadAll();
+      Views.uptime.aiAnalysis(false);
       // Auto-refresh every 30s
       if (refreshTimer) clearInterval(refreshTimer);
       refreshTimer = setInterval(loadAll, 30000);
@@ -93,9 +94,18 @@
     },
 
     // ── AI Analysis ──────────────────────────────────────────────────
-    aiAnalysis: function () {
+    aiAnalysis: function (force) {
       var el = document.getElementById('uptime-ai-text');
       if (!el) return;
+      if (!force && window.AICache) {
+        var restored = window.AICache.restore('uptime');
+        if (restored) {
+          el.textContent = restored.response;
+          var fb = document.getElementById('uptime-ai-freshness');
+          if (fb) fb.innerHTML = window.AICache.freshnessBadge('uptime');
+          return;
+        }
+      }
       el.innerHTML = '<div class="briefing-shimmer" style="width:90%"></div><div class="briefing-shimmer" style="width:65%"></div>';
 
       var ctx = serverData.map(function (s) {
@@ -120,7 +130,13 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prompt })
       }).then(function (r) { return r.json(); }).then(function (d) {
-        typeWriter(el, d.response || d.error || 'Analysis unavailable');
+        var text = d.response || d.error || 'Analysis unavailable';
+        typeWriter(el, text);
+        if (window.AICache) {
+          window.AICache.set('uptime', {}, text);
+          var fb = document.getElementById('uptime-ai-freshness');
+          if (fb) fb.innerHTML = window.AICache.freshnessBadge('uptime');
+        }
       }).catch(function () {
         el.textContent = 'AI analysis unavailable';
       });

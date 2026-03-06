@@ -1,10 +1,10 @@
 /**
  * Git Enhanced Routes — Rich git data for Git Intelligence Center
  */
-const { spawn } = require('child_process');
+const { askAI } = require('../lib/ai');
 
 module.exports = function (app, ctx) {
-  const { requireAdmin, execCommand, REPO_DIR } = ctx;
+  const { requireAdmin, requireRole, execCommand, REPO_DIR } = ctx;
   const cwd = REPO_DIR;
 
   // Rich commit log with stats
@@ -96,7 +96,7 @@ module.exports = function (app, ctx) {
     } catch (e) { res.json({ stashes: [] }); }
   });
 
-  app.post('/api/git/stash', requireAdmin, async (req, res) => {
+  app.post('/api/git/stash', requireRole('editor'), async (req, res) => {
     try {
       const msg = (req.body.message || 'Quick stash').replace(/"/g, '\\"');
       const r = await execCommand(`git stash push -m "${msg}"`, { cwd, timeout: 10000 });
@@ -104,7 +104,7 @@ module.exports = function (app, ctx) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
-  app.post('/api/git/stash/pop', requireAdmin, async (req, res) => {
+  app.post('/api/git/stash/pop', requireRole('editor'), async (req, res) => {
     try {
       const r = await execCommand('git stash pop', { cwd, timeout: 10000 });
       res.json({ success: true, output: r.stdout });
@@ -112,7 +112,7 @@ module.exports = function (app, ctx) {
   });
 
   // Commit with message
-  app.post('/api/git/commit', requireAdmin, async (req, res) => {
+  app.post('/api/git/commit', requireRole('editor'), async (req, res) => {
     try {
       const { message, addAll } = req.body;
       if (!message) return res.status(400).json({ error: 'Commit message required' });
@@ -169,7 +169,7 @@ module.exports = function (app, ctx) {
   });
 
   // AI: generate commit message from staged diff
-  app.post('/api/git/ai-commit-msg', requireAdmin, async (req, res) => {
+  app.post('/api/git/ai-commit-msg', requireRole('editor'), async (req, res) => {
     try {
       const diff = await execCommand('git diff --cached --stat', { cwd, timeout: 5000 });
       const fullDiff = await execCommand('git diff --cached', { cwd, timeout: 5000 });
@@ -181,49 +181,23 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ message: cached.response, cached: true });
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '', stderr = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', d => { stderr += d; });
-        child.on('close', code => resolve({ stdout, stderr, code }));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      const message = result.stdout.trim().replace(/^["']|["']$/g, '') || 'chore: update files';
+      const raw = await askAI(prompt, { timeout: 20000 });
+      const message = (raw || '').replace(/^["']|["']$/g, '').trim() || 'chore: update files';
       neuralCache.semanticSet(prompt, message);
       res.json({ message, cached: false });
     } catch (e) { res.json({ message: 'chore: update', error: e.message }); }
   });
 
   // AI: review staged changes
-  app.post('/api/git/ai-review', requireAdmin, async (req, res) => {
+  app.post('/api/git/ai-review', requireRole('editor'), async (req, res) => {
     try {
       const diff = await execCommand('git diff --cached', { cwd, timeout: 5000 });
       if (!diff.stdout.trim()) return res.json({ review: 'No staged changes to review.' });
 
       const prompt = `Review this git diff for a code review. Be concise (4-6 sentences). Check for: bugs, security issues (XSS, injection, hardcoded secrets), performance concerns, and code quality. Mention specific file names and line patterns. No markdown.\n\n${diff.stdout.substring(0, 5000)}`;
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 25000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      res.json({ review: result.trim() || 'Review unavailable.' });
+      const review = await askAI(prompt, { timeout: 25000 }) || 'Review unavailable.';
+      res.json({ review });
     } catch (e) { res.json({ review: 'Review unavailable: ' + e.message }); }
   });
 
@@ -242,21 +216,7 @@ module.exports = function (app, ctx) {
       const cached = neuralCache.semanticGet(prompt);
       if (cached) return res.json({ analysis: cached.response, cached: true });
 
-      const cleanEnv = { ...process.env };
-      delete cleanEnv.CLAUDECODE;
-      const result = await new Promise((resolve, reject) => {
-        const child = spawn('claude', ['--print'], { stdio: ['pipe', 'pipe', 'pipe'], shell: true, timeout: 20000, env: cleanEnv });
-        let stdout = '';
-        child.stdout.on('data', d => { stdout += d; });
-        child.stderr.on('data', () => {});
-        child.on('close', () => resolve(stdout));
-        child.on('error', reject);
-        child.stdin.on('error', () => {});
-        child.stdin.write(prompt);
-        child.stdin.end();
-      });
-
-      const analysis = result.trim() || 'Analysis unavailable.';
+      const analysis = await askAI(prompt, { timeout: 20000 }) || 'Analysis unavailable.';
       neuralCache.semanticSet(prompt, analysis);
       res.json({ analysis, cached: false });
     } catch (e) { res.json({ analysis: 'Analysis unavailable: ' + e.message }); }
