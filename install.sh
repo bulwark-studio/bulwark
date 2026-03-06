@@ -42,27 +42,37 @@ fi
 echo ""
 echo -e "${BOLD}Checking prerequisites...${NC}"
 
+install_node() {
+  if [[ "$OS" == "Linux" ]]; then
+    echo "  Installing Node.js 20 via NodeSource..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+    sudo apt-get install -y -qq nodejs
+  elif [[ "$OS" == "Darwin" ]]; then
+    if command -v brew &>/dev/null; then
+      echo "  Installing Node.js 20 via Homebrew..."
+      brew install node@20
+    else
+      echo "  Installing Node.js 20 via nvm..."
+      curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+      nvm install 20
+      nvm use 20
+    fi
+  fi
+}
+
 if command -v node &>/dev/null; then
   NODE_VER=$(node -v | sed 's/v//' | cut -d. -f1)
   if [[ "$NODE_VER" -ge 18 ]]; then
     echo -e "  ${CYAN}✓${NC} Node.js $(node -v)"
   else
     echo -e "  ${ORANGE}✗${NC} Node.js $(node -v) — need 18+"
-    echo "  Installing Node.js 20 via nvm..."
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-    nvm install 20
-    nvm use 20
+    install_node
   fi
 else
   echo -e "  ${ORANGE}✗${NC} Node.js not found"
-  echo "  Installing Node.js 20 via nvm..."
-  curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-  export NVM_DIR="$HOME/.nvm"
-  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-  nvm install 20
-  nvm use 20
+  install_node
 fi
 
 # --- Check PostgreSQL (optional) ---
@@ -88,22 +98,26 @@ echo ""
 if [[ -d "$INSTALL_DIR" ]]; then
   echo -e "${BOLD}Updating existing installation...${NC}"
   cd "$INSTALL_DIR"
-  git pull --rebase origin main
+  git pull --rebase --autostash origin main
 else
   echo -e "${BOLD}Installing Bulwark to ${INSTALL_DIR}...${NC}"
   sudo mkdir -p "$INSTALL_DIR"
   sudo chown "$(whoami)" "$INSTALL_DIR"
-  git clone "$REPO_URL" "$INSTALL_DIR"
+  git clone "$REPO_URL" "$INSTALL_DIR" || {
+    echo -e "  ${ORANGE}Failed to clone repository. Check your network connection.${NC}"
+    exit 1
+  }
   cd "$INSTALL_DIR"
 fi
 
 # --- Install dependencies ---
 echo ""
 echo -e "${BOLD}Installing dependencies...${NC}"
-npm install --production 2>&1 | tail -1
+npm install --production
+echo -e "  ${CYAN}✓${NC} Dependencies installed"
 
 # --- Generate config ---
-ADMIN_PASS=$(openssl rand -base64 12 | tr -dc 'a-zA-Z0-9' | head -c16)
+ADMIN_PASS=$(openssl rand -hex 16 | head -c16)
 
 if [[ ! -f ".env" ]]; then
   echo -e "${BOLD}Creating configuration...${NC}"
