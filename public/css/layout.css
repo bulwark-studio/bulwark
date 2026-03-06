@@ -177,6 +177,14 @@
   color: var(--text-tertiary);
 }
 
+.sidebar-company {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+  margin-top: 6px;
+  letter-spacing: 0.3px;
+}
+
 /* --- Main Content --- */
 .main-content {
   flex: 1;
