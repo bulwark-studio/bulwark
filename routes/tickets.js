@@ -1,5 +1,6 @@
 module.exports = function (app, ctx) {
   const { dbQuery, vpsQuery, vpsPool, io, execCommand, REPO_DIR, requireRole } = ctx;
+  const { askAI, askAIJSON } = require('../lib/ai');
 
   async function getTicketSummary() {
     const localTickets = await dbQuery(`
@@ -112,6 +113,100 @@ module.exports = function (app, ctx) {
         [`Ticket ${id.substring(0, 8)} rejected`, reason || 'Rejected', JSON.stringify({ ticket_id: id, reason })]);
       io.emit("tickets", await getTicketSummary());
       res.json({ success: true });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Create ticket ─────────────────────────────────────────────────────────
+  app.post("/api/tickets", requireRole('editor'), async (req, res) => {
+    const { subject, issue_type, issue_description, priority, target_env } = req.body;
+    if (!subject || !issue_description) return res.status(400).json({ error: "Subject and description required" });
+    try {
+      const sql = `INSERT INTO support_tickets (subject, issue_type, issue_description, priority, fix_status, target_env, name, email, source)
+        VALUES ($1, $2, $3, $4, 'pending', $5, $6, $7, 'manual') RETURNING id`;
+      const user = req.user?.username || 'admin';
+      const params = [subject, issue_type || 'task', issue_description, priority || 'normal', target_env || 'dev', user, user + '@bulwark'];
+      let row;
+      if (ctx.pool) {
+        const r = await ctx.pool.query(sql, params);
+        row = r.rows[0];
+      } else if (vpsPool) {
+        const r = await vpsPool.query(sql, params);
+        row = r.rows[0];
+      }
+      if (!row) return res.status(500).json({ error: "No database available" });
+      io.emit("tickets", await getTicketSummary());
+      res.json({ success: true, id: row.id });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── AI: Triage all pending tickets ────────────────────────────────────────
+  app.post("/api/tickets/ai/triage", requireRole('editor'), async (req, res) => {
+    try {
+      const data = await getTicketSummary();
+      const pending = data.tickets.filter(t => t.fix_status === 'pending' || t.fix_status === 'analyzing');
+      if (!pending.length) return res.json({ message: "No pending tickets to triage", results: [] });
+
+      const ticketList = pending.map(t => `- [${t.priority}] ${t.subject}: ${(t.issue_description || '').substring(0, 200)}`).join('\n');
+      const prompt = `You are a DevOps ticket triage assistant. Analyze these ${pending.length} support tickets and return JSON.
+
+Tickets:
+${ticketList}
+
+Return a JSON array where each element has:
+- "subject": the ticket subject (exact match)
+- "recommended_priority": "critical" | "high" | "normal" | "low"
+- "recommended_status": "analyzing" | "fixing" | "pending"
+- "category": a short category label (e.g. "frontend", "backend", "infrastructure", "security", "performance")
+- "summary": one-sentence analysis
+- "suggested_fix": one-sentence fix suggestion
+
+Return ONLY the JSON array, no markdown.`;
+
+      const result = await askAIJSON(prompt, { timeout: 45000 });
+      if (result.error) return res.json({ message: result.error, results: [] });
+      const results = Array.isArray(result) ? result : [];
+      res.json({ message: `Triaged ${results.length} tickets`, results });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── AI: Analyze single ticket ─────────────────────────────────────────────
+  app.post("/api/tickets/:id/ai/analyze", requireRole('editor'), async (req, res) => {
+    const { id } = req.params;
+    try {
+      let ticket;
+      const rows = await dbQuery(`SELECT * FROM support_tickets WHERE id = $1`, [id]);
+      ticket = rows[0];
+      if (!ticket && vpsPool) {
+        const vr = await vpsPool.query(`SELECT * FROM support_tickets WHERE id = $1`, [id]);
+        ticket = vr.rows[0];
+      }
+      if (!ticket) return res.status(404).json({ error: "Ticket not found" });
+
+      const prompt = `You are a senior DevOps engineer. Analyze this support ticket and provide actionable guidance. Return JSON.
+
+Ticket:
+- Subject: ${ticket.subject || ticket.issue_type}
+- Type: ${ticket.issue_type}
+- Priority: ${ticket.priority}
+- Status: ${ticket.fix_status || ticket.status}
+- Description: ${ticket.issue_description}
+${ticket.fix_notes ? '- Fix Notes: ' + ticket.fix_notes : ''}
+${ticket.fix_branch ? '- Branch: ' + ticket.fix_branch : ''}
+
+Return JSON with:
+- "analysis": 2-3 sentence root cause analysis
+- "recommended_priority": "critical" | "high" | "normal" | "low"
+- "recommended_status": next status this ticket should move to
+- "steps": array of 3-5 actionable fix steps (strings)
+- "estimated_effort": "trivial" | "small" | "medium" | "large"
+- "related_areas": array of system areas affected (e.g. ["frontend", "socket.io", "metrics"])
+- "risk_level": "low" | "medium" | "high"
+
+Return ONLY the JSON object, no markdown.`;
+
+      const result = await askAIJSON(prompt, { timeout: 45000 });
+      if (result.error) return res.json({ analysis: result.error });
+      res.json(result);
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 };

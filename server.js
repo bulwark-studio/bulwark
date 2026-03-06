@@ -205,6 +205,7 @@ require("./routes/uptime")(app, ctx);
 require("./routes/cloudflare")(app, ctx);
 require("./routes/docker-direct")(app, ctx);
 require("./routes/credentials")(app, ctx);
+require("./routes/git-projects")(app, ctx);
 require("./routes/git-enhanced")(app, ctx);
 require("./routes/deploy")(app, ctx);
 require("./routes/cron-enhanced")(app, ctx);

@@ -49,11 +49,12 @@ module.exports = function (app, ctx) {
 
   app.get("/api/git", async (req, res) => {
     try {
+      const gitCwd = (ctx.getGitCwd && ctx.getGitCwd()) || REPO_DIR;
       const [branch, log, status, remotes] = await Promise.all([
-        execCommand("git branch --show-current", { cwd: REPO_DIR }),
-        execCommand("git log --oneline -20", { cwd: REPO_DIR }),
-        execCommand("git status --short", { cwd: REPO_DIR }),
-        execCommand("git remote -v", { cwd: REPO_DIR }),
+        execCommand("git branch --show-current", { cwd: gitCwd }),
+        execCommand("git log --oneline -20", { cwd: gitCwd }),
+        execCommand("git status --short", { cwd: gitCwd }),
+        execCommand("git remote -v", { cwd: gitCwd }),
       ]);
       res.json({ branch: branch.stdout.trim(), commits: log.stdout.trim().split("\n").filter(Boolean), status: status.stdout.trim(), remotes: remotes.stdout.trim() });
     } catch (e) { res.json({ error: e.message }); }
@@ -142,14 +143,18 @@ module.exports = function (app, ctx) {
   });
 
   app.post("/api/git/pull", requireRole('editor'), async (req, res) => {
-    try { const r = await execCommand("git pull origin main", { cwd: REPO_DIR, timeout: 30000 }); res.json({ stdout: r.stdout, stderr: r.stderr }); }
-    catch (e) { res.status(500).json({ error: e.message }); }
+    try {
+      const gitCwd = (ctx.getGitCwd && ctx.getGitCwd()) || REPO_DIR;
+      const r = await execCommand("git pull origin main", { cwd: gitCwd, timeout: 30000 });
+      res.json({ stdout: r.stdout, stderr: r.stderr });
+    } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
   app.post("/api/git/push", requireRole('editor'), async (req, res) => {
     try {
-      const b = await execCommand("git branch --show-current", { cwd: REPO_DIR });
-      const r = await execCommand(`git push origin ${b.stdout.trim()}`, { cwd: REPO_DIR, timeout: 30000 });
+      const gitCwd = (ctx.getGitCwd && ctx.getGitCwd()) || REPO_DIR;
+      const b = await execCommand("git branch --show-current", { cwd: gitCwd });
+      const r = await execCommand(`git push origin ${b.stdout.trim()}`, { cwd: gitCwd, timeout: 30000 });
       res.json({ stdout: r.stdout, stderr: r.stderr, branch: b.stdout.trim() });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });

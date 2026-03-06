@@ -7,7 +7,7 @@ Your entire server, one dashboard.
 ### Docker (Recommended)
 
 ```bash
-git clone https://github.com/yourorg/bulwark.git
+git clone https://github.com/bulwark-studio/bulwark.git
 cd bulwark
 docker compose up -d
 ```
@@ -604,6 +604,22 @@ A: Yes. View, create, and delete tunnels directly from the Cloudflare view. Requ
 
 Manage multiple database connections. The Docker setup includes PostgreSQL 17 — it's already connected out of the box.
 
+![DB Projects — Active Connection, Stats, Connection String](../media/screenshots/database_project_1.png)
+
+### What You See
+
+The Projects view shows your active database connection with real-time stats:
+
+| Stat | Description |
+|------|-------------|
+| **Status** | Green dot = connected, orange = disconnected |
+| **Database** | Name (e.g. `db_autopilot`) |
+| **Size** | Database size on disk (e.g. 19 MB) |
+| **Connections** | Active connection count |
+| **Version** | PostgreSQL version (e.g. 17.8) |
+
+The connection string is displayed (password masked) along with SSL status and creation date.
+
 ### Adding an External Database
 
 1. Go to **Database > Projects** in the sidebar
@@ -614,34 +630,70 @@ Manage multiple database connections. The Docker setup includes PostgreSQL 17 �
    ```
 4. Click **Test Connection**, then **Save**
 
-Switch between connections using the database picker in the top bar of any Database view.
+Switch between connections using the database picker in the top bar of any Database view. All Database views (SQL Editor, Tables, Schema, Migrations, Roles, Backups, AI Assistant) share the same active project.
 
 ### Projects FAQ
 
 **Q: Can I connect to multiple databases?**
-A: Yes. Add as many projects as you need. Switch between them with the database picker.
+A: Yes. Add as many projects as you need. Switch between them with the database picker dropdown at the top of every Database view.
 
 **Q: Does it support MySQL or SQLite?**
 A: Currently PostgreSQL only. MySQL and SQLite support is planned.
+
+**Q: The project shows "disconnected" or orange status.**
+A: Check that the database server is running and the connection string is correct. Click **Manage Projects** in the top bar to edit or test the connection.
 
 ## 13. SQL Editor
 
 Write and run SQL queries with AI-powered autocompletion, syntax highlighting, and query history.
 
+![SQL Editor — CodeMirror, Query History, Run/Ask Claude/Save/Export](../media/screenshots/sql_Editor.png)
+
+### What You See
+
+The SQL Editor features:
+
+- **CodeMirror editor** with SQL syntax highlighting (material-darker theme) and autocomplete
+- **Toolbar buttons:** Run, Ask Claude (AI SQL generation), Save (named queries), Export CSV
+- **Query History sidebar** — recent queries with timestamps, click to reload
+- **Results panel** — query results displayed as a sortable table below the editor
+
 ### SQL Editor FAQ
 
 **Q: How do I use AI to generate SQL?**
-A: Click **Ask Claude** in the SQL Editor toolbar. Describe what you want in plain English and Claude will generate the SQL. Requires Claude CLI to be authenticated.
+A: Click **Ask Claude** in the SQL Editor toolbar. Describe what you want in plain English (e.g. "show table sizes sorted by largest") and Claude will generate the SQL. Requires Claude CLI to be authenticated.
 
 **Q: Can I run destructive queries (DROP, ALTER)?**
 A: DDL statements are blocked by default. To run them, the query must include the `?allow_ddl=true` parameter. This is a safety measure.
 
 **Q: Where is query history stored?**
-A: In `data/query-history.json`. The last 100 queries are kept. You can also save named queries for quick access.
+A: In `data/query-history.json`. The last 100 queries are kept. You can also save named queries with the **Save** button for quick access.
+
+**Q: Can I export query results?**
+A: Yes. Click **Export CSV** after running a query to download the results as a CSV file.
 
 ## 14. Tables
 
 Browse your database schema — columns, data, constraints, foreign keys, and indexes in a two-panel layout.
+
+![Tables — Two-Panel Layout, Table List, Columns/Data/Constraints/FK/Indexes Tabs](../media/screenshots/tables_3.png)
+
+### What You See
+
+The Tables view uses a two-panel layout:
+
+- **Left panel** — Table list with row count estimates and search filter
+- **Right panel** — Detail tabs for the selected table:
+
+| Tab | Shows |
+|-----|-------|
+| **Columns** | Column name, type, nullable, default value |
+| **Data** | Paginated row browser with sorting |
+| **Constraints** | Primary keys, unique constraints, check constraints |
+| **Foreign Keys** | FK relationships to other tables |
+| **Indexes** | Index definitions with size and type |
+
+Click any table in the left panel to load its details on the right.
 
 ### Tables FAQ
 
@@ -651,9 +703,27 @@ A: The Tables view is read-only for safety. Use the SQL Editor to run INSERT/UPD
 **Q: Why do some tables show 0 rows?**
 A: Row counts are estimates from PostgreSQL statistics. Run `ANALYZE` on your database to update the estimates, or click into the table to see actual row data.
 
+**Q: How do I search for a specific table?**
+A: Use the search box at the top of the left panel. It filters the table list as you type.
+
 ## 15. Schema
 
 Explore database functions, triggers, extensions, and indexes.
+
+![Schema — Functions Tab with Name, Arguments, Return Type, Language](../media/screenshots/schema_4.png)
+
+### What You See
+
+The Schema Browser organizes database objects into four tabs:
+
+| Tab | Count Example | Shows |
+|-----|--------------|-------|
+| **Functions** | 140 | Function name, arguments, return type, language (sql/plpgsql) |
+| **Triggers** | 54 | Trigger name, event, table, timing (BEFORE/AFTER) |
+| **Extensions** | 4-5 | Extension name, version, schema |
+| **Indexes** | 592 | Index name, table, definition, size |
+
+Each tab shows a count badge so you can see the total objects at a glance.
 
 ### Schema FAQ
 
@@ -663,9 +733,31 @@ A: The Schema view is read-only for browsing. Use the SQL Editor to create or mo
 **Q: What extensions are available?**
 A: Shows all installed PostgreSQL extensions (e.g. pg_stat_statements, uuid-ossp, pgcrypto). Install new ones via SQL: `CREATE EXTENSION extension_name;`
 
+**Q: Why do I see so many functions?**
+A: PostgreSQL includes many built-in functions. The list shows all functions in your database, including system functions and those created by extensions.
+
 ## 16. Migrations
 
 Track applied vs pending database migrations. Supports Docker test-runs and schema diffs.
+
+![Migrations — Migration Manager, Pending Files, View/Apply/Test Buttons](../media/screenshots/migration_5.png)
+
+### What You See
+
+The Migration Manager shows:
+
+- **Summary bar** — Total migrations, applied count, pending count, pool (dev/vps)
+- **Migration list** — Each `.sql` file with status badge (Applied/Pending)
+- **Action buttons per migration:**
+
+| Button | Action |
+|--------|--------|
+| **View** | Preview the SQL contents of the migration file |
+| **Apply** | Execute the migration against the live database |
+| **Test** | Docker test-run: spin up temp PG, apply, validate, destroy |
+
+- **Schema Diff** button — Compare live database schema against `schema.sql`
+- **Docker Test** button — Bulk test all pending migrations in a disposable container
 
 ### Migrations FAQ
 
@@ -673,25 +765,76 @@ Track applied vs pending database migrations. Supports Docker test-runs and sche
 A: Place `.sql` files in your project's migration directory. Bulwark scans the filesystem and compares against applied migrations in the database.
 
 **Q: Can I test a migration before applying?**
-A: Yes. Click **Test Run** to spin up a temporary PostgreSQL container, apply the migration, validate, and destroy — without touching your live database.
+A: Yes. Click **Test** next to any migration to spin up a temporary PostgreSQL container, apply the migration, validate, and destroy — without touching your live database. Requires Docker.
+
+**Q: What does Schema Diff do?**
+A: Compares your live database schema against `schema.sql` and shows the differences — useful for catching drift between code and production.
 
 ## 17. Roles
 
 View PostgreSQL roles, table-level permissions, and run AI security audits.
 
+![Roles — Role List, Permission Heatmap, AI Security Audit, Table Permissions](../media/screenshots/roles_6.png)
+
+### What You See
+
+The Roles view has a two-panel layout:
+
+- **Left panel** — Role list showing all PostgreSQL roles with badges (SUPER, LOGIN)
+- **Right panel** — Selected role details: superuser status, login ability, create DB, create role, connection limit, expiry
+
+**Three tabs:**
+
+| Tab | Shows |
+|-----|-------|
+| **Overview** | Role properties + table-level permissions (SELECT, INSERT, UPDATE, DELETE) |
+| **Permission Heatmap** | Visual grid of all roles vs all tables — cyan = granted, dash = denied |
+| **Security Findings** | AI-generated security audit results |
+
+**Summary bar** shows: Total Roles, Superusers, Login Roles, Active Connections.
+
+**Top-right buttons:** AI Security Audit, Create Role.
+
 ### Roles FAQ
 
 **Q: What does the AI security audit do?**
-A: Claude analyzes all database roles, their permissions, and privilege levels, then returns a security score with specific findings and recommendations. Requires Claude CLI.
+A: Click **AI Security Audit**. Claude analyzes all database roles, their permissions, and privilege levels, then returns a security score with specific findings and recommendations. Requires Claude CLI.
 
 **Q: Can I create roles from here?**
-A: Use the AI role generator — describe what the role needs access to in plain English and Claude generates the least-privilege SQL. Run it in the SQL Editor.
+A: Click **Create Role** or use the **AI Analyze** button on any role. You can also describe what the role needs in plain English and Claude generates the least-privilege SQL.
+
+**Q: What do the role badges mean?**
+A: **SUPER** = superuser (full access), **LOGIN** = can log in to the database. Roles without LOGIN are group roles used for permission inheritance.
 
 ## 18. Backups
 
 Create and restore PostgreSQL backups with AI-powered backup strategy analysis.
 
+![Backups — Backup List, Create/Download/Restore/Delete, AI Strategy](../media/screenshots/backups_7.png)
+
+### What You See
+
+The Backup Intelligence Center shows:
+
+- **Summary bar** — Backup count, total size, last backup age, oldest backup age
+- **Create Backup** button — Runs `pg_dump` and saves to `data/backups/`
+
+**Three tabs:**
+
+| Tab | Shows |
+|-----|-------|
+| **Backups** | List of backup files with status, filename, size, created date, age |
+| **AI Strategy** | AI-generated backup strategy with health score and recommendations |
+| **Disaster Recovery** | AI-generated DR plan with RPO/RTO targets |
+
+Each backup has action buttons: **Download**, **Restore**, **Delete**.
+
+Age indicators use color coding: cyan = recent (healthy), orange = old (needs attention).
+
 ### Backups FAQ
+
+**Q: How do I create a backup?**
+A: Click **Create Backup** in the top right. Bulwark runs `pg_dump` and saves the SQL file to `data/backups/` with a timestamp filename.
 
 **Q: pg_dump says "version mismatch".**
 A: Your pg_dump client version must match or exceed your PostgreSQL server version. The Docker image includes pg_dump 17. For manual installs, install `postgresql-client-17`.
@@ -699,20 +842,43 @@ A: Your pg_dump client version must match or exceed your PostgreSQL server versi
 **Q: What if pg_dump isn't installed?**
 A: Bulwark falls back to SQL-based export, dumping schema and data via PostgreSQL queries. Less feature-complete than pg_dump but works everywhere.
 
-**Q: What does AI backup strategy do?**
-A: Claude analyzes your backup history, database size, and configuration, then provides a health score, disaster recovery plan, and specific recommendations.
+**Q: What does AI Strategy do?**
+A: Click **AI Strategy**. Claude analyzes your backup history, database size, and configuration, then provides a health score, disaster recovery plan, and specific recommendations.
+
+**Q: How do I restore a backup?**
+A: Click **Restore** next to any backup in the list. A confirmation dialog appears — this will overwrite the current database contents.
 
 ## 19. AI Assistant
 
 A conversational AI assistant for database operations — ask questions about your schema, generate queries, and get optimization advice.
 
+![AI Assistant — Chat Interface, Quick Prompts, Action Buttons](../media/screenshots/ai_assit_8.png)
+
+### What You See
+
+The AI Database Assistant has:
+
+- **Connection banner** — Shows active project, database name, table count, index count, size
+- **Three tabs:** AI Chat, Health, Deploy Check
+- **Chat interface** — Conversational AI with full context of your database schema, indexes, constraints, and health metrics
+- **Quick prompt cards** — Pre-built prompts to get started:
+  - "What tables have the most rows?"
+  - "Find tables missing timestamps"
+  - "Generate backup script"
+  - "Map FK relationships"
+- **Action buttons** at the bottom: Diagnose, Optimize, Deploy Script, Migration, Table Report
+- **Text input** — Type any question about your database
+
 ### AI Assistant FAQ
 
 **Q: What can I ask the AI Assistant?**
-A: Anything about your database — "show me the largest tables", "generate an index for slow queries", "explain this schema". It has context about your connected database.
+A: Anything about your database — "show me the largest tables", "generate an index for slow queries", "explain this schema", "find tables without primary keys". It has full context about your connected database including all tables, columns, indexes, and constraints.
 
 **Q: Which AI provider does it use?**
 A: Whatever is configured in Settings > AI Provider. Default is Claude CLI. Also supports Codex CLI or none.
+
+**Q: What do the action buttons do?**
+A: They send pre-built prompts: **Diagnose** checks for issues, **Optimize** suggests performance improvements, **Deploy Script** generates deployment SQL, **Migration** creates migration files, **Table Report** summarizes your schema.
 
 ---
 
@@ -722,15 +888,52 @@ A: Whatever is configured in Settings > AI Provider. Default is Claude CLI. Also
 
 ## 20. Terminal
 
-A floating terminal drawer that persists across all pages.
+Full-screen terminal with three tabs: Shell, Bulwark AI, and Credential Vault.
+
+![Terminal — Bulwark AI Tab, Quick Actions, Natural Language Input](../media/screenshots/terminal_1.png)
 
 ### Three Tabs
 
 | Tab | Purpose |
 |-----|---------|
-| **Shell** | Full PTY terminal (bash). Run any command. |
-| **Bulwark AI** | Natural language DevOps assistant. Ask "restart Docker containers" and it generates the command. |
-| **Vault** | Encrypted credential storage. SSH keys, API tokens, connection strings. |
+| **Shell** | Full PTY terminal (bash/PowerShell). Run any command. |
+| **Bulwark AI** | Natural language DevOps assistant with quick action buttons. |
+| **Vault** | AES-256-GCM encrypted credential storage. |
+
+### Bulwark AI Tab
+
+The AI tab provides a natural language interface to your server. Type commands in plain English and Bulwark generates and executes them.
+
+**Quick action buttons** for common tasks:
+
+| Button | What it does |
+|--------|-------------|
+| **SSH into production** | Connects to your production server |
+| **Check disk space** | Runs disk usage analysis |
+| **Restart Docker containers** | Restarts your Docker fleet |
+| **Show PM2 logs** | Displays PM2 process logs |
+| **Deploy latest changes** | Runs your deploy pipeline |
+| **Analyze server health** | Full system health check |
+
+Type anything in the **"Ask Bulwark anything..."** input at the bottom. Requires Claude CLI to be authenticated.
+
+### Credential Vault
+
+![Vault — Add Credential Modal, SSH Key, AES-256-GCM Encryption](../media/screenshots/fault_1.png)
+
+Click the **Vault** tab to manage encrypted credentials. Click **+ Add** to store a new credential:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | Friendly name (e.g. "My Server") |
+| **Type** | SSH Key, API Token, Database, or Generic |
+| **Host** | Server IP or hostname |
+| **Port** | Connection port (default: 22 for SSH) |
+| **Username** | Login username |
+| **Private Key** | Paste your private key (SSH type) |
+| **Tags** | Comma-separated labels (e.g. "production, aws") |
+
+All credentials are **encrypted with AES-256-GCM** and never leave the server unencrypted. Click the play button next to any saved SSH credential to connect directly from the terminal.
 
 ### Quick Commands
 
@@ -755,9 +958,75 @@ A: The Docker image runs as the `bulwark` user (not root) to support this. If yo
 **Q: The terminal says "Session ended".**
 A: The PTY session timed out or crashed. Click the Shell tab or press `Ctrl + Backtick` to reconnect.
 
+**Q: How secure is the Vault?**
+A: Credentials are encrypted with AES-256-GCM using a server-side key. They are stored in `data/credentials.json` and never transmitted in plaintext. The encryption key is derived from `ENCRYPTION_KEY` in your `.env` file (auto-generated on first run if not set).
+
+**Q: Can I SSH directly from the Vault?**
+A: Yes. Save an SSH Key credential with the host, port, username, and private key. Click the play button next to it to open an SSH session in the Shell tab.
+
 ## 21. Tickets
 
-Support ticket system with Kanban board, status tracking, and approval workflows.
+Support ticket system with 7-column Kanban board, drag-and-drop workflow, AI triage, and approval workflows.
+
+![Tickets — Kanban Board, AI Triage, New Ticket, Approve/Reject](../media/screenshots/tickets_sidebar.png)
+
+### What You See
+
+The Tickets view is a **7-column Kanban board** showing tickets across the full development lifecycle:
+
+| Column | Purpose |
+|--------|---------|
+| **Pending** | New tickets, not yet investigated |
+| **Analyzing** | Being investigated or triaged |
+| **Fixing** | Active development in progress |
+| **Testing** | Fix is being tested/validated |
+| **Awaiting Approval** | Ready for review — shows Approve/Reject buttons |
+| **Approved** | Approved — auto-pushes the fix branch to git |
+| **Deployed** | Live in production |
+
+**Status bar** at the top shows ticket counts per column with color-coded badges.
+
+Each ticket card shows:
+- **Subject** and **description** (truncated)
+- **Priority badge** (critical/high/normal/low) with color coding
+- **Type badge** (bug/feature/task)
+- **Branch name** in cyan (if assigned)
+- **Action buttons:** AI (analyze), View (detail modal), Del (delete)
+
+### Creating Tickets
+
+Click **+ New Ticket** in the top right to open the create modal:
+
+| Field | Options |
+|-------|---------|
+| **Subject** | Brief summary of the issue |
+| **Description** | Detailed description |
+| **Type** | Bug, Feature, Task, Improvement |
+| **Priority** | Low, Normal, High, Critical |
+| **Environment** | Dev, Staging, Production |
+
+### AI Features
+
+**AI Triage** (top right) — Claude bulk-analyzes all pending tickets and returns:
+- Recommended priority and status for each ticket
+- Category label (frontend, backend, infrastructure, security, performance)
+- One-sentence analysis and suggested fix
+- Results appear as a table above the Kanban board
+
+**AI Analyze** (per ticket) — Click the **AI** button on any card, or click **AI Analyze** inside the detail modal. Claude provides:
+- Root cause analysis (2-3 sentences)
+- Recommended priority and next status
+- 3-5 actionable fix steps
+- Effort estimate (trivial/small/medium/large)
+- Risk level (low/medium/high)
+- Related system areas
+
+### Workflow
+
+- **Drag and drop** cards between columns to change status
+- **Approve** button (Awaiting Approval column) — approves the ticket and auto-pushes the fix branch
+- **Reject** button — sends ticket back to Fixing with a reason note
+- Real-time updates via WebSocket — changes by other users appear instantly
 
 ### Tickets FAQ
 
@@ -765,7 +1034,16 @@ Support ticket system with Kanban board, status tracking, and approval workflows
 A: In the PostgreSQL `support_tickets` table. Tickets work when a database is connected.
 
 **Q: Can I use tickets without a database?**
-A: No. The ticket system requires PostgreSQL. Without it, the view shows "No database connected".
+A: No. The ticket system requires PostgreSQL. Without it, the view shows empty.
+
+**Q: How does AI Triage work?**
+A: Click **AI Triage** — Claude analyzes all pending/analyzing tickets at once, recommends priority, status, and a fix suggestion for each. Requires Claude CLI to be authenticated.
+
+**Q: What happens when I approve a ticket?**
+A: The ticket moves to "Approved" and Bulwark auto-pushes the ticket's `fix_branch` to git origin. An activity log entry is created.
+
+**Q: Can I assign tickets to team members?**
+A: The `assigned_to` field exists in the database but is not yet exposed in the UI. You can set it via the SQL Editor.
 
 ## 22. Git
 

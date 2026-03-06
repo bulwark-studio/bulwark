@@ -9,17 +9,15 @@
 - [x] Create ASCII art banner for terminal install (in install.sh + README.md)
 - [x] Create landing page (landing/index.html — deploy to bulwark.studio via GitHub Pages)
 
-### 1b. GitHub Open Source Setup (BLOCKED — waiting on email for GitHub org)
-**Status:** Waiting on email verification to set up GitHub correctly.
-
-**When unblocked, do this:**
+### 1b. GitHub Open Source Setup (DONE)
+**Status:** Live at https://github.com/bulwark-studio/bulwark
 
 #### Create GitHub Repo
-- [ ] Create public repo: `autopilotaitech/bulwark` (or new `bulwark-dev` org)
-- [ ] Description: "Your entire server, one dashboard. AI-powered, self-hosted ops platform."
-- [ ] Topics: devops, server-management, self-hosted, ai, docker, terminal, database, monitoring
-- [ ] Website: bulwark.studio
-- [ ] Enable Discussions + Issues, disable Wiki
+- [x] Create public repo: `bulwark-studio/bulwark` — https://github.com/bulwark-studio/bulwark
+- [x] Description: "The open-source server command center that replaces Portainer + pgAdmin + Uptime Kuma + your deployment scripts — with 4 npm dependencies."
+- [x] Topics: devops, server-management, self-hosted, ai, docker, terminal, database, monitoring, dashboard, postgresql, deployment, open-source
+- [x] Website: bulwark.studio
+- [x] Enable Discussions + Issues, disable Wiki
 
 #### Extract from Monorepo
 ```bash
@@ -32,7 +30,7 @@ rm -rf node_modules .env
 git init
 git add .
 git commit -m "Initial commit: Bulwark v2.1 — AI-powered server management platform"
-git remote add origin git@github.com:autopilotaitech/bulwark.git
+git remote add origin git@github.com:bulwark-studio/bulwark.git
 git branch -M main
 git push -u origin main
 ```

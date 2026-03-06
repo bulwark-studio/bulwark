@@ -6,7 +6,7 @@ Thanks for your interest in contributing! Bulwark is an open-source, AI-powered 
 
 ```bash
 # Clone the repo
-git clone https://github.com/autopilotaitech/bulwark.git
+git clone https://github.com/bulwark-studio/bulwark.git
 cd bulwark
 
 # Install dependencies

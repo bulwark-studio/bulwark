@@ -43,7 +43,7 @@ Bulwark is an AI-powered, self-hosted server management platform that replaces y
 ### npm
 
 ```bash
-git clone https://github.com/autopilotaitech/bulwark.git
+git clone https://github.com/bulwark-studio/bulwark.git
 cd bulwark
 npm install
 MONITOR_USER=admin MONITOR_PASS=changeme npm start

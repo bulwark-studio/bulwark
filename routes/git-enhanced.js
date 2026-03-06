@@ -5,7 +5,11 @@ const { askAI } = require('../lib/ai');
 
 module.exports = function (app, ctx) {
   const { requireAdmin, requireRole, execCommand, REPO_DIR } = ctx;
-  const cwd = REPO_DIR;
+  // Dynamic cwd: use active git project if set, else fall back to static REPO_DIR
+  function getCwd() { return (ctx.getGitCwd && ctx.getGitCwd()) || REPO_DIR; }
+  function getEnv() { return (ctx.getGitEnv && ctx.getGitEnv()) || process.env; }
+  // Legacy compat: `cwd` used throughout — override getter
+  const cwd = null; // force use of getCwd()
 
   // Rich commit log with stats
   app.get('/api/git/log', requireAdmin, async (req, res) => {
@@ -13,7 +17,7 @@ module.exports = function (app, ctx) {
       const limit = parseInt(req.query.limit) || 50;
       const r = await execCommand(
         `git log --format="%H|||%an|||%ae|||%aI|||%s" -${limit} --shortstat`,
-        { cwd, timeout: 10000 }
+        { cwd: getCwd(), timeout: 10000 }
       );
       const lines = r.stdout.trim().split('\n');
       const commits = [];
@@ -40,10 +44,10 @@ module.exports = function (app, ctx) {
   app.get('/api/git/diff', requireAdmin, async (req, res) => {
     try {
       const [staged, unstaged, stagedStat, unstagedStat] = await Promise.all([
-        execCommand('git diff --cached', { cwd, timeout: 10000 }),
-        execCommand('git diff', { cwd, timeout: 10000 }),
-        execCommand('git diff --cached --stat', { cwd, timeout: 10000 }),
-        execCommand('git diff --stat', { cwd, timeout: 10000 }),
+        execCommand('git diff --cached', { cwd: getCwd(), timeout: 10000 }),
+        execCommand('git diff', { cwd: getCwd(), timeout: 10000 }),
+        execCommand('git diff --cached --stat', { cwd: getCwd(), timeout: 10000 }),
+        execCommand('git diff --stat', { cwd: getCwd(), timeout: 10000 }),
       ]);
       res.json({
         staged: staged.stdout,
@@ -58,8 +62,8 @@ module.exports = function (app, ctx) {
   app.get('/api/git/diff/:hash', requireAdmin, async (req, res) => {
     try {
       const hash = req.params.hash.replace(/[^a-f0-9]/gi, '').slice(0, 40);
-      const r = await execCommand(`git show --stat --format="" ${hash}`, { cwd, timeout: 10000 });
-      const d = await execCommand(`git show --format="" ${hash}`, { cwd, timeout: 10000 });
+      const r = await execCommand(`git show --stat --format="" ${hash}`, { cwd: getCwd(), timeout: 10000 });
+      const d = await execCommand(`git show --format="" ${hash}`, { cwd: getCwd(), timeout: 10000 });
       res.json({ stat: r.stdout, diff: d.stdout.substring(0, 50000) });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -68,9 +72,9 @@ module.exports = function (app, ctx) {
   app.get('/api/git/branches', requireAdmin, async (req, res) => {
     try {
       const [local, remote, current] = await Promise.all([
-        execCommand('git branch --format="%(refname:short)|||%(objectname:short)|||%(committerdate:iso)|||%(subject)"', { cwd }),
-        execCommand('git branch -r --format="%(refname:short)|||%(objectname:short)|||%(committerdate:iso)|||%(subject)"', { cwd }),
-        execCommand('git branch --show-current', { cwd }),
+        execCommand('git branch --format="%(refname:short)|||%(objectname:short)|||%(committerdate:iso)|||%(subject)"', { cwd: getCwd() }),
+        execCommand('git branch -r --format="%(refname:short)|||%(objectname:short)|||%(committerdate:iso)|||%(subject)"', { cwd: getCwd() }),
+        execCommand('git branch --show-current', { cwd: getCwd() }),
       ]);
       const parse = (raw, isRemote) => raw.stdout.trim().split('\n').filter(Boolean).map(line => {
         const [name, hash, date, message] = line.split('|||');
@@ -87,7 +91,7 @@ module.exports = function (app, ctx) {
   // Stash operations
   app.get('/api/git/stash', requireAdmin, async (req, res) => {
     try {
-      const r = await execCommand('git stash list --format="%gd|||%s|||%aI"', { cwd });
+      const r = await execCommand('git stash list --format="%gd|||%s|||%aI"', { cwd: getCwd() });
       const stashes = r.stdout.trim().split('\n').filter(Boolean).map(line => {
         const [ref, message, date] = line.split('|||');
         return { ref, message, date };
@@ -99,14 +103,14 @@ module.exports = function (app, ctx) {
   app.post('/api/git/stash', requireRole('editor'), async (req, res) => {
     try {
       const msg = (req.body.message || 'Quick stash').replace(/"/g, '\\"');
-      const r = await execCommand(`git stash push -m "${msg}"`, { cwd, timeout: 10000 });
+      const r = await execCommand(`git stash push -m "${msg}"`, { cwd: getCwd(), timeout: 10000 });
       res.json({ success: true, output: r.stdout });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
   app.post('/api/git/stash/pop', requireRole('editor'), async (req, res) => {
     try {
-      const r = await execCommand('git stash pop', { cwd, timeout: 10000 });
+      const r = await execCommand('git stash pop', { cwd: getCwd(), timeout: 10000 });
       res.json({ success: true, output: r.stdout });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -116,9 +120,9 @@ module.exports = function (app, ctx) {
     try {
       const { message, addAll } = req.body;
       if (!message) return res.status(400).json({ error: 'Commit message required' });
-      if (addAll) await execCommand('git add -A', { cwd });
+      if (addAll) await execCommand('git add -A', { cwd: getCwd() });
       const safeMsg = message.replace(/"/g, '\\"').replace(/\$/g, '\\$');
-      const r = await execCommand(`git commit -m "${safeMsg}"`, { cwd, timeout: 15000 });
+      const r = await execCommand(`git commit -m "${safeMsg}"`, { cwd: getCwd(), timeout: 15000 });
       res.json({ success: true, output: r.stdout });
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -126,7 +130,7 @@ module.exports = function (app, ctx) {
   // Contributors
   app.get('/api/git/contributors', requireAdmin, async (req, res) => {
     try {
-      const r = await execCommand('git shortlog -sne --all', { cwd, timeout: 10000 });
+      const r = await execCommand('git shortlog -sne --all', { cwd: getCwd(), timeout: 10000 });
       const contributors = r.stdout.trim().split('\n').filter(Boolean).map(line => {
         const m = line.trim().match(/^\s*(\d+)\s+(.+?)\s+<(.+?)>$/);
         return m ? { commits: parseInt(m[1]), name: m[2], email: m[3] } : null;
@@ -139,10 +143,10 @@ module.exports = function (app, ctx) {
   app.get('/api/git/repo-stats', requireAdmin, async (req, res) => {
     try {
       const [totalCommits, firstCommit, fileCount, repoSize] = await Promise.all([
-        execCommand('git rev-list --count HEAD', { cwd }),
-        execCommand('git log --reverse --format="%aI" -1', { cwd }),
-        execCommand('git ls-files | wc -l', { cwd }),
-        execCommand('git count-objects -vH', { cwd }),
+        execCommand('git rev-list --count HEAD', { cwd: getCwd() }),
+        execCommand('git log --reverse --format="%aI" -1', { cwd: getCwd() }),
+        execCommand('git ls-files | wc -l', { cwd: getCwd() }),
+        execCommand('git count-objects -vH', { cwd: getCwd() }),
       ]);
       // Parse size
       const sizeMatch = repoSize.stdout.match(/size-pack:\s*(.+)/);
@@ -158,7 +162,7 @@ module.exports = function (app, ctx) {
   // Heatmap data — commits per day for last year
   app.get('/api/git/heatmap', requireAdmin, async (req, res) => {
     try {
-      const r = await execCommand('git log --format="%aI" --since="1 year ago"', { cwd, timeout: 10000 });
+      const r = await execCommand('git log --format="%aI" --since="1 year ago"', { cwd: getCwd(), timeout: 10000 });
       const days = {};
       r.stdout.trim().split('\n').filter(Boolean).forEach(d => {
         const day = d.substring(0, 10);
@@ -171,8 +175,8 @@ module.exports = function (app, ctx) {
   // AI: generate commit message from staged diff
   app.post('/api/git/ai-commit-msg', requireRole('editor'), async (req, res) => {
     try {
-      const diff = await execCommand('git diff --cached --stat', { cwd, timeout: 5000 });
-      const fullDiff = await execCommand('git diff --cached', { cwd, timeout: 5000 });
+      const diff = await execCommand('git diff --cached --stat', { cwd: getCwd(), timeout: 5000 });
+      const fullDiff = await execCommand('git diff --cached', { cwd: getCwd(), timeout: 5000 });
       if (!diff.stdout.trim()) return res.json({ message: '', error: 'No staged changes' });
 
       const prompt = `Generate a concise git commit message for these changes. Use conventional commit format (feat/fix/refactor/docs/chore). One line, max 72 chars. No quotes around it.\n\nFiles changed:\n${diff.stdout}\n\nDiff (first 3000 chars):\n${fullDiff.stdout.substring(0, 3000)}`;
@@ -191,7 +195,7 @@ module.exports = function (app, ctx) {
   // AI: review staged changes
   app.post('/api/git/ai-review', requireRole('editor'), async (req, res) => {
     try {
-      const diff = await execCommand('git diff --cached', { cwd, timeout: 5000 });
+      const diff = await execCommand('git diff --cached', { cwd: getCwd(), timeout: 5000 });
       if (!diff.stdout.trim()) return res.json({ review: 'No staged changes to review.' });
 
       const prompt = `Review this git diff for a code review. Be concise (4-6 sentences). Check for: bugs, security issues (XSS, injection, hardcoded secrets), performance concerns, and code quality. Mention specific file names and line patterns. No markdown.\n\n${diff.stdout.substring(0, 5000)}`;
@@ -205,9 +209,9 @@ module.exports = function (app, ctx) {
   app.get('/api/git/ai-analysis', requireAdmin, async (req, res) => {
     try {
       const [stats, recent, branches] = await Promise.all([
-        execCommand('git rev-list --count HEAD', { cwd }),
-        execCommand('git log --oneline -10', { cwd }),
-        execCommand('git branch -a', { cwd }),
+        execCommand('git rev-list --count HEAD', { cwd: getCwd() }),
+        execCommand('git log --oneline -10', { cwd: getCwd() }),
+        execCommand('git branch -a', { cwd: getCwd() }),
       ]);
 
       const prompt = `Analyze this git repository. Be concise (4-5 sentences). Total commits: ${stats.stdout.trim()}. Branches: ${branches.stdout.trim()}. Recent commits:\n${recent.stdout}\nComment on: commit patterns, branch hygiene, areas of activity, recommendations. No markdown.`;
@@ -220,5 +224,106 @@ module.exports = function (app, ctx) {
       neuralCache.semanticSet(prompt, analysis);
       res.json({ analysis, cached: false });
     } catch (e) { res.json({ analysis: 'Analysis unavailable: ' + e.message }); }
+  });
+
+  // AI: branch cleanup analysis
+  app.get('/api/git/ai-branch-cleanup', requireAdmin, async (req, res) => {
+    try {
+      const [local, remote, current] = await Promise.all([
+        execCommand('git branch --format="%(refname:short) %(committerdate:iso) %(subject)"', { cwd: getCwd() }),
+        execCommand('git branch -r --format="%(refname:short) %(committerdate:iso) %(subject)"', { cwd: getCwd() }),
+        execCommand('git branch --show-current', { cwd: getCwd() }),
+      ]);
+      const prompt = `Analyze these git branches for cleanup. Current branch: ${current.stdout.trim()}.
+
+Local branches:
+${local.stdout}
+
+Remote branches:
+${remote.stdout}
+
+Return JSON with:
+- "stale": array of branch names that look stale (no recent activity, already merged, etc.)
+- "merged": array of branches that appear to be merged (based on commit messages like "merge", "deployed", etc.)
+- "active": array of branches with recent activity
+- "recommendations": array of 2-3 cleanup suggestions (strings)
+- "summary": one-sentence summary
+
+Return ONLY the JSON object, no markdown.`;
+
+      const { askAIJSON } = require('../lib/ai');
+      const result = await askAIJSON(prompt, { timeout: 30000 });
+      res.json(result.error ? { stale: [], merged: [], active: [], recommendations: [], summary: result.error } : result);
+    } catch (e) { res.json({ stale: [], merged: [], active: [], recommendations: [], summary: 'Analysis unavailable: ' + e.message }); }
+  });
+
+  // AI: generate PR description from branch diff
+  app.post('/api/git/ai-pr-description', requireRole('editor'), async (req, res) => {
+    try {
+      const base = (req.body.base || 'main').replace(/[^a-zA-Z0-9/_.-]/g, '');
+      const current = (await execCommand('git branch --show-current', { cwd: getCwd() })).stdout.trim();
+      const [diffStat, log] = await Promise.all([
+        execCommand(`git diff ${base}...HEAD --stat`, { cwd: getCwd(), timeout: 10000 }),
+        execCommand(`git log ${base}...HEAD --oneline`, { cwd: getCwd(), timeout: 10000 }),
+      ]);
+      if (!log.stdout.trim()) return res.json({ title: '', body: '', error: 'No commits ahead of ' + base });
+
+      const prompt = `Generate a GitHub Pull Request title and description for merging branch "${current}" into "${base}".
+
+Commits:
+${log.stdout}
+
+Files changed:
+${diffStat.stdout.substring(0, 3000)}
+
+Return JSON with:
+- "title": PR title (under 70 chars, conventional format)
+- "summary": 2-3 bullet points summarizing what changed
+- "test_plan": 2-3 bullet points for testing the changes
+- "breaking": true/false if there are breaking changes
+- "labels": array of suggested labels (e.g. "bug", "feature", "refactor")
+
+Return ONLY the JSON object, no markdown.`;
+
+      const { askAIJSON } = require('../lib/ai');
+      const result = await askAIJSON(prompt, { timeout: 30000 });
+      res.json(result.error ? { title: '', body: '', error: result.error } : result);
+    } catch (e) { res.json({ title: '', body: '', error: e.message }); }
+  });
+
+  // AI: analyze merge conflicts
+  app.post('/api/git/ai-conflict-help', requireRole('editor'), async (req, res) => {
+    try {
+      const status = await execCommand('git status --short', { cwd: getCwd(), timeout: 5000 });
+      const conflicted = status.stdout.split('\n').filter(l => l.startsWith('UU') || l.startsWith('AA') || l.startsWith('DD'));
+      if (!conflicted.length) return res.json({ conflicts: [], resolution: 'No merge conflicts detected.' });
+
+      const files = conflicted.map(l => l.slice(3).trim());
+      let conflictContent = '';
+      for (const f of files.slice(0, 5)) {
+        try {
+          const content = await execCommand(`git diff ${f.replace(/"/g, '\\"')}`, { cwd: getCwd(), timeout: 5000 });
+          conflictContent += `\n--- ${f} ---\n${content.stdout.substring(0, 2000)}\n`;
+        } catch {}
+      }
+
+      const prompt = `Analyze these git merge conflicts and suggest resolutions. Be specific about what to keep/remove.
+
+Conflicted files: ${files.join(', ')}
+
+Conflict diffs:
+${conflictContent.substring(0, 5000)}
+
+Return JSON with:
+- "conflicts": array of objects with "file" (string), "description" (what the conflict is about), "suggestion" (how to resolve it)
+- "resolution": overall strategy recommendation (1-2 sentences)
+- "risk": "low" | "medium" | "high"
+
+Return ONLY the JSON object, no markdown.`;
+
+      const { askAIJSON } = require('../lib/ai');
+      const result = await askAIJSON(prompt, { timeout: 30000 });
+      res.json(result.error ? { conflicts: [], resolution: result.error, risk: 'unknown' } : result);
+    } catch (e) { res.json({ conflicts: [], resolution: 'Analysis unavailable: ' + e.message }); }
   });
 };

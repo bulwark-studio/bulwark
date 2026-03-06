@@ -1,3 +1,17 @@
 node_modules/
 users.json
+sessions.json
 ecosystem.config.js
+.env
+
+# Runtime data (user-specific)
+data/credentials.json
+data/audit-log.json
+data/backups/
+data/repos/
+data/.git-ssh-key-*
+data/users.json
+data/sessions.json
+
+# Logo drafts
+media/logo-save/
