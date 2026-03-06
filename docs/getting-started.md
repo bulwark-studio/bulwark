@@ -2,74 +2,77 @@
 
 Your entire server, one dashboard. This guide walks you through setting up Bulwark from a fresh install to a fully connected infrastructure management platform.
 
----
+### Getting Started
 
-## Table of Contents
+- [1. Installation](#1-installation)
+- [2. First Login](#2-first-login)
+- [3. Setting Up AI (Claude & Codex)](#3-setting-up-ai-claude--codex)
 
-**Getting Started**
-1. [Installation](#1-installation)
-2. [First Login](#2-first-login)
-3. [Setting Up AI (Claude & Codex)](#3-setting-up-ai-claude--codex)
+### Overview
 
-**Overview**
-4. [Dashboard](#4-dashboard)
-5. [Metrics](#5-metrics)
-6. [Uptime](#6-uptime)
+- [4. Dashboard](#4-dashboard)
+- [5. Metrics](#5-metrics)
+- [6. Uptime](#6-uptime)
 
-**Infrastructure**
-7. [Servers](#7-servers)
-8. [Docker](#8-docker)
-9. [PM2](#9-pm2)
-10. [SSL / Domains](#10-ssl--domains)
-11. [Cloudflare](#11-cloudflare)
+### Infrastructure
 
-**Database**
-12. [Projects](#12-projects)
-13. [SQL Editor](#13-sql-editor)
-14. [Tables](#14-tables)
-15. [Schema](#15-schema)
-16. [Migrations](#16-migrations)
-17. [Roles](#17-roles)
-18. [Backups](#18-backups)
-19. [AI Assistant](#19-ai-assistant)
+- [7. Servers](#7-servers)
+- [8. Docker](#8-docker)
+- [9. PM2](#9-pm2)
+- [10. SSL / Domains](#10-ssl--domains)
+- [11. Cloudflare](#11-cloudflare)
 
-**DevOps**
-20. [Terminal](#20-terminal)
-21. [Tickets](#21-tickets)
-22. [Git](#22-git)
-23. [Deploy](#23-deploy)
-24. [Cron Jobs](#24-cron-jobs)
-25. [File Manager](#25-file-manager)
-26. [Env Variables](#26-env-variables)
+### Database
 
-**Workspace**
-27. [Calendar](#27-calendar)
-28. [Notes](#28-notes)
+- [12. Projects](#12-projects)
+- [13. SQL Editor](#13-sql-editor)
+- [14. Tables](#14-tables)
+- [15. Schema](#15-schema)
+- [16. Migrations](#16-migrations)
+- [17. Roles](#17-roles)
+- [18. Backups](#18-backups)
+- [19. AI Assistant](#19-ai-assistant)
 
-**Security**
-29. [Security Center](#29-security-center)
-30. [FTP](#30-ftp)
-31. [Notifications](#31-notifications)
+### DevOps
 
-**System**
-32. [Cache](#32-cache)
-33. [Logs](#33-logs)
-34. [Multi-Server](#34-multi-server)
-35. [Settings](#35-settings)
+- [20. Terminal](#20-terminal)
+- [21. Tickets](#21-tickets)
+- [22. Git](#22-git)
+- [23. Deploy](#23-deploy)
+- [24. Cron Jobs](#24-cron-jobs)
+- [25. File Manager](#25-file-manager)
+- [26. Env Variables](#26-env-variables)
 
-**Reference**
-36. [Keyboard Shortcuts](#36-keyboard-shortcuts)
-37. [FAQ](#37-faq)
+### Workspace
 
----
+- [27. Calendar](#27-calendar)
+- [28. Notes](#28-notes)
+
+### Security
+
+- [29. Security Center](#29-security-center)
+- [30. FTP](#30-ftp)
+- [31. Notifications](#31-notifications)
+
+### System
+
+- [32. Cache](#32-cache)
+- [33. Logs](#33-logs)
+- [34. Multi-Server](#34-multi-server)
+- [35. Settings](#35-settings)
+
+### Reference
+
+- [36. Keyboard Shortcuts](#36-keyboard-shortcuts)
+- [37. FAQ](#37-faq)
 
 ## 1. Installation
 
 ### Docker (Recommended)
 
 ```bash
-git clone https://github.com/autopilotaitech/autopilotaitech.github.io.git
-cd autopilotaitech.github.io/dev-monitor
+git clone https://github.com/yourorg/bulwark.git
+cd bulwark
 docker compose up -d
 ```
 
@@ -89,8 +92,6 @@ npm start
 
 Requires: Node.js 18+, PostgreSQL (optional — works without it).
 
----
-
 ## 2. First Login
 
 Default credentials:
@@ -101,8 +102,6 @@ Default credentials:
 | Password | `admin` |
 
 **Change your password immediately** after first login via Settings.
-
----
 
 ## 3. Setting Up AI (Claude & Codex)
 
@@ -156,8 +155,6 @@ ANTHROPIC_API_KEY=sk-ant-xxx OPENAI_API_KEY=sk-xxx docker compose up -d
 ```
 
 Or add them to a `.env` file in the `dev-monitor/` directory.
-
----
 
 ## 4. Dashboard
 
@@ -242,8 +239,6 @@ A: Metrics need a few seconds to populate after page load. If they stay at 0%, c
 **Q: How often does the dashboard refresh?**
 A: Live Metrics update every 3 seconds via WebSocket. Other panels refresh on page load. Click **Refresh** in the top bar to manually reload all data.
 
----
-
 ## 5. Metrics
 
 The Metrics view gives you deep real-time telemetry for your server — CPU, memory, disk, and per-core performance.
@@ -316,8 +311,6 @@ A: Bulwark reports memory as used by applications (excluding OS buffers/cache), 
 **Q: The per-core heatmap is all dark.**
 A: Your CPU is mostly idle — that's normal for a lightly loaded server. Run a build or benchmark and you'll see cores light up.
 
----
-
 ## 6. Uptime
 
 Monitor the availability and response time of your servers and endpoints from a single view.
@@ -383,9 +376,9 @@ A: Yes. Click **+ Uptime Page** on any server card to generate a shareable statu
 
 ---
 
----
+## Infrastructure
 
-# Infrastructure
+---
 
 ## 7. Servers
 
@@ -419,8 +412,6 @@ A: Yes. Add any server accessible via HTTP health checks or SSH. Cloud-specific 
 **Q: Why does "Local Dev" always show?**
 A: Local Dev represents the machine Bulwark is running on. It always appears and reports real-time system metrics via the Node.js `os` module.
 
----
-
 ## 8. Docker
 
 Manage Docker containers, images, volumes, and networks directly from the dashboard.
@@ -432,8 +423,6 @@ A: Bulwark connects to the Docker Engine API via the Unix socket (`/var/run/dock
 
 **Q: Can I manage Docker on a remote server?**
 A: Currently Docker management is local only. For remote servers, use the Terminal to SSH in and run Docker commands.
-
----
 
 ## 9. PM2
 
@@ -447,8 +436,6 @@ A: PM2 must be installed and running on the server. Install with `npm install -g
 **Q: Can I restart processes from Bulwark?**
 A: Yes. Click the restart button next to any process, or use the Terminal to run `pm2 restart <name>`.
 
----
-
 ## 10. SSL / Domains
 
 Manage SSL/TLS certificates and domain configurations.
@@ -460,8 +447,6 @@ A: Go to SSL / Domains and click **+ Add**. You can paste your certificate and k
 
 **Q: Does it support Let's Encrypt?**
 A: Yes, via the adapter service. Configure your domain and Bulwark will handle certificate issuance and renewal.
-
----
 
 ## 11. Cloudflare
 
@@ -477,7 +462,9 @@ A: Yes. View, create, and delete tunnels directly from the Cloudflare view. Requ
 
 ---
 
-# Database
+## Database
+
+---
 
 ## 12. Projects
 
@@ -503,8 +490,6 @@ A: Yes. Add as many projects as you need. Switch between them with the database 
 **Q: Does it support MySQL or SQLite?**
 A: Currently PostgreSQL only. MySQL and SQLite support is planned.
 
----
-
 ## 13. SQL Editor
 
 Write and run SQL queries with AI-powered autocompletion, syntax highlighting, and query history.
@@ -520,8 +505,6 @@ A: DDL statements are blocked by default. To run them, the query must include th
 **Q: Where is query history stored?**
 A: In `data/query-history.json`. The last 100 queries are kept. You can also save named queries for quick access.
 
----
-
 ## 14. Tables
 
 Browse your database schema — columns, data, constraints, foreign keys, and indexes in a two-panel layout.
@@ -533,8 +516,6 @@ A: The Tables view is read-only for safety. Use the SQL Editor to run INSERT/UPD
 
 **Q: Why do some tables show 0 rows?**
 A: Row counts are estimates from PostgreSQL statistics. Run `ANALYZE` on your database to update the estimates, or click into the table to see actual row data.
-
----
 
 ## 15. Schema
 
@@ -548,8 +529,6 @@ A: The Schema view is read-only for browsing. Use the SQL Editor to create or mo
 **Q: What extensions are available?**
 A: Shows all installed PostgreSQL extensions (e.g. pg_stat_statements, uuid-ossp, pgcrypto). Install new ones via SQL: `CREATE EXTENSION extension_name;`
 
----
-
 ## 16. Migrations
 
 Track applied vs pending database migrations. Supports Docker test-runs and schema diffs.
@@ -562,8 +541,6 @@ A: Place `.sql` files in your project's migration directory. Bulwark scans the f
 **Q: Can I test a migration before applying?**
 A: Yes. Click **Test Run** to spin up a temporary PostgreSQL container, apply the migration, validate, and destroy — without touching your live database.
 
----
-
 ## 17. Roles
 
 View PostgreSQL roles, table-level permissions, and run AI security audits.
@@ -575,8 +552,6 @@ A: Claude analyzes all database roles, their permissions, and privilege levels, 
 
 **Q: Can I create roles from here?**
 A: Use the AI role generator — describe what the role needs access to in plain English and Claude generates the least-privilege SQL. Run it in the SQL Editor.
-
----
 
 ## 18. Backups
 
@@ -593,8 +568,6 @@ A: Bulwark falls back to SQL-based export, dumping schema and data via PostgreSQ
 **Q: What does AI backup strategy do?**
 A: Claude analyzes your backup history, database size, and configuration, then provides a health score, disaster recovery plan, and specific recommendations.
 
----
-
 ## 19. AI Assistant
 
 A conversational AI assistant for database operations — ask questions about your schema, generate queries, and get optimization advice.
@@ -609,7 +582,9 @@ A: Whatever is configured in Settings > AI Provider. Default is Claude CLI. Also
 
 ---
 
-# DevOps
+## DevOps
+
+---
 
 ## 20. Terminal
 
@@ -646,8 +621,6 @@ A: The Docker image runs as the `bulwark` user (not root) to support this. If yo
 **Q: The terminal says "Session ended".**
 A: The PTY session timed out or crashed. Click the Shell tab or press `Ctrl + Backtick` to reconnect.
 
----
-
 ## 21. Tickets
 
 Support ticket system with Kanban board, status tracking, and approval workflows.
@@ -659,8 +632,6 @@ A: In the PostgreSQL `support_tickets` table. Tickets work when a database is co
 
 **Q: Can I use tickets without a database?**
 A: No. The ticket system requires PostgreSQL. Without it, the view shows "No database connected".
-
----
 
 ## 22. Git
 
@@ -674,8 +645,6 @@ A: Bulwark uses the `REPO_DIR` environment variable (defaults to `/admin`). Set 
 **Q: How does AI commit message generation work?**
 A: Click **Generate** when committing. Claude analyzes your staged changes and writes a descriptive commit message. Requires Claude CLI.
 
----
-
 ## 23. Deploy
 
 Deployment pipeline with rollback support and deploy checks.
@@ -687,8 +656,6 @@ A: Click **+ Add Target** and enter the server name, host, deploy command, and b
 
 **Q: Can I rollback a deployment?**
 A: Yes. Each deploy is logged with a timestamp. Click **Rollback** to revert to the previous deployment state.
-
----
 
 ## 24. Cron Jobs
 
@@ -702,8 +669,6 @@ A: Yes. Bulwark reads and writes the system crontab. Requires appropriate permis
 **Q: Can I test a cron schedule?**
 A: The scheduling UI shows a human-readable description of when the job will run next (e.g. "Every day at 3:00 AM").
 
----
-
 ## 25. File Manager
 
 Browse, edit, upload, and download files on the server.
@@ -715,8 +680,6 @@ A: The file manager starts in the `REPO_DIR` directory. Navigate using the bread
 
 **Q: Can I edit files directly?**
 A: Yes. Click any text file to open it in an inline editor. Save changes directly to the server.
-
----
 
 ## 26. Env Variables
 
@@ -732,7 +695,9 @@ A: Yes, but consider using the Credential Vault instead for sensitive data like 
 
 ---
 
-# Workspace
+## Workspace
+
+---
 
 ## 27. Calendar
 
@@ -745,8 +710,6 @@ A: Not currently. Events are stored locally in `data/calendar.json`. External ca
 
 **Q: Can I set reminders?**
 A: Events appear on the Dashboard's calendar widget. Push notifications for reminders are planned.
-
----
 
 ## 28. Notes
 
@@ -762,7 +725,9 @@ A: Yes. Click the pin icon on any note to keep it at the top of the list.
 
 ---
 
-# Security
+## Security
+
+---
 
 ## 29. Security Center
 
@@ -776,8 +741,6 @@ A: Open ports, running services, file permissions, SSH configuration, firewall r
 **Q: How often should I scan?**
 A: Run a scan after any infrastructure change (new service, port change, user added). Weekly scans are recommended for production servers.
 
----
-
 ## 30. FTP
 
 Manage FTP server, user accounts, and active sessions.
@@ -789,8 +752,6 @@ A: No. This view manages an existing FTP server (vsftpd, ProFTPD, etc.) running 
 
 **Q: Can I create FTP users?**
 A: Yes. Click **+ Add User** to create a new FTP account with a home directory and permissions.
-
----
 
 ## 31. Notifications
 
@@ -806,7 +767,9 @@ A: Currently notifications are in-app only (bell icon in the top bar). Email and
 
 ---
 
-# System
+## System
+
+---
 
 ## 32. Cache
 
@@ -820,8 +783,6 @@ A: AI responses (briefings, analysis, SQL generation) are cached to avoid redund
 **Q: Can I clear the cache?**
 A: Yes. Click **Clear All** to reset the cache. Individual entries can also be deleted.
 
----
-
 ## 33. Logs
 
 System logs, audit trail, and activity history.
@@ -834,8 +795,6 @@ A: Every API call is logged with timestamp, user, action, resource, method, IP, 
 **Q: Can I export logs?**
 A: Yes. Go to Settings > Audit Log and click **Export JSON** or **Export CSV**.
 
----
-
 ## 34. Multi-Server
 
 Aggregated view across all connected servers — compare health, metrics, and status side by side.
@@ -847,8 +806,6 @@ A: Servers added in Infrastructure > Servers automatically appear here. The view
 
 **Q: What if a server is unreachable?**
 A: It shows as "unreachable" with an orange indicator. Other servers continue to report normally.
-
----
 
 ## 35. Settings
 
@@ -870,7 +827,9 @@ A: Yes. Admins can add users in Settings > User Management. Each user gets a rol
 
 ---
 
-# Reference
+## Reference
+
+---
 
 ## 36. Keyboard Shortcuts
 
@@ -878,8 +837,6 @@ A: Yes. Admins can add users in Settings > User Management. Each user gets a rol
 |----------|--------|
 | `Ctrl + Backtick` | Toggle terminal drawer |
 | `Ctrl + Shift + Backtick` | Cycle terminal size (half / full / mini) |
-
----
 
 ## 37. FAQ
 
@@ -905,7 +862,4 @@ A: Yes. Claude CLI and Codex CLI are independent tools. Set both API keys and us
 **Q: Is my API key stored securely?**
 A: API keys passed via environment variables stay in memory only. Keys stored in the Credential Vault are encrypted with AES-256-GCM.
 
----
-
 *Bulwark v2.1 — Server Management Platform*
-*Copyright 2026 AutopilotAI Tech LLC*
