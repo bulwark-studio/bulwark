@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 520" fill="none">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&amp;display=swap');
+    text { font-family: 'JetBrains Mono', monospace; }
+    .bg { fill: #0a0b10; }
+    .bar { fill: #0e0e12; }
+    .border { stroke: rgba(255,255,255,0.08); stroke-width: 1; fill: none; }
+    .dot1 { fill: #ff5f57; }
+    .dot2 { fill: #febc2e; }
+    .dot3 { fill: #28c840; }
+    .title { fill: #52525a; font-size: 12px; }
+    .prompt { fill: #22d3ee; font-size: 13px; }
+    .cmd { fill: #e4e4e7; font-size: 13px; }
+    .out { fill: #8b8b92; font-size: 13px; }
+    .success { fill: #22d3ee; font-size: 13px; }
+    .warn { fill: #ff6b2b; font-size: 13px; }
+    .dim { fill: #52525a; font-size: 13px; }
+    .cursor { fill: #22d3ee; opacity: 0; }
+
+    /* Typing animation — each line fades in sequentially */
+    .line { opacity: 0; }
+    .line.l1  { animation: fadeIn 0.1s 0.4s forwards; }
+    .line.l2  { animation: fadeIn 0.1s 1.2s forwards; }
+    .line.l3  { animation: fadeIn 0.1s 1.5s forwards; }
+    .line.l4  { animation: fadeIn 0.1s 1.8s forwards; }
+    .line.l5  { animation: fadeIn 0.1s 2.1s forwards; }
+    .line.l6  { animation: fadeIn 0.1s 2.6s forwards; }
+    .line.l7  { animation: fadeIn 0.1s 2.9s forwards; }
+    .line.l8  { animation: fadeIn 0.1s 3.4s forwards; }
+    .line.l9  { animation: fadeIn 0.1s 3.7s forwards; }
+    .line.l10 { animation: fadeIn 0.1s 4.0s forwards; }
+    .line.l11 { animation: fadeIn 0.1s 4.3s forwards; }
+    .line.l12 { animation: fadeIn 0.1s 4.8s forwards; }
+    .line.l13 { animation: fadeIn 0.1s 5.1s forwards; }
+    .line.l14 { animation: fadeIn 0.1s 5.4s forwards; }
+    .line.l15 { animation: fadeIn 0.1s 5.7s forwards; }
+    .line.l16 { animation: fadeIn 0.1s 6.2s forwards; }
+    .line.l17 { animation: fadeIn 0.1s 6.5s forwards; }
+    .line.l18 { animation: fadeIn 0.1s 6.8s forwards; }
+
+    /* Cursor blink at final line */
+    .cursor { animation: blink 1s 7.0s infinite; }
+
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+  </style>
+
+  <!-- Window -->
+  <rect class="bg" width="840" height="520" rx="12"/>
+  <rect class="border" x="0.5" y="0.5" width="839" height="519" rx="12"/>
+
+  <!-- Title bar -->
+  <rect class="bar" width="840" height="40" rx="12"/>
+  <rect class="bg" y="32" width="840" height="10"/>
+  <line x1="0" y1="40" x2="840" y2="40" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+  <circle class="dot1" cx="20" cy="20" r="5"/>
+  <circle class="dot2" cx="38" cy="20" r="5"/>
+  <circle class="dot3" cx="56" cy="20" r="5"/>
+  <text class="title" x="76" y="24">bulwark — terminal</text>
+
+  <!-- Line 1: Install command -->
+  <g class="line l1">
+    <text class="prompt" x="20" y="72">$</text>
+    <text class="cmd" x="36" y="72">curl -fsSL https://bulwark.studio/install.sh | bash</text>
+  </g>
+
+  <!-- Line 2-5: Install output -->
+  <g class="line l2"><text class="out" x="20" y="96">Downloading Bulwark v2.1.0...</text></g>
+  <g class="line l3"><text class="success" x="20" y="116">&#10003; Node.js 20.11.0 detected</text></g>
+  <g class="line l4"><text class="success" x="20" y="136">&#10003; PostgreSQL 17.2 connected</text></g>
+  <g class="line l5"><text class="success" x="20" y="156">&#10003; Bulwark running on http://localhost:3001</text></g>
+
+  <!-- Line 6: npm start -->
+  <g class="line l6">
+    <text class="prompt" x="20" y="192">$</text>
+    <text class="cmd" x="36" y="192">npm start</text>
+  </g>
+
+  <!-- Line 7-11: Server boot -->
+  <g class="line l7"><text class="dim" x="20" y="216">[bulwark] Loading 31 route modules...</text></g>
+  <g class="line l8"><text class="success" x="20" y="236">&#10003; 270 API endpoints registered</text></g>
+  <g class="line l9"><text class="success" x="20" y="256">&#10003; Socket.IO connected (3s metrics)</text></g>
+  <g class="line l10"><text class="success" x="20" y="276">&#10003; Docker Engine API linked</text></g>
+  <g class="line l11"><text class="success" x="20" y="296">&#10003; AI provider: Claude CLI (BYOK)</text></g>
+
+  <!-- Line 12: AI query -->
+  <g class="line l12">
+    <text class="prompt" x="20" y="332">sql&gt;</text>
+    <text class="cmd" x="60" y="332">Ask AI: "show all tables over 1GB"</text>
+  </g>
+
+  <!-- Line 13-15: AI response -->
+  <g class="line l13"><text class="dim" x="20" y="356">Generating SQL via Claude...</text></g>
+  <g class="line l14"><text class="success" x="20" y="376">SELECT schemaname || '.' || tablename AS table,</text></g>
+  <g class="line l15"><text class="success" x="20" y="396">  pg_size_pretty(pg_total_relation_size(schemaname || '.' || tablename)) AS size</text></g>
+
+  <!-- Line 16-18: Results -->
+  <g class="line l16"><text class="out" x="20" y="432">3 rows returned (42ms)</text></g>
+  <g class="line l17"><text class="out" x="20" y="456">  chester_activity    2.1 GB</text></g>
+  <g class="line l18"><text class="out" x="20" y="476">  audit_log           1.4 GB</text></g>
+
+  <!-- Blinking cursor -->
+  <rect class="cursor" x="20" y="494" width="8" height="16" rx="1"/>
+</svg>

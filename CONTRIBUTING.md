@@ -26,6 +26,34 @@ npm start
 - PostgreSQL 17 (optional — app works without it in degraded mode)
 - Docker (optional — for Docker management features)
 
+### Hot Reload (Development)
+
+Bulwark has no build step, so development is fast:
+
+```bash
+# Install nodemon for auto-restart on backend changes
+npx nodemon server.js
+
+# Frontend changes are instant — just refresh the browser
+# No transpilation, no bundling, no waiting
+```
+
+### Project Structure
+
+```
+server.js          → Express + Socket.IO setup, auth, intervals
+routes/            → 31 route modules (each exports function(app, ctx))
+lib/               → 16 shared libraries (db, auth, AI, RBAC, etc.)
+public/
+  index.html       → App shell with 34 view containers
+  css/             → theme.css, layout.css, components.css
+  js/
+    app.js         → State, Socket.IO, view registry, nav
+    views/         → 34 self-registering view modules
+data/              → Runtime JSON stores (no DB required)
+landing/           → Marketing site (bulwark.studio)
+```
+
 ## Code Style
 
 Bulwark uses **vanilla JavaScript** with no build step, no bundler, no framework.
@@ -66,8 +94,8 @@ Bulwark uses **vanilla JavaScript** with no build step, no bundler, no framework
 
 ## Reporting Issues
 
-- Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md) for bugs
-- Use the [feature request template](.github/ISSUE_TEMPLATE/feature_request.md) for ideas
+- Use the [bug report template](https://github.com/bulwark-studio/bulwark/issues/new?template=bug_report.yml) for bugs
+- Use the [feature request template](https://github.com/bulwark-studio/bulwark/issues/new?template=feature_request.yml) for ideas
 - Check existing issues before creating a new one
 
 ## Code of Conduct

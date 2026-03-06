@@ -19,6 +19,10 @@ Bulwark is an AI-powered, self-hosted server management platform that replaces y
 
 **No vendor lock-in. No cloud dependency. Your server, your data, your AI subscription.**
 
+<p align="center">
+  <img src="media/demo.svg" alt="Bulwark terminal demo" width="840">
+</p>
+
 ---
 
 ## Features
@@ -117,6 +121,7 @@ Configure in **Settings > AI Provider**. Bulwark auto-detects installed CLIs.
 
 <p align="center">
   <img src="media/screenshots/Dashboard_open_ai_banner_3.png" alt="Dashboard" width="800">
+  <br><em>AI-Powered Dashboard — health score, briefing, command hub, live metrics</em>
 </p>
 
 | | |
@@ -127,6 +132,10 @@ Configure in **Settings > AI Provider**. Bulwark auto-detects installed CLIs.
 | **Terminal AI** — Full PTY + natural language commands | **Kanban Tickets** — AI triage across 7 stages |
 | ![Tables](media/screenshots/tables_3.png) | ![Roles](media/screenshots/roles_6.png) |
 | **Table Browser** — Two-panel explorer with constraints | **Roles** — AI security audit, permission heatmap |
+| ![Metrics](media/screenshots/Metrics_top_5.png) | ![Uptime](media/screenshots/upTime_top_7.png) |
+| **Metrics** — CPU/memory/disk gauges, AI analysis | **Uptime** — Health checks, response times, history |
+| ![Schema](media/screenshots/schema_4.png) | ![Backups](media/screenshots/backups_7.png) |
+| **Schema** — Functions, triggers, extensions, indexes | **Backups** — AI strategy, DR plan, health indicators |
 
 ---
 
@@ -152,6 +161,12 @@ Bulwark features a glass-morphism dark theme with cyan/orange signal system:
 - **Orange (#ff6b2b)** — error, warning, destructive, down
 - Glass cards with `backdrop-filter: blur()` and border highlights
 - JetBrains Mono typography throughout
+
+---
+
+## Documentation
+
+Full docs at **[bulwark.studio/docs](https://bulwark.studio/docs.html)** — installation, configuration, all 34 views, API reference, AI setup, and troubleshooting.
 
 ---
 
