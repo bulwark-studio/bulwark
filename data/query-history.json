@@ -1,5 +1,112 @@
 [
   {
+    "sql": "GRANT SELECT ON ALL TABLES IN SCHEMA public TO analytics_viewer;",
+    "duration": 4,
+    "rows": 0,
+    "rowCount": null,
+    "type": "SELECT",
+    "ts": "2026-03-06T04:41:30.745Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "CREATE ROLE analytics_viewer WITH LOGIN PASSWORD 'analytics123' CONNECTION LIMIT 5;",
+    "duration": 9,
+    "rows": 0,
+    "rowCount": null,
+    "type": "DDL",
+    "ts": "2026-03-06T04:41:30.513Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "CREATE ROLE app_migrations WITH LOGIN PASSWORD 'migrate123' CREATEDB; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO app_migrations;",
+    "duration": 15,
+    "rows": 0,
+    "type": "DDL",
+    "ts": "2026-03-06T04:41:30.271Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "CREATE ROLE app_service WITH LOGIN PASSWORD 'service123' CONNECTION LIMIT 20; GRANT SELECT, INSERT, UPDATE ON ALL TABLES IN SCHEMA public TO app_service;",
+    "duration": 14,
+    "rows": 0,
+    "type": "DDL",
+    "ts": "2026-03-06T04:41:30.020Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "CREATE ROLE app_readonly WITH LOGIN PASSWORD 'readonly123' CONNECTION LIMIT 10; GRANT SELECT ON ALL TABLES IN SCHEMA public TO app_readonly;",
+    "duration": 16,
+    "rows": 0,
+    "type": "DDL",
+    "ts": "2026-03-06T04:41:29.774Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT rolname FROM pg_roles WHERE rolname NOT LIKE 'pg_%' ORDER BY rolname",
+    "duration": 2,
+    "rows": 1,
+    "rowCount": 1,
+    "type": "SELECT",
+    "ts": "2026-03-06T04:41:17.776Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
+    "duration": 6,
+    "rows": 2725,
+    "rowCount": 2725,
+    "type": "SELECT",
+    "ts": "2026-03-06T04:39:44.538Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
+    "duration": 6,
+    "rows": 2725,
+    "rowCount": 2725,
+    "type": "SELECT",
+    "ts": "2026-03-06T04:34:18.526Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
+    "duration": 6,
+    "rows": 2725,
+    "rowCount": 2725,
+    "type": "SELECT",
+    "ts": "2026-03-06T04:33:04.057Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
+    "duration": 6,
+    "rows": 2725,
+    "rowCount": 2725,
+    "type": "SELECT",
+    "ts": "2026-03-06T04:32:57.951Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
+    "sql": "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
+    "duration": 6,
+    "rows": 2725,
+    "rowCount": 2725,
+    "type": "SELECT",
+    "ts": "2026-03-06T04:32:51.475Z",
+    "user": "admin",
+    "pool": "dev"
+  },
+  {
     "sql": "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position",
     "duration": 11,
     "rows": 2725,

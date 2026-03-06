@@ -178,7 +178,7 @@
           'Connection limit: ' + (role.connection_limit === -1 ? '<span style="color:var(--orange)">unlimited</span>' : role.connection_limit) +
           ' · Active: ' + (role.active_connections || 0) +
           (role.valid_until ? ' · Expires: ' + new Date(role.valid_until).toLocaleDateString() : ' · <span style="color:var(--orange)">No expiry</span>') +
-          (role.member_of && role.member_of.length ? ' · Member of: ' + role.member_of.join(', ') : '') +
+          (Array.isArray(role.member_of) && role.member_of.length ? ' · Member of: ' + role.member_of.join(', ') : '') +
         '</div>' +
       '</div>';
 
