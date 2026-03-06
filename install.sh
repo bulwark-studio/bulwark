@@ -24,7 +24,7 @@ BANNER
 echo -e "${NC}"
 
 INSTALL_DIR="/opt/bulwark"
-REPO_URL="https://github.com/autopilotaitech/bulwark.git"
+REPO_URL="https://github.com/bulwark-studio/bulwark.git"
 SERVICE_NAME="bulwark"
 PORT=3001
 
