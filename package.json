@@ -1,19 +1,59 @@
 {
-  "name": "bulwark",
+  "name": "@bulwark-studio/bulwark",
   "version": "2.1.0",
-  "description": "AI-powered, self-hosted server management platform",
+  "description": "AI-powered, self-hosted server management platform. Terminal, Docker, DB Studio, Git, Deploy, Security — one dashboard.",
   "main": "server.js",
+  "bin": {
+    "bulwark": "server.js"
+  },
   "homepage": "https://bulwark.studio",
   "repository": {
     "type": "git",
     "url": "https://github.com/bulwark-studio/bulwark.git"
   },
+  "bugs": {
+    "url": "https://github.com/bulwark-studio/bulwark/issues"
+  },
+  "author": "Autopilot AI Tech LLC <hello@bulwark.studio> (https://bulwark.studio)",
   "license": "AGPL-3.0",
-  "keywords": ["devops", "server-management", "self-hosted", "ai", "docker", "terminal", "monitoring", "dashboard"],
+  "keywords": [
+    "devops",
+    "server-management",
+    "self-hosted",
+    "ai",
+    "docker",
+    "terminal",
+    "monitoring",
+    "dashboard",
+    "database",
+    "postgresql",
+    "deployment",
+    "security",
+    "portainer-alternative",
+    "pgadmin-alternative"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
+  "files": [
+    "server.js",
+    "write-config.js",
+    "routes/",
+    "lib/",
+    "public/",
+    "data/",
+    "docs/",
+    "media/screenshots/",
+    "landing/",
+    "install.sh",
+    "Dockerfile",
+    "docker-compose.yml",
+    ".env.example"
+  ],
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.5",

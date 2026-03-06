@@ -1,0 +1,7 @@
+.git
+.github
+node_modules
+media/logo-save
+media/demo.svg
+*.md
+!README.md
