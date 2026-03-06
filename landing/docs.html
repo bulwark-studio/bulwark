@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Documentation — Bulwark</title>
+<meta name="description" content="Bulwark documentation — installation, configuration, views, API, AI integration, and architecture.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --canvas: #0a0b10;
+  --surface: rgba(14,14,18,0.65);
+  --surface-solid: #0e0e12;
+  --border: rgba(255,255,255,0.08);
+  --border-glass: rgba(255,255,255,0.10);
+  --border-top: rgba(255,255,255,0.14);
+  --text-primary: #e4e4e7;
+  --text-secondary: #8b8b92;
+  --text-tertiary: #52525a;
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34,211,238,0.15);
+  --orange: #ff6b2b;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--canvas);
+  color: var(--text-primary);
+  line-height: 1.7;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% -20%, rgba(34,211,238,0.04), transparent 70%);
+  pointer-events: none;
+}
+a { color: var(--cyan); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* NAV */
+.topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(10,11,16,0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border);
+  height: 56px; display: flex; align-items: center;
+  padding: 0 24px;
+}
+.topbar-brand { font-size: 18px; font-weight: 700; letter-spacing: 3px; color: var(--cyan); }
+.topbar-links { margin-left: auto; display: flex; gap: 20px; align-items: center; }
+.topbar-links a { color: var(--text-secondary); font-size: 13px; }
+.topbar-links a:hover { color: var(--text-primary); text-decoration: none; }
+
+/* LAYOUT */
+.wrapper {
+  display: flex; margin-top: 56px; min-height: calc(100vh - 56px);
+  position: relative; z-index: 1;
+}
+
+/* SIDEBAR */
+.sidebar {
+  width: 260px; min-width: 260px;
+  background: rgba(10,10,14,0.70);
+  backdrop-filter: blur(40px) saturate(180%);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  overflow-y: auto;
+  position: fixed; top: 56px; bottom: 0; left: 0;
+}
+.sidebar-group { margin-bottom: 4px; }
+.sidebar-heading {
+  font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-tertiary); padding: 16px 20px 8px;
+}
+.sidebar a {
+  display: block; padding: 7px 20px; font-size: 13px; color: var(--text-secondary);
+  border-left: 2px solid transparent; transition: all 0.15s;
+}
+.sidebar a:hover { color: var(--text-primary); background: rgba(255,255,255,0.02); text-decoration: none; }
+.sidebar a.active { color: var(--cyan); border-left-color: var(--cyan); background: var(--cyan-dim); }
+
+/* CONTENT */
+.content {
+  margin-left: 260px; flex: 1; padding: 40px 48px 80px; max-width: 860px;
+}
+.content h1 {
+  font-size: 32px; font-weight: 700; margin-bottom: 8px;
+}
+.content .subtitle {
+  font-size: 14px; color: var(--text-secondary); margin-bottom: 40px;
+}
+.content h2 {
+  font-size: 22px; font-weight: 700; margin-top: 48px; margin-bottom: 12px;
+  padding-top: 24px; border-top: 1px solid var(--border);
+}
+.content h2:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.content h3 {
+  font-size: 16px; font-weight: 600; margin-top: 28px; margin-bottom: 8px;
+  color: var(--cyan);
+}
+.content p { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+.content ul, .content ol {
+  padding-left: 24px; margin-bottom: 16px;
+}
+.content li {
+  font-size: 14px; color: var(--text-secondary); margin-bottom: 6px;
+}
+.content code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; background: rgba(255,255,255,0.05);
+  padding: 2px 6px; border-radius: 4px; color: var(--cyan);
+}
+pre {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  overflow-x: auto;
+  margin-bottom: 20px;
+  backdrop-filter: blur(20px);
+}
+pre code {
+  background: none; padding: 0; font-size: 13px; color: var(--text-secondary);
+  line-height: 1.8;
+}
+.highlight { color: var(--cyan); }
+
+/* TABLE */
+table {
+  width: 100%; border-collapse: collapse; margin-bottom: 20px;
+  font-size: 13px;
+}
+th {
+  text-align: left; padding: 10px 12px;
+  background: rgba(255,255,255,0.03);
+  color: var(--text-tertiary); font-weight: 600;
+  letter-spacing: 1px; text-transform: uppercase; font-size: 11px;
+  border-bottom: 1px solid var(--border);
+}
+td {
+  padding: 10px 12px; color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+/* CALLOUT */
+.callout {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--cyan);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+.callout.warn { border-left-color: var(--orange); }
+.callout p { margin-bottom: 0; }
+.callout strong { color: var(--text-primary); }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .sidebar { display: none; }
+  .content { margin-left: 0; padding: 24px; }
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a href="/" class="topbar-brand" style="text-decoration:none;">BULWARK</a>
+  <div class="topbar-links">
+    <a href="/">Home</a>
+    <a href="/docs.html" class="active" style="color:var(--cyan);">Docs</a>
+    <a href="https://github.com/bulwark-studio/bulwark" target="_blank">GitHub</a>
+    <a href="https://github.com/bulwark-studio/bulwark/discussions" target="_blank">Community</a>
+  </div>
+</div>
+
+<div class="wrapper">
+<aside class="sidebar">
+  <div class="sidebar-group">
+    <div class="sidebar-heading">Getting Started</div>
+    <a href="#installation" class="active">Installation</a>
+    <a href="#configuration">Configuration</a>
+    <a href="#first-login">First Login</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-heading">Core Features</div>
+    <a href="#terminal">Terminal</a>
+    <a href="#docker">Docker Management</a>
+    <a href="#db-studio">Database Studio</a>
+    <a href="#git-deploy">Git + Deploy</a>
+    <a href="#monitoring">Monitoring</a>
+    <a href="#security">Security Center</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-heading">AI Integration</div>
+    <a href="#byok">BYOK Setup</a>
+    <a href="#ai-features">AI Features</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-heading">Architecture</div>
+    <a href="#stack">Stack</a>
+    <a href="#views">34 Views</a>
+    <a href="#api">API Endpoints</a>
+    <a href="#theme">Dimension Dark</a>
+  </div>
+  <div class="sidebar-group">
+    <div class="sidebar-heading">Reference</div>
+    <a href="#env-vars">Environment Variables</a>
+    <a href="#keyboard">Keyboard Shortcuts</a>
+    <a href="#troubleshooting">Troubleshooting</a>
+  </div>
+</aside>
+
+<main class="content">
+<h1>Documentation</h1>
+<p class="subtitle">Everything you need to install, configure, and use Bulwark.</p>
+
+<h2 id="installation">Installation</h2>
+
+<h3>One-Line Install (Linux)</h3>
+<pre><code>curl -fsSL https://bulwark.studio/install.sh | bash</code></pre>
+<p>Detects your system, installs Node.js if needed, clones the repo, runs <code>npm install</code>, and starts Bulwark on port 3001.</p>
+
+<h3>npm</h3>
+<pre><code>git clone https://github.com/bulwark-studio/bulwark.git
+cd bulwark
+npm install
+MONITOR_USER=admin MONITOR_PASS=changeme npm start</code></pre>
+
+<h3>Docker</h3>
+<pre><code>docker build -t bulwark .
+docker run -d -p 3001:3001 \
+  -e MONITOR_USER=admin \
+  -e MONITOR_PASS=changeme \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  bulwark</code></pre>
+
+<div class="callout">
+<p><strong>Note:</strong> Mount the Docker socket (<code>/var/run/docker.sock</code>) to enable Docker management features.</p>
+</div>
+
+<h2 id="configuration">Configuration</h2>
+
+<p>Create a <code>.env</code> file in the project root or set environment variables directly.</p>
+
+<table>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+<tr><td><code>MONITOR_PORT</code></td><td>3001</td><td>Server port</td></tr>
+<tr><td><code>MONITOR_USER</code></td><td>—</td><td>Admin username (required first run)</td></tr>
+<tr><td><code>MONITOR_PASS</code></td><td>—</td><td>Admin password (required first run)</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td>—</td><td>PostgreSQL connection string</td></tr>
+<tr><td><code>VPS_DATABASE_URL</code></td><td>—</td><td>Secondary DB connection</td></tr>
+<tr><td><code>REPO_DIR</code></td><td>cwd</td><td>Repository root for Git/Deploy</td></tr>
+<tr><td><code>APP_NAME</code></td><td>Bulwark</td><td>Custom branding name</td></tr>
+</table>
+
+<h2 id="first-login">First Login</h2>
+<ol>
+<li>Open <code>http://your-server:3001</code></li>
+<li>Log in with the <code>MONITOR_USER</code> / <code>MONITOR_PASS</code> credentials</li>
+<li>Go to <strong>Settings</strong> and change your password immediately</li>
+<li>Optionally enable <strong>TOTP 2FA</strong> in Settings &gt; Security</li>
+</ol>
+
+<h2 id="terminal">Terminal</h2>
+<p>Full xterm.js + node-pty terminal in the browser. Supports 256-color, resize, copy/paste, and session persistence.</p>
+<ul>
+<li><strong>Shell tab</strong> — Standard terminal session</li>
+<li><strong>AI tab</strong> — Claude-powered natural language commands</li>
+<li><strong>Vault tab</strong> — Secure credential access</li>
+</ul>
+
+<h2 id="docker">Docker Management</h2>
+<p>27 native Docker Engine API endpoints. No Portainer needed.</p>
+<ul>
+<li>Container lifecycle: create, start, stop, restart, remove</li>
+<li>Real-time stats (CPU, memory, network I/O)</li>
+<li>Log streaming with search and filtering</li>
+<li>Image and volume management</li>
+<li>Connection wizard for remote Docker hosts</li>
+<li>AI fleet diagnostics</li>
+</ul>
+
+<div class="callout">
+<p><strong>Connection:</strong> Bulwark connects to Docker via <code>/var/run/docker.sock</code> (Linux) or TCP. Use the connection wizard in Settings if Docker is on a remote host.</p>
+</div>
+
+<h2 id="db-studio">Database Studio</h2>
+<p>Supabase-style database management with 30+ endpoints. Direct PostgreSQL introspection via <code>information_schema</code> and <code>pg_catalog</code>.</p>
+
+<h3>SQL Editor</h3>
+<p>CodeMirror 5 with syntax highlighting, autocomplete, query history, saved queries, and AI SQL generation.</p>
+<ul>
+<li>Ask Claude to generate SQL from natural language</li>
+<li>DDL blocked by default (safety layer)</li>
+<li>All queries logged to query history</li>
+</ul>
+
+<h3>Table Browser</h3>
+<p>Two-panel explorer: table list on the left, tabs on the right (Columns, Data, Constraints, Foreign Keys, Indexes).</p>
+
+<h3>Schema Explorer</h3>
+<p>Browse functions, triggers, extensions, and indexes.</p>
+
+<h3>Migrations</h3>
+<p>Applied vs. pending migration tracking. Docker test-run (spin up PG, apply, validate, destroy). Schema diff.</p>
+
+<h3>Roles</h3>
+<p>PostgreSQL role manager with AI security audit (scores permissions), permission heatmap, and AI role generator.</p>
+
+<h3>Backups</h3>
+<p><code>pg_dump</code> / <code>pg_restore</code> integration. AI backup strategy analysis with disaster recovery planning.</p>
+
+<h2 id="git-deploy">Git + Deploy</h2>
+<ul>
+<li><strong>Git view:</strong> Commit, push, branch management, diff, log, AI PR descriptions</li>
+<li><strong>Deploy view:</strong> One-click deploy pipeline with pre-flight checks and rollback</li>
+<li><strong>Git Projects:</strong> Manage multiple repositories with dynamic cwd switching</li>
+</ul>
+
+<h2 id="monitoring">Monitoring</h2>
+<ul>
+<li><strong>Dashboard:</strong> Real-time CPU, memory, disk metrics via Socket.IO (3s refresh)</li>
+<li><strong>Metrics:</strong> Historical charts with Chart.js, process list, AI performance analysis</li>
+<li><strong>Uptime:</strong> HTTP/TCP health checks with configurable intervals and alerting</li>
+<li><strong>Multi-Server:</strong> Aggregate metrics across multiple servers</li>
+</ul>
+
+<h2 id="security">Security Center</h2>
+<ul>
+<li>Security posture scoring</li>
+<li>Secret scanning and dependency audit</li>
+<li>SSL/TLS certificate management</li>
+<li>AES-256-GCM encrypted credential vault</li>
+<li>AI-generated fix recommendations</li>
+<li>Cloudflare DNS and tunnel management</li>
+</ul>
+
+<h2 id="byok">BYOK AI Setup</h2>
+<p>Bulwark uses <strong>Bring Your Own Key</strong> — you install AI CLI tools on your server and authenticate with your own subscriptions.</p>
+
+<table>
+<tr><th>Provider</th><th>Install</th><th>Requirement</th></tr>
+<tr><td>Claude CLI</td><td><code>npm i -g @anthropic-ai/claude-cli</code></td><td>Anthropic subscription</td></tr>
+<tr><td>Codex CLI</td><td><code>npm i -g @openai/codex</code></td><td>OpenAI API key</td></tr>
+<tr><td>None</td><td>—</td><td>AI features disabled</td></tr>
+</table>
+
+<p>Configure in <strong>Settings &gt; AI Provider</strong>. Bulwark auto-detects installed CLIs.</p>
+
+<div class="callout">
+<p><strong>Privacy:</strong> AI requests go directly from your server to your AI provider. Bulwark never sees your prompts, responses, or API keys.</p>
+</div>
+
+<h2 id="ai-features">AI Features</h2>
+<ul>
+<li><strong>SQL generation</strong> — Natural language to SQL in DB Studio</li>
+<li><strong>Role security audit</strong> — AI scores PostgreSQL role permissions</li>
+<li><strong>Backup strategy</strong> — AI analyzes backup health with DR planning</li>
+<li><strong>Commit messages</strong> — AI generates commit messages from diffs</li>
+<li><strong>PR descriptions</strong> — AI writes pull request summaries</li>
+<li><strong>Ticket triage</strong> — AI categorizes and prioritizes tickets</li>
+<li><strong>Daily briefings</strong> — AI-powered scheduling summaries</li>
+</ul>
+
+<h2 id="stack">Stack</h2>
+<table>
+<tr><th>Layer</th><th>Technology</th></tr>
+<tr><td>Server</td><td>Express.js + Socket.IO</td></tr>
+<tr><td>Frontend</td><td>Vanilla JS (ViewRegistry pattern, no build step)</td></tr>
+<tr><td>Database</td><td>PostgreSQL 17 (optional)</td></tr>
+<tr><td>Terminal</td><td>xterm.js + node-pty</td></tr>
+<tr><td>Charts</td><td>Chart.js</td></tr>
+<tr><td>SQL Editor</td><td>CodeMirror 5</td></tr>
+<tr><td>Auth</td><td>PBKDF2 + TOTP 2FA</td></tr>
+<tr><td>Encryption</td><td>AES-256-GCM</td></tr>
+</table>
+
+<p><strong>4 npm dependencies:</strong> express, socket.io, pg, node-pty (+ multer for file uploads).</p>
+
+<h2 id="views">34 Views</h2>
+<table>
+<tr><th>Group</th><th>Views</th></tr>
+<tr><td>Overview</td><td>Dashboard, Metrics, Uptime</td></tr>
+<tr><td>Infrastructure</td><td>Servers, Docker, PM2, SSL/Domains, Cloudflare</td></tr>
+<tr><td>Database</td><td>SQL Editor, Tables, Schema, Migrations, Roles, Backups, DB Projects, DB Assistant</td></tr>
+<tr><td>Operations</td><td>Terminal, Claude, Tickets, Git, Deploy, Cron Jobs, File Manager, Env Variables</td></tr>
+<tr><td>Security</td><td>Security Center, Credentials, FTP, Notifications</td></tr>
+<tr><td>System</td><td>Logs, Multi-Server, Calendar, Briefing, Notes, Cache, Settings</td></tr>
+</table>
+
+<h2 id="api">API Endpoints</h2>
+<p>270+ REST API endpoints across 31 route modules. All endpoints require authentication via session cookie or Bearer token.</p>
+<pre><code># Example: Get system info
+curl -b "monitor_session=TOKEN" http://localhost:3001/api/system
+
+# Example: List database tables
+curl -b "monitor_session=TOKEN" http://localhost:3001/api/db/tables
+
+# Example: Execute SQL query
+curl -X POST -b "monitor_session=TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"sql":"SELECT NOW()"}' \
+  http://localhost:3001/api/db/query</code></pre>
+
+<h2 id="theme">Dimension Dark Theme</h2>
+<p>Glass-morphism dark theme with a strict two-color signal system:</p>
+<ul>
+<li><strong style="color:#22d3ee;">Cyan (#22d3ee)</strong> — success, healthy, active, positive</li>
+<li><strong style="color:#ff6b2b;">Orange (#ff6b2b)</strong> — error, warning, destructive, down</li>
+</ul>
+<p>Glass effects: <code>backdrop-filter: blur(20px) saturate(180%)</code> on all cards, sidebar, topbar, and modals. JetBrains Mono typography throughout.</p>
+
+<h2 id="env-vars">Environment Variables</h2>
+<table>
+<tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+<tr><td><code>MONITOR_PORT</code></td><td>3001</td><td>Server listen port</td></tr>
+<tr><td><code>MONITOR_USER</code></td><td>—</td><td>Default admin username</td></tr>
+<tr><td><code>MONITOR_PASS</code></td><td>—</td><td>Default admin password</td></tr>
+<tr><td><code>DATABASE_URL</code></td><td>—</td><td>PostgreSQL connection string</td></tr>
+<tr><td><code>VPS_DATABASE_URL</code></td><td>—</td><td>Secondary DB for VPS pool</td></tr>
+<tr><td><code>REPO_DIR</code></td><td>cwd</td><td>Git/Deploy repository root</td></tr>
+<tr><td><code>APP_NAME</code></td><td>Bulwark</td><td>Branding name override</td></tr>
+<tr><td><code>NODE_ENV</code></td><td>—</td><td>Set to <code>production</code> for prod mode</td></tr>
+</table>
+
+<h2 id="keyboard">Keyboard Shortcuts</h2>
+<table>
+<tr><th>Key</th><th>Action</th></tr>
+<tr><td><code>Ctrl+K</code></td><td>Command palette</td></tr>
+<tr><td><code>Ctrl+J</code></td><td>Toggle AI assistant</td></tr>
+<tr><td><code>Escape</code></td><td>Close modal / lightbox</td></tr>
+<tr><td><code>Arrow Left/Right</code></td><td>Navigate carousel</td></tr>
+</table>
+
+<h2 id="troubleshooting">Troubleshooting</h2>
+
+<h3>Server won't start</h3>
+<ul>
+<li>Ensure Node.js 18+ is installed: <code>node --version</code></li>
+<li>Check port 3001 is available: <code>lsof -i :3001</code></li>
+<li>Check logs for errors at startup</li>
+</ul>
+
+<h3>Database features unavailable</h3>
+<ul>
+<li>Set <code>DATABASE_URL</code> in your <code>.env</code> file</li>
+<li>Ensure PostgreSQL is running and accessible</li>
+<li>The app works without a database in degraded mode</li>
+</ul>
+
+<h3>Docker not connecting</h3>
+<ul>
+<li>Ensure Docker is installed and running</li>
+<li>Check socket permissions: <code>ls -la /var/run/docker.sock</code></li>
+<li>For Docker Desktop, use the connection wizard in Settings</li>
+</ul>
+
+<h3>AI features not working</h3>
+<ul>
+<li>Install Claude CLI: <code>npm i -g @anthropic-ai/claude-cli && claude auth</code></li>
+<li>Verify it works: <code>claude --print "hello"</code></li>
+<li>Check Settings &gt; AI Provider is set correctly</li>
+</ul>
+
+<div class="callout warn">
+<p><strong>Need help?</strong> Open a <a href="https://github.com/bulwark-studio/bulwark/discussions" target="_blank">Discussion</a> or file an <a href="https://github.com/bulwark-studio/bulwark/issues" target="_blank">Issue</a> on GitHub.</p>
+</div>
+
+</main>
+</div>
+
+<script>
+// Highlight active sidebar link on scroll
+var sections = document.querySelectorAll('[id]');
+var links = document.querySelectorAll('.sidebar a');
+window.addEventListener('scroll', function() {
+  var y = window.scrollY + 100;
+  sections.forEach(function(s) {
+    if (s.offsetTop <= y && s.offsetTop + s.offsetHeight > y) {
+      links.forEach(function(l) { l.classList.remove('active'); });
+      var a = document.querySelector('.sidebar a[href="#' + s.id + '"]');
+      if (a) a.classList.add('active');
+    }
+  });
+});
+</script>
+
+</body>
+</html>
