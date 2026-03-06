@@ -1,0 +1,68 @@
+name: Bug Report
+description: Report a bug in Bulwark
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Fill out the fields below so we can reproduce and fix it.
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Dashboard
+        - Terminal
+        - Docker
+        - Database (SQL Editor / Tables / Schema / Roles / Backups)
+        - Git / Deploy
+        - Security
+        - Monitoring / Uptime
+        - Settings
+        - Authentication
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Bulwark Version
+      description: Run `node server.js --version` or check Settings
+      placeholder: "e.g. 2.1.0"
+  - type: dropdown
+    id: install
+    attributes:
+      label: Installation Method
+      options:
+        - npm (bare metal)
+        - Docker
+        - install.sh script
+  - type: input
+    id: os
+    attributes:
+      label: OS / Environment
+      placeholder: "e.g. Ubuntu 22.04, macOS 14, Windows 11"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Paste relevant console output or attach screenshots
