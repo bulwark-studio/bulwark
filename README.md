@@ -115,7 +115,18 @@ Configure in **Settings > AI Provider**. Bulwark auto-detects installed CLIs.
 
 ## Screenshots
 
-> Screenshots coming soon. Star the repo to get notified!
+<p align="center">
+  <img src="media/screenshots/Dashboard_open_ai_banner_3.png" alt="Dashboard" width="800">
+</p>
+
+| | |
+|---|---|
+| ![SQL Editor](media/screenshots/sql_Editor.png) | ![Docker](media/screenshots/Docker_9.png) |
+| **SQL Editor** — Syntax highlighting, AI query generation | **Docker Fleet** — Container management, log streaming |
+| ![Terminal](media/screenshots/terminal_1.png) | ![Tickets](media/screenshots/tickets_sidebar.png) |
+| **Terminal AI** — Full PTY + natural language commands | **Kanban Tickets** — AI triage across 7 stages |
+| ![Tables](media/screenshots/tables_3.png) | ![Roles](media/screenshots/roles_6.png) |
+| **Table Browser** — Two-panel explorer with constraints | **Roles** — AI security audit, permission heatmap |
 
 ---
 
@@ -162,4 +173,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 
 ---
 
-**Built by Bulwark** | [bulwark.studio](https://bulwark.studio)
+**Autopilot AI Tech LLC** | [bulwark.studio](https://bulwark.studio) | [@BulwarkStudio](https://x.com/BulwarkStudio)
