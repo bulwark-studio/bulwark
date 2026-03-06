@@ -204,51 +204,191 @@
     }, 50);
   };
 
-  // ── Firewall Tab (adapter-dependent) ──
+  // ── Firewall Tab (native — no adapter needed) ──
 
   function renderFirewall(el) {
-    el.innerHTML = '<div class="sec-section"><div style="color:var(--text-tertiary)">Loading firewall rules...</div></div>';
-    fetch('/adapter/security/firewall/rules').then(function (r) { return r.json(); }).then(function (d) {
-      if (d.degraded) { el.innerHTML = degraded('Firewall', d.error); return; }
-      var rules = Array.isArray(d) ? d : d.rules || [];
-      el.innerHTML = '<div class="sec-section"><h3>Firewall Rules</h3>' +
-        '<button class="btn btn-sm btn-cyan" style="margin-bottom:12px" onclick="addFirewallRule()">+ Add Rule</button>' +
-        (rules.length ? '<div class="sec-fw-list">' +
-          rules.map(function (r) {
-            var actionColor = r.action === 'allow' ? 'var(--cyan)' : 'var(--orange)';
-            return '<div class="sec-fw-row">' +
-              '<span class="sec-fw-port">' + esc(r.port || '') + '</span>' +
-              '<span class="sec-fw-proto">' + esc(r.protocol || 'tcp') + '</span>' +
-              '<span class="sec-fw-action" style="color:' + actionColor + '">' + esc(r.action || 'allow') + '</span>' +
-              '<span class="sec-fw-from">' + esc(r.from || 'any') + '</span>' +
-              '<button class="sec-fix-btn danger" onclick="deleteFirewallRule(\'' + esc(r.id || r.port) + '\')">Del</button>' +
-            '</div>';
-          }).join('') +
-        '</div>' : '<div class="sec-empty">No firewall rules</div>') +
-      '</div>';
-    }).catch(function (e) { el.innerHTML = degraded('Firewall', e.message); });
+    el.innerHTML = '<div class="sec-section"><div style="color:var(--text-tertiary)">Detecting firewall...</div></div>';
+    fetch('/api/security/firewall').then(function (r) { return r.json(); }).then(function (d) {
+      var status = d.status || 'unknown';
+      var rules = d.rules || [];
+      var tool = d.tool || 'none';
+      var statusColor = status === 'active' ? 'var(--cyan)' : status === 'inactive' ? 'var(--orange)' : 'var(--text-tertiary)';
+      var statusIcon = status === 'active' ? '&#9679;' : status === 'inactive' ? '&#9675;' : '?';
+
+      // No firewall detected — show AI setup guide
+      if (tool === 'none' || status === 'unavailable') {
+        el.innerHTML =
+          '<div class="sec-section" style="text-align:center;padding:32px">' +
+            '<div style="font-size:32px;margin-bottom:12px">&#128737;</div>' +
+            '<div style="color:var(--text-primary);font-weight:600;font-size:14px;margin-bottom:8px">No Firewall Detected</div>' +
+            '<div style="color:var(--text-tertiary);font-size:12px;max-width:460px;margin:0 auto 20px;line-height:1.6">' +
+              (d.platform === 'win32'
+                ? 'Windows Firewall is managed through Windows Security settings. Bulwark can analyze your firewall configuration — click below for AI recommendations.'
+                : 'A firewall protects your server by controlling which network traffic is allowed in and out. Most Linux servers use <b>ufw</b> (Uncomplicated Firewall).') +
+            '</div>' +
+            '<div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">' +
+              '<button class="sec-ai-btn" onclick="firewallAISetup()">&#10024; AI Setup Guide</button>' +
+              '<button class="btn btn-sm btn-ghost" onclick="firewallAIAsk()">Ask AI a Question</button>' +
+            '</div>' +
+          '</div>';
+        return;
+      }
+
+      // Firewall detected — show status + rules
+      el.innerHTML =
+        '<div class="sec-section">' +
+          '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+            '<div><h3 style="margin:0">Firewall — ' + esc(tool.toUpperCase()) + '</h3>' +
+              '<div style="margin-top:4px"><span style="color:' + statusColor + '">' + statusIcon + '</span> <span style="color:' + statusColor + ';font-size:12px">' + esc(status) + '</span></div>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px">' +
+              '<button class="sec-ai-btn" onclick="firewallAIAsk()">&#10024; Ask AI</button>' +
+              '<button class="btn btn-sm btn-ghost" onclick="secTabSwitch(\'firewall\')">Refresh</button>' +
+            '</div>' +
+          '</div>' +
+          (rules.length ?
+            '<div class="sec-fw-list">' +
+              '<div class="sec-fw-row" style="color:var(--text-tertiary);font-size:10px;text-transform:uppercase;letter-spacing:0.5px;border:none;padding-bottom:4px">' +
+                '<span class="sec-fw-port">To</span>' +
+                '<span class="sec-fw-action">Action</span>' +
+                '<span class="sec-fw-from">From</span>' +
+              '</div>' +
+              rules.map(function (r) {
+                var actionColor = (r.action || '').toLowerCase().indexOf('allow') >= 0 ? 'var(--cyan)' : 'var(--orange)';
+                return '<div class="sec-fw-row">' +
+                  '<span class="sec-fw-port">' + esc(r.to || r.port || '') + '</span>' +
+                  '<span class="sec-fw-action" style="color:' + actionColor + '">' + esc(r.action || '') + '</span>' +
+                  '<span class="sec-fw-from">' + esc(r.from || 'Anywhere') + '</span>' +
+                '</div>';
+              }).join('') +
+            '</div>' :
+            '<div class="sec-empty">No rules configured</div>'
+          ) +
+          '<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">' +
+            '<button class="sec-ai-btn" onclick="firewallAISetup()">&#10024; AI Recommendations</button>' +
+            '<button class="btn btn-sm btn-ghost" onclick="firewallAIAdd()">+ Add Rule (AI)</button>' +
+          '</div>' +
+        '</div>';
+    }).catch(function () {
+      el.innerHTML =
+        '<div class="sec-section" style="text-align:center;padding:32px">' +
+          '<div style="font-size:32px;margin-bottom:12px">&#128737;</div>' +
+          '<div style="color:var(--text-primary);font-weight:600;margin-bottom:8px">Firewall Status Unknown</div>' +
+          '<div style="color:var(--text-tertiary);font-size:12px;margin-bottom:16px">Could not detect firewall configuration.</div>' +
+          '<button class="sec-ai-btn" onclick="firewallAISetup()">&#10024; AI Setup Guide</button>' +
+        '</div>';
+    });
   }
 
-  // ── SSH Keys Tab (adapter-dependent) ──
+  // Firewall AI: Full setup guide
+  window.firewallAISetup = function () {
+    Modal.open({ title: '&#10024; AI Firewall Setup', size: 'lg',
+      body: '<div id="fw-ai-result" style="color:var(--text-secondary);font-size:13px;line-height:1.7">Generating firewall recommendations...<span class="cursor-blink"></span></div>'
+    });
+    fetch('/api/security/firewall/ai-setup').then(function (r) { return r.json(); }).then(function (d) {
+      var el = document.getElementById('fw-ai-result');
+      if (el) el.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7">' + esc(d.guide || 'Could not generate guide.') + '</pre>';
+    }).catch(function () {
+      var el = document.getElementById('fw-ai-result');
+      if (el) el.textContent = 'AI unavailable. Configure an AI provider in Settings > AI Provider.';
+    });
+  };
+
+  // Firewall AI: Ask a question
+  window.firewallAIAsk = function () {
+    Modal.open({ title: '&#10024; Ask AI About Firewalls', size: 'md',
+      body: '<div class="form-group"><label class="form-label">Describe what you need in plain English</label>' +
+        '<textarea id="fw-ai-q" class="form-input" rows="3" placeholder="e.g., I want to allow SSH and HTTP but block everything else\ne.g., How do I open port 443 for HTTPS?\ne.g., Is my server secure without a firewall?"></textarea></div>' +
+        '<div id="fw-ai-answer" style="margin-top:12px"></div>',
+      footer: '<button class="btn btn-sm" onclick="Modal.close(this.closest(\'.modal-overlay\'))">Close</button>' +
+        '<button class="btn btn-sm btn-primary" id="fw-ai-send">&#10024; Ask AI</button>'
+    });
+    setTimeout(function () {
+      var btn = document.getElementById('fw-ai-send');
+      if (btn) btn.onclick = function () {
+        var q = (document.getElementById('fw-ai-q') || {}).value;
+        if (!q) return;
+        var ans = document.getElementById('fw-ai-answer');
+        if (ans) ans.innerHTML = '<div style="color:var(--text-tertiary);font-size:12px">Thinking...<span class="cursor-blink"></span></div>';
+        btn.disabled = true;
+        fetch('/api/security/firewall/ai-ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (ans) ans.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:rgba(0,0,0,0.3);border-radius:6px">' + esc(d.answer || 'No answer.') + '</pre>';
+            btn.disabled = false;
+          });
+      };
+    }, 50);
+  };
+
+  // Firewall AI: Add rule via natural language
+  window.firewallAIAdd = function () {
+    Modal.open({ title: '&#10024; Add Firewall Rule', size: 'md',
+      body: '<div class="form-group"><label class="form-label">Describe the rule in plain English</label>' +
+        '<input id="fw-ai-rule" class="form-input" placeholder="e.g., Allow SSH from my IP 203.0.113.5"></div>' +
+        '<div id="fw-ai-cmd" style="margin-top:12px"></div>',
+      footer: '<button class="btn btn-sm" onclick="Modal.close(this.closest(\'.modal-overlay\'))">Close</button>' +
+        '<button class="btn btn-sm btn-primary" id="fw-ai-gen">&#10024; Generate Command</button>'
+    });
+    setTimeout(function () {
+      var btn = document.getElementById('fw-ai-gen');
+      if (btn) btn.onclick = function () {
+        var rule = (document.getElementById('fw-ai-rule') || {}).value;
+        if (!rule) return;
+        var out = document.getElementById('fw-ai-cmd');
+        if (out) out.innerHTML = '<div style="color:var(--text-tertiary);font-size:12px">Generating command...<span class="cursor-blink"></span></div>';
+        btn.disabled = true;
+        fetch('/api/security/firewall/ai-ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: 'Generate the exact ufw or iptables command for: ' + rule + '. Show the command, explain what it does, and warn about any risks.' }) })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (out) out.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:rgba(0,0,0,0.3);border-radius:6px">' + esc(d.answer || 'No answer.') + '</pre>' +
+              '<div style="color:var(--text-tertiary);font-size:11px;margin-top:8px">&#9888; Copy and run this command in your terminal. Bulwark generates but does not auto-execute firewall changes for safety.</div>';
+            btn.disabled = false;
+          });
+      };
+    }, 50);
+  };
+
+  // ── SSH Keys Tab (native — no adapter needed) ──
 
   function renderSSH(el) {
     el.innerHTML = '<div class="sec-section"><div style="color:var(--text-tertiary)">Loading SSH keys...</div></div>';
-    fetch('/adapter/security/ssh-keys').then(function (r) { return r.json(); }).then(function (d) {
-      if (d.degraded) { el.innerHTML = degraded('SSH Keys', d.error); return; }
-      var keys = Array.isArray(d) ? d : d.keys || [];
+    fetch('/api/security/ssh-keys').then(function (r) { return r.json(); }).then(function (d) {
+      var keys = d.keys || [];
+      if (d.unavailable) {
+        el.innerHTML =
+          '<div class="sec-section" style="text-align:center;padding:32px">' +
+            '<div style="font-size:32px;margin-bottom:12px">&#128273;</div>' +
+            '<div style="color:var(--text-primary);font-weight:600;margin-bottom:8px">SSH Keys</div>' +
+            '<div style="color:var(--text-tertiary);font-size:12px;margin-bottom:16px">' + esc(d.message || 'SSH not available on this platform.') + '</div>' +
+            '<button class="sec-ai-btn" onclick="firewallAIAsk()">&#10024; Ask AI About SSH</button>' +
+          '</div>';
+        return;
+      }
       el.innerHTML = '<div class="sec-section"><h3>Authorized SSH Keys</h3>' +
-        '<button class="btn btn-sm btn-cyan" style="margin-bottom:12px" onclick="addSSHKey()">+ Add Key</button>' +
+        '<div style="color:var(--text-tertiary);font-size:11px;margin-bottom:12px">Keys in ~/.ssh/authorized_keys that can access this server</div>' +
         (keys.length ? '<div class="sec-ssh-list">' +
           keys.map(function (k) {
             return '<div class="sec-ssh-row">' +
-              '<span class="sec-ssh-fp">' + esc(k.fingerprint || k.fp || '') + '</span>' +
-              '<span class="sec-ssh-comment">' + esc(k.comment || '') + '</span>' +
-              '<button class="sec-fix-btn danger" onclick="deleteSSHKey(\'' + esc(k.fingerprint || k.fp || '') + '\')">Del</button>' +
+              '<span class="sec-ssh-fp">' + esc(k.type || '') + '</span>' +
+              '<span class="sec-ssh-comment" style="flex:1">' + esc(k.comment || 'unnamed key') + '</span>' +
+              '<span style="color:var(--text-tertiary);font-size:10px">' + esc((k.key || '').substring(0, 20) + '...') + '</span>' +
             '</div>';
           }).join('') +
-        '</div>' : '<div class="sec-empty">No SSH keys</div>') +
+        '</div>' : '<div class="sec-empty">No authorized keys found</div>') +
+        '<div style="margin-top:12px"><button class="sec-ai-btn" onclick="firewallAIAsk()">&#10024; Ask AI About SSH Security</button></div>' +
       '</div>';
-    }).catch(function (e) { el.innerHTML = degraded('SSH Keys', e.message); });
+    }).catch(function () {
+      el.innerHTML =
+        '<div class="sec-section" style="text-align:center;padding:32px">' +
+          '<div style="font-size:32px;margin-bottom:12px">&#128273;</div>' +
+          '<div style="color:var(--text-primary);font-weight:600;margin-bottom:8px">SSH Keys</div>' +
+          '<div style="color:var(--text-tertiary);font-size:12px;margin-bottom:16px">Could not read SSH keys.</div>' +
+          '<button class="sec-ai-btn" onclick="firewallAIAsk()">&#10024; Ask AI</button>' +
+        '</div>';
+    });
   }
 
   // ── AI Actions ──
@@ -290,8 +430,9 @@
   };
 
   function degraded(section, err) {
-    return '<div class="sec-section" style="text-align:center;padding:32px"><div style="color:var(--orange);font-weight:600;margin-bottom:4px">' + section + ' — Adapter Not Connected</div>' +
-      '<div style="color:var(--text-tertiary);font-size:11px">' + esc(err || 'Adapter unavailable') + '</div></div>';
+    return '<div class="sec-section" style="text-align:center;padding:32px"><div style="color:var(--text-secondary);font-weight:600;margin-bottom:8px">' + section + '</div>' +
+      '<div style="color:var(--text-tertiary);font-size:12px;margin-bottom:16px">' + esc(err || 'Feature unavailable') + '</div>' +
+      '<button class="sec-ai-btn" onclick="firewallAIAsk()">&#10024; Ask AI for Help</button></div>';
   }
 
   function typewriter(el, text) {

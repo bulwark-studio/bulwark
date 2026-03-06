@@ -227,4 +227,152 @@ module.exports = function (app, ctx) {
       res.json({ fix: result.trim() || 'No recommendation available.' });
     } catch (e) { res.json({ fix: 'Recommendation unavailable: ' + e.message }); }
   });
+
+  // ── Native Firewall Detection ──
+
+  app.get('/api/security/firewall', requireAdmin, async (req, res) => {
+    try {
+      const platform = process.platform;
+
+      // Windows
+      if (platform === 'win32') {
+        return res.json({ tool: 'none', status: 'unavailable', platform, rules: [],
+          message: 'Windows Firewall is managed through Windows Security settings.' });
+      }
+
+      // Linux — try ufw first, then iptables
+      try {
+        const ufwStatus = await execCommand('sudo ufw status numbered 2>/dev/null || ufw status numbered 2>/dev/null', { timeout: 5000 });
+        const output = ufwStatus.stdout.trim();
+
+        if (output.includes('inactive')) {
+          return res.json({ tool: 'ufw', status: 'inactive', platform, rules: [] });
+        }
+
+        if (output.includes('active')) {
+          const rules = [];
+          const lines = output.split('\n');
+          for (const line of lines) {
+            const match = line.match(/\[\s*(\d+)\]\s+(.+?)\s+(ALLOW|DENY|REJECT|LIMIT)\s+(IN|OUT)?\s*(.*)/i);
+            if (match) {
+              rules.push({ num: match[1], to: match[2].trim(), action: match[3], from: match[5].trim() || 'Anywhere' });
+            }
+          }
+          return res.json({ tool: 'ufw', status: 'active', platform, rules });
+        }
+      } catch {}
+
+      // Fallback: iptables
+      try {
+        const ipt = await execCommand('sudo iptables -L -n --line-numbers 2>/dev/null || iptables -L -n --line-numbers 2>/dev/null', { timeout: 5000 });
+        const output = ipt.stdout.trim();
+        if (output) {
+          const rules = [];
+          const lines = output.split('\n');
+          for (const line of lines) {
+            const match = line.match(/^(\d+)\s+(\w+)\s+(\w+)\s+--\s+(\S+)\s+(\S+)\s*(.*)/);
+            if (match) {
+              rules.push({ num: match[1], action: match[2], to: match[5], from: match[4], proto: match[3], extra: (match[6] || '').trim() });
+            }
+          }
+          return res.json({ tool: 'iptables', status: 'active', platform, rules });
+        }
+      } catch {}
+
+      // macOS — pf
+      if (platform === 'darwin') {
+        try {
+          const pf = await execCommand('sudo pfctl -sr 2>/dev/null', { timeout: 5000 });
+          if (pf.stdout.trim()) {
+            const rules = pf.stdout.trim().split('\n').map((line, i) => ({ num: String(i + 1), to: line.trim(), action: 'rule', from: '' }));
+            return res.json({ tool: 'pf', status: 'active', platform, rules });
+          }
+        } catch {}
+      }
+
+      res.json({ tool: 'none', status: 'unavailable', platform, rules: [] });
+    } catch (e) { res.json({ tool: 'none', status: 'error', error: e.message, rules: [] }); }
+  });
+
+  // AI Firewall Setup Guide
+  app.get('/api/security/firewall/ai-setup', requireAdmin, async (req, res) => {
+    try {
+      const platform = process.platform;
+      let context = `Platform: ${platform}, Node.js ${process.version}`;
+
+      // Detect what's listening
+      try {
+        const ports = await execCommand(
+          platform === 'win32' ? 'netstat -an | findstr LISTENING' : 'ss -tlnp 2>/dev/null | grep LISTEN',
+          { timeout: 5000 }
+        );
+        context += `\nListening ports:\n${ports.stdout.trim().substring(0, 500)}`;
+      } catch {}
+
+      const prompt = `You are a server security expert helping a non-technical user set up a firewall. The user may not know Linux commands.
+
+${context}
+
+Give a complete, beginner-friendly firewall setup guide:
+1. Explain what a firewall does in 1 sentence
+2. Recommend ufw for Ubuntu/Debian (it's the simplest)
+3. Give exact copy-paste commands to:
+   - Install ufw if needed
+   - Set default deny incoming, allow outgoing
+   - Allow SSH (port 22) so they don't lock themselves out
+   - Allow their app port (3001 for Bulwark)
+   - Allow HTTP (80) and HTTPS (443) if they run a web server
+   - Enable the firewall
+4. Show how to check status after
+5. Warn about common mistakes (locking yourself out of SSH)
+
+Keep it simple. Number every step. Show exact commands. No markdown formatting.`;
+
+      const result = await askAI(prompt, { timeout: 30000 });
+      res.json({ guide: result.trim() || 'Could not generate guide. Make sure an AI provider is configured in Settings.' });
+    } catch (e) { res.json({ guide: 'AI unavailable: ' + e.message + '\n\nConfigure an AI provider in Settings > AI Provider.' }); }
+  });
+
+  // AI Firewall Q&A
+  app.post('/api/security/firewall/ai-ask', requireRole('editor'), async (req, res) => {
+    try {
+      const { question } = req.body;
+      const platform = process.platform;
+
+      const prompt = `You are a server security expert. The user is asking about firewalls. They may not be technical — explain clearly with exact commands they can copy-paste.
+
+Platform: ${platform}
+Question: ${question}
+
+Give a clear, direct answer. If providing commands, explain what each does. Warn about any risks. No markdown formatting.`;
+
+      const result = await askAI(prompt, { timeout: 20000 });
+      res.json({ answer: result.trim() || 'No answer available.' });
+    } catch (e) { res.json({ answer: 'AI unavailable: ' + e.message }); }
+  });
+
+  // ── Native SSH Keys Detection ──
+
+  app.get('/api/security/ssh-keys', requireAdmin, async (req, res) => {
+    try {
+      if (process.platform === 'win32') {
+        return res.json({ keys: [], unavailable: true, message: 'SSH key management on Windows uses OpenSSH. Check C:\\Users\\<user>\\.ssh\\authorized_keys.' });
+      }
+
+      const homeDir = process.env.HOME || '/root';
+      const authKeysPath = path.join(homeDir, '.ssh', 'authorized_keys');
+
+      if (!fs.existsSync(authKeysPath)) {
+        return res.json({ keys: [], message: 'No authorized_keys file found' });
+      }
+
+      const content = fs.readFileSync(authKeysPath, 'utf8');
+      const keys = content.split('\n').filter(Boolean).filter(l => !l.startsWith('#')).map(line => {
+        const parts = line.trim().split(/\s+/);
+        return { type: parts[0] || '', key: parts[1] || '', comment: parts.slice(2).join(' ') || '' };
+      });
+
+      res.json({ keys });
+    } catch (e) { res.json({ keys: [], error: e.message }); }
+  });
 };
