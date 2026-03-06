@@ -132,7 +132,7 @@
         }
       }
     }
-    chart.update('none');
+    chart.update({ duration: 0 });
   };
 
   /**
@@ -157,7 +157,7 @@
         if (chart.data.datasets[0].data.length > maxPoints) chart.data.datasets[0].data.shift();
       }
     }
-    chart.update('none');
+    chart.update({ duration: 0 });
   };
 
   /**

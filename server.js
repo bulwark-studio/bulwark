@@ -274,6 +274,7 @@ async function sendInitialState(socket) {
     ctx.getRecentActivity ? ctx.getRecentActivity() : [],
     ctx.getProcessList ? ctx.getProcessList() : [],
   ]);
+  sys.connectedClients = io.engine.clientsCount || 0;
   socket.emit("init", { system: sys, tickets, activity, processes: procs });
 }
 
@@ -281,7 +282,9 @@ async function sendInitialState(socket) {
 setInterval(() => {
   if (io.engine.clientsCount === 0) return;
   const metrics = collectMetrics();
-  io.emit("metrics", { system: getSystemInfo(), extended: metrics, ts: Date.now() });
+  const sys = getSystemInfo();
+  sys.connectedClients = io.engine.clientsCount || 0;
+  io.emit("metrics", { system: sys, extended: metrics, ts: Date.now() });
 }, 3000);
 
 setInterval(async () => {

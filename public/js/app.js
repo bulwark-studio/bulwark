@@ -74,11 +74,20 @@ window.animateValue = function(el, end, duration) {
   };
 
   // ── Load Current User Role ──
-  fetch('/api/me').then(function(r) { return r.json(); }).then(function(u) {
-    window.state.userRole = u.role || 'viewer';
-    window.state.userName = u.username || '';
-    document.body.setAttribute('data-role', u.role || 'viewer');
-  }).catch(function() {});
+  function loadCurrentUser() {
+    fetch('/api/me').then(function(r) { return r.json(); }).then(function(u) {
+      if (!u || u.error) return;
+      window.state.userRole = u.role || 'viewer';
+      window.state.userName = u.username || '';
+      document.body.setAttribute('data-role', u.role || 'viewer');
+      var userEl = document.getElementById('topbar-user');
+      if (userEl && u.username) {
+        userEl.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-1px;margin-right:4px"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>' +
+          u.username + ' <span style="color:var(--text-tertiary)">(' + (u.role || 'viewer') + ')</span>';
+      }
+    }).catch(function(e) { console.warn('[Monitor] Failed to load user:', e); });
+  }
+  loadCurrentUser();
 
   // ── Load Branding ──
   fetch('/api/branding').then(function(r) { return r.json(); }).then(function(b) {
@@ -506,6 +515,9 @@ window.animateValue = function(el, end, duration) {
         view.init();
       }
     });
+
+    // Retry user load after DOM ready (in case early fetch raced)
+    if (!window.state.userName) loadCurrentUser();
 
     // Switch to saved view or default to dashboard
     var savedView;

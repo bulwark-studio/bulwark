@@ -338,11 +338,16 @@
       var nodes = [];
       var edges = [];
 
+      // Users node (far left) — shows connected clients
+      var clientCount = (window.state.system && window.state.system.connectedClients) || 1;
+      nodes.push({ id: 'users', x: 30, y: 30, label: clientCount + '', status: clientCount > 0 ? 'healthy' : 'unhealthy', detail: 'Users', small: true });
+
       // Local node (center-left)
-      nodes.push({ id: 'local', x: 80, y: 90, label: 'Local', status: 'healthy', detail: 'Bulwark' });
+      nodes.push({ id: 'local', x: 130, y: 90, label: 'Local', status: 'healthy', detail: 'Bulwark' });
+      edges.push({ from: 'users', to: 'local', status: 'healthy', label: '' });
 
       // Server nodes
-      var sx = 250, sy = 50;
+      var sx = 280, sy = 50;
       (servers || []).forEach(function (s, i) {
         var id = 'srv-' + i;
         nodes.push({ id: id, x: sx, y: sy + i * 70, label: esc(s.name || 'Server'), status: s.status === 'healthy' || s.status === 'up' ? 'healthy' : 'unhealthy', detail: esc(s.host || s.provider || '') });
@@ -350,7 +355,7 @@
       });
 
       // DB node (if connected)
-      nodes.push({ id: 'db', x: 400, y: 60, label: 'PostgreSQL', status: 'healthy', detail: 'Database' });
+      nodes.push({ id: 'db', x: 430, y: 60, label: 'PostgreSQL', status: 'healthy', detail: 'Database' });
       if (servers.length > 0) {
         edges.push({ from: 'srv-0', to: 'db', status: 'healthy', label: '' });
       } else {
@@ -358,7 +363,7 @@
       }
 
       // PM2 process nodes (bottom cluster)
-      var px = 60;
+      var px = 80;
       (procs || []).slice(0, 6).forEach(function (p, i) {
         var id = 'pm2-' + i;
         nodes.push({ id: id, x: px + i * 80, y: 160, label: esc(p.name || 'proc'), status: p.status === 'online' ? 'healthy' : 'unhealthy', detail: (p.cpu || 0) + '% cpu', small: true });

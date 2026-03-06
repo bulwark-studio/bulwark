@@ -10,11 +10,13 @@ Your entire server, one dashboard. This guide walks you through setting up Bulwa
 2. [First Login](#2-first-login)
 3. [Setting Up AI (Claude & Codex)](#3-setting-up-ai-claude--codex)
 4. [Dashboard](#4-dashboard)
-5. [Connecting Your Database](#5-connecting-your-database)
-6. [Adding Servers](#6-adding-servers)
-7. [Terminal & Command Center](#7-terminal--command-center)
-8. [Keyboard Shortcuts](#8-keyboard-shortcuts)
-9. [FAQ](#9-faq)
+5. [Metrics](#5-metrics)
+6. [Uptime](#6-uptime)
+7. [Connecting Your Database](#7-connecting-your-database)
+8. [Adding Servers](#8-adding-servers)
+9. [Terminal & Command Center](#9-terminal--command-center)
+10. [Keyboard Shortcuts](#10-keyboard-shortcuts)
+11. [FAQ](#11-faq)
 
 ---
 
@@ -199,7 +201,146 @@ A: Live Metrics update every 3 seconds via WebSocket. Other panels refresh on pa
 
 ---
 
-## 5. Connecting Your Database
+## 5. Metrics
+
+The Metrics view gives you deep real-time telemetry for your server — CPU, memory, disk, and per-core performance.
+
+![Metrics — AI Analysis, Hero Stats, CPU Chart, Core Heatmap](../media/screenshots/Metrics_top_5.png)
+
+### AI Performance Analysis
+
+The banner at the top provides an AI-generated summary of your system performance, similar to the Dashboard briefing but focused on hardware utilization. Click **Analyze** to generate a fresh report.
+
+### Hero Stats
+
+Four key metrics displayed as large stat cards:
+
+| Stat | What it shows |
+|------|---------------|
+| **CPU** | Current CPU utilization percentage |
+| **Memory** | Current memory usage percentage |
+| **Cores** | Total CPU cores available |
+| **Uptime** | Server uptime in hours |
+
+### Real-Time Telemetry — CPU
+
+A live-updating line chart showing CPU usage over time. Select a time range (1m, 5m, 15m, 1h, 6h) to zoom in or out. Data updates every 3 seconds via WebSocket.
+
+### Per-Core Heatmap
+
+A color-coded heatmap showing activity across all CPU cores. Each cell represents one core — darker means idle, brighter means active. Useful for spotting unbalanced workloads or runaway processes pinned to a single core.
+
+![Metrics — CPU Aggregate, Memory Chart, System Info, Per-Core Sparklines](../media/screenshots/Metrics_bottom_6.png)
+
+### CPU Aggregate Chart
+
+A secondary CPU chart showing aggregate utilization with a longer time window. Helps identify trends over minutes rather than seconds.
+
+### Memory Usage Chart
+
+Live memory usage chart with the same time range selector as CPU. Shows used vs total memory with percentage labels.
+
+### System Info Panel
+
+Detailed system information at a glance:
+
+| Field | Example |
+|-------|---------|
+| **Hostname** | Your server's hostname |
+| **Platform** | linux, darwin, win32 |
+| **Architecture** | x64, arm64 |
+| **CPU Model** | AMD Ryzen 7 7700X, Intel Xeon, etc. |
+| **Cores** | Total logical cores |
+| **Node.js** | Runtime version |
+| **Uptime** | Hours since last boot |
+| **Load Average** | 1/5/15 minute load averages |
+
+### Per-Core Activity
+
+Individual sparkline charts for each CPU core, showing recent activity patterns. Each core gets its own mini chart so you can visually compare core utilization across the system.
+
+### Metrics FAQ
+
+**Q: Charts show 0% for everything.**
+A: Metrics need a few seconds to populate after page load. If they stay flat, check the WebSocket connection (green dot in the status bar). On fresh installs, give it 10-15 seconds to accumulate data points.
+
+**Q: Can I change the chart time range?**
+A: Yes. Use the time range buttons (1m, 5m, 15m, 1h, 6h) above each chart to adjust the window.
+
+**Q: Memory shows a different number than `free -m`.**
+A: Bulwark reports memory as used by applications (excluding OS buffers/cache), which matches what most monitoring tools display. The `free` command shows raw OS-level figures including cache.
+
+**Q: The per-core heatmap is all dark.**
+A: Your CPU is mostly idle — that's normal for a lightly loaded server. Run a build or benchmark and you'll see cores light up.
+
+---
+
+## 6. Uptime
+
+Monitor the availability and response time of your servers and endpoints from a single view.
+
+![Uptime — AI Analysis, Status, Server Cards, Response Time Chart](../media/screenshots/upTime_top_7.png)
+
+### AI Uptime Analysis
+
+The banner provides an AI-generated summary of your uptime status — latency trends, resource usage, and recommendations. Click **Analyze** to generate a fresh report.
+
+### Status Banner
+
+Shows overall system status ("All Systems Operational") with the last check timestamp and current response time.
+
+### Connected Servers
+
+Each monitored server gets a card showing:
+
+| Field | Description |
+|-------|-------------|
+| **Status** | Up (cyan) or Down (orange) |
+| **Uptime** | Percentage uptime over monitoring period |
+| **Latency** | Current response time in ms |
+| **Host** | IP address or hostname |
+| **Port** | Monitored port number |
+
+Click **+ Uptime Page** on any server card to create a public status page for that server.
+
+### Response Time Chart
+
+A live chart showing response time history across all monitored servers. Orange and cyan lines differentiate servers. Use the time range selector to view trends over different periods.
+
+### Monitored Endpoints
+
+Add HTTP/HTTPS health check endpoints to monitor APIs, websites, or services.
+
+![Uptime — Add Monitored Endpoint Modal](../media/screenshots/upTime_EndPoints_8.png)
+
+Click **+** next to "Monitored Endpoints" to add a new endpoint:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | Friendly name (e.g. "My API") |
+| **URL** | Full URL to check (e.g. `https://api.example.com/health`) |
+| **Check Interval** | Seconds between checks (default: 60) |
+| **Expected Status Code** | HTTP status code that means healthy (default: 200) |
+
+Bulwark will ping the endpoint at the configured interval and alert you if it returns an unexpected status code or times out.
+
+### Uptime FAQ
+
+**Q: How do I add a server to uptime monitoring?**
+A: Go to Infrastructure > Servers first and add the server. It will automatically appear in the Uptime view.
+
+**Q: Can I monitor external URLs (not my servers)?**
+A: Yes. Use the Monitored Endpoints section to add any HTTP/HTTPS URL. No server setup required — just the URL and expected status code.
+
+**Q: How often are checks performed?**
+A: Server health checks run every 30 seconds. Endpoint checks use the interval you configure (default 60 seconds).
+
+**Q: Can I create a public status page?**
+A: Yes. Click **+ Uptime Page** on any server card to generate a shareable status page URL.
+
+---
+
+## 7. Connecting Your Database
 
 ### Local PostgreSQL (Docker Compose)
 
@@ -228,7 +369,7 @@ Bulwark supports multiple database connections. Switch between them using the da
 
 ---
 
-## 6. Adding Servers
+## 8. Adding Servers
 
 ### Local Server
 
@@ -258,7 +399,7 @@ Once stored, click the play button next to any credential to SSH directly from t
 
 ---
 
-## 7. Terminal & Command Center
+## 9. Terminal & Command Center
 
 The terminal is a floating drawer that persists across all pages.
 
@@ -284,7 +425,7 @@ The toolbar above the terminal has one-click buttons: `clear`, `ls`, `git st`, `
 
 ---
 
-## 8. Keyboard Shortcuts
+## 10. Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
@@ -293,7 +434,7 @@ The toolbar above the terminal has one-click buttons: `clear`, `ls`, `git st`, `
 
 ---
 
-## 9. FAQ
+## 11. FAQ
 
 ### General
 

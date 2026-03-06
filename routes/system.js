@@ -24,7 +24,11 @@ module.exports = function (app, ctx) {
   ctx.getProcessList = getProcessList;
   ctx.getSystemInfo = getSystemInfo;
 
-  app.get("/api/system", (req, res) => res.json(getSystemInfo()));
+  app.get("/api/system", (req, res) => {
+    const sys = getSystemInfo();
+    sys.connectedClients = ctx.io ? ctx.io.engine.clientsCount || 0 : 0;
+    res.json(sys);
+  });
   app.get("/api/activity", async (req, res) => res.json({ activity: await getRecentActivity() }));
   app.get("/api/processes", async (req, res) => res.json({ processes: await getProcessList() }));
 

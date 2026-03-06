@@ -238,6 +238,13 @@
       },
       options: { scales: { y: { min: 0, max: 100 } } }
     });
+    // Force full render after creation (fixes gradient fill not showing on initial data)
+    setTimeout(function () {
+      var cpuChart = Charts.instances['m-cpu-chart'];
+      var memChart = Charts.instances['m-mem-chart'];
+      if (cpuChart) cpuChart.update();
+      if (memChart) memChart.update();
+    }, 100);
   }
 
   // ── Fetch initial data ─────────────────────────────────────────────
