@@ -9,11 +9,12 @@ Your entire server, one dashboard. This guide walks you through setting up Bulwa
 1. [Installation](#1-installation)
 2. [First Login](#2-first-login)
 3. [Setting Up AI (Claude & Codex)](#3-setting-up-ai-claude--codex)
-4. [Connecting Your Database](#4-connecting-your-database)
-5. [Adding Servers](#5-adding-servers)
-6. [Terminal & Command Center](#6-terminal--command-center)
-7. [Keyboard Shortcuts](#7-keyboard-shortcuts)
-8. [FAQ](#8-faq)
+4. [Dashboard](#4-dashboard)
+5. [Connecting Your Database](#5-connecting-your-database)
+6. [Adding Servers](#6-adding-servers)
+7. [Terminal & Command Center](#7-terminal--command-center)
+8. [Keyboard Shortcuts](#8-keyboard-shortcuts)
+9. [FAQ](#9-faq)
 
 ---
 
@@ -113,7 +114,92 @@ Or add them to a `.env` file in the `dev-monitor/` directory.
 
 ---
 
-## 4. Connecting Your Database
+## 4. Dashboard
+
+The Dashboard is your command center — a single-screen overview of your entire infrastructure.
+
+![Dashboard — AI Briefing, Health Score, Command Hub, Live Metrics](../media/screenshots/Dashboard_open_ai_banner_3.png)
+
+### AI Briefing
+
+The banner at the top provides an AI-generated summary of your system health. It analyzes CPU, memory, database, servers, tickets, and processes, then gives you a plain-English status report. Click **Refresh** to regenerate.
+
+> *"All systems are looking healthy this morning with a 98/100 health score — both monitored servers are up, CPU and memory usage are minimal, and the database cache is hitting 100%."*
+
+Requires Claude CLI to be authenticated (see [Setting Up AI](#3-setting-up-ai-claude--codex)).
+
+### Health Score
+
+The donut chart shows a composite health score (0-100) broken down by:
+
+| Component | What it measures |
+|-----------|-----------------|
+| **System** | CPU and memory utilization |
+| **Database** | Connection health, cache hit ratio |
+| **Servers** | Reachability of monitored servers |
+| **PM2** | Process manager status |
+| **Tickets** | Open support ticket count |
+
+### Command Hub
+
+One-click actions for common tasks:
+
+| Button | Action |
+|--------|--------|
+| **Run Diagnostics** | Full system health check |
+| **Deploy Check** | Verify deployment status |
+| **Ask Claude** | Open AI assistant |
+| **Refresh All** | Reload all dashboard data |
+
+### Live Metrics
+
+Real-time gauges for CPU, Memory, and Disk usage with animated ring charts. Updates every 3 seconds via WebSocket.
+
+![Dashboard — Infrastructure Map, Database, Timeline, Tickets, Calendar, Notes](../media/screenshots/Dashboard_open_ai_banner-bottom_4.png)
+
+### Infrastructure Map
+
+A visual topology of your infrastructure. Shows connected servers, databases, and services with latency indicators. Nodes are interactive — click to navigate to the corresponding management view.
+
+### Database Panel
+
+At-a-glance database stats:
+
+| Metric | Description |
+|--------|-------------|
+| **Tables** | Total table count |
+| **Size** | Database size on disk |
+| **Conns** | Active connections |
+| **Queries** | Queries executed in session |
+| **Version** | PostgreSQL version |
+
+### Additional Panels
+
+- **Activity Timeline** — Recent system events, deploys, and user actions
+- **Tickets** — Open / In Progress / Resolved ticket counts
+- **Calendar** — Upcoming events and scheduled maintenance
+- **Notes** — Quick notes with pin support
+
+### Dashboard FAQ
+
+**Q: The AI Briefing says "Click Analyze for AI-powered insights."**
+A: Claude CLI isn't authenticated yet. Open the terminal and run `claude --dangerously-skip-permissions` to set up your Anthropic account.
+
+**Q: Health score shows N/A for some components.**
+A: Components show N/A when not configured. Add a database connection for Database health, add servers for Server health, install PM2 for PM2 health.
+
+**Q: The Infrastructure Map is empty.**
+A: Add servers under Infrastructure > Servers. The map auto-populates as you connect infrastructure.
+
+**Q: Live metrics show 0% for everything.**
+A: Metrics need a few seconds to populate after page load. If they stay at 0%, check that the WebSocket connection is active (look for the green "Connected" dot in the status bar).
+
+**Q: How often does the dashboard refresh?**
+A: Live Metrics update every 3 seconds via WebSocket. Other panels refresh on page load. Click **Refresh** in the top bar to manually reload all data.
+
+---
+
+## 5. Connecting Your Database
 
 ### Local PostgreSQL (Docker Compose)
 
@@ -142,7 +228,7 @@ Bulwark supports multiple database connections. Switch between them using the da
 
 ---
 
-## 5. Adding Servers
+## 6. Adding Servers
 
 ### Local Server
 
@@ -172,7 +258,7 @@ Once stored, click the play button next to any credential to SSH directly from t
 
 ---
 
-## 6. Terminal & Command Center
+## 7. Terminal & Command Center
 
 The terminal is a floating drawer that persists across all pages.
 
@@ -198,7 +284,7 @@ The toolbar above the terminal has one-click buttons: `clear`, `ls`, `git st`, `
 
 ---
 
-## 7. Keyboard Shortcuts
+## 8. Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
@@ -207,7 +293,7 @@ The toolbar above the terminal has one-click buttons: `clear`, `ls`, `git st`, `
 
 ---
 
-## 8. FAQ
+## 9. FAQ
 
 ### General
 
