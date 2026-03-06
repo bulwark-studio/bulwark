@@ -7,15 +7,17 @@ services:
     environment:
       - MONITOR_PORT=3001
       - MONITOR_USER=${MONITOR_USER:-admin}
-      - MONITOR_PASS=${MONITOR_PASS:-changeme}
+      - MONITOR_PASS=${MONITOR_PASS:-admin}
       - DATABASE_URL=postgresql://bulwark:bulwark@postgres:5432/bulwark
       - NODE_ENV=production
+      # AI keys (BYOK — set in .env or pass at runtime)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
     volumes:
       - bulwark-data:/app/data
-      - ./users.json:/app/users.json
     restart: unless-stopped
     networks:
       - bulwark-net

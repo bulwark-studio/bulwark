@@ -1,33 +1,53 @@
 # ══════════════════════════════════════════════════════════════════
-# Bulwark — Ubuntu 24.04 + Node.js 20
-# Single-stage build (Express.js, no build step)
+# Bulwark v2.1 — Ubuntu 24.04 + Node.js 22 + AI CLIs
+# Self-contained server management platform
 # ══════════════════════════════════════════════════════════════════
 
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install Node.js 20 + native build tools for node-pty
+# ── System packages ──────────────────────────────────────────────
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl gnupg ca-certificates \
-    python3 make g++ && \
-    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    curl gnupg ca-certificates git openssh-client bash \
+    python3 make g++ \
+    # Terminal tools (used by views)
+    procps htop net-tools iproute2 \
+    # pg_dump/psql for DB backups (version must match or exceed server)
+    lsb-release \
+    # Cron for cron-enhanced view
+    cron \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── PostgreSQL 17 client (pg_dump/psql must match server version) ─
+RUN sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && \
+    curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | gpg --dearmor -o /etc/apt/trusted.gpg.d/pgdg.gpg && \
+    apt-get update && apt-get install -y --no-install-recommends postgresql-client-17 && \
+    rm -rf /var/lib/apt/lists/*
+
+# ── Node.js 22 (required for Codex CLI) ─────────────────────────
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt-get install -y --no-install-recommends nodejs && \
     rm -rf /var/lib/apt/lists/*
 
+# ── AI CLIs (BYOK — users bring their own API keys) ─────────────
+RUN npm install -g @anthropic-ai/claude-code @openai/codex 2>/dev/null || true
+
+# ── App setup ────────────────────────────────────────────────────
 WORKDIR /app
 
-# Copy package files and install (node-pty compiles native addon here)
 COPY package.json package-lock.json* ./
 RUN npm install --production
 
-# Copy application files
 COPY server.js ./
 COPY write-config.js ./
 COPY routes/ ./routes/
 COPY lib/ ./lib/
 COPY data/ ./data/
 COPY public/ ./public/
+
+# Ensure data dirs exist with write permissions
+RUN mkdir -p /app/data/backups && chmod -R 777 /app/data
 
 ENV NODE_ENV=production
 ENV MONITOR_PORT=3001
