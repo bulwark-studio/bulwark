@@ -105,7 +105,10 @@
           if (fb) fb.innerHTML = window.AICache.freshnessBadge('uptime');
           return;
         }
+        // No cache and not forced — don't auto-fetch, wait for user click
+        return;
       }
+      if (!force) return;
       el.innerHTML = '<div class="briefing-shimmer" style="width:90%"></div><div class="briefing-shimmer" style="width:65%"></div>';
 
       var ctx = serverData.map(function (s) {

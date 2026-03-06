@@ -255,6 +255,15 @@
     loadBriefing: function (refresh) {
       var el = document.getElementById('briefing-text');
       if (!el) return;
+
+      // On nav-back, restore cached briefing instantly (no re-fetch)
+      if (!refresh && window._dashBriefingCache) {
+        var c = window._dashBriefingCache;
+        el.textContent = c.briefing;
+        if (c.score !== undefined) updateHealthRing(c.score, c.subscores || {});
+        return;
+      }
+
       if (typewriterTimer) clearInterval(typewriterTimer);
       el.innerHTML = '<div class="briefing-shimmer" style="width:90%"></div><div class="briefing-shimmer" style="width:70%"></div><div class="briefing-shimmer" style="width:45%"></div>';
       if (briefingCtrl) briefingCtrl.abort();
@@ -265,6 +274,8 @@
           if (d.error) { el.textContent = d.error; return; }
           typeWriter(el, d.briefing || 'No briefing available');
           if (d.score !== undefined) updateHealthRing(d.score, d.subscores || {});
+          // Cache for nav-back
+          window._dashBriefingCache = { briefing: d.briefing, score: d.score, subscores: d.subscores };
         })
         .catch(function (e) {
           if (e.name !== 'AbortError') el.textContent = 'Briefing unavailable — Claude CLI not responding';

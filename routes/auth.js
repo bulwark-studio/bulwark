@@ -43,7 +43,7 @@ button:hover{background:#06b6d4}
 <form method="POST" action="/login">
 <label for="username">Username</label><input type="text" id="username" name="username" required autocomplete="username" autofocus>
 <label for="password">Password</label><input type="password" id="password" name="password" required autocomplete="current-password">
-<button type="submit">Sign In</button></form><div class="ver">v2.1 &mdash; &copy; 2026 AutopilotAI Tech LLC&trade;</div></div></body></html>`;
+<button type="submit">Sign In</button></form><div class="ver">v2.1 &mdash; &copy; 2026 Bulwark</div></div></body></html>`;
 }
 
 function get2FAHTML(errorMsg = "") {

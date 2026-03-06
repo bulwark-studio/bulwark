@@ -162,4 +162,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 
 ---
 
-**Built by [AutopilotAI Tech](https://autopilotaitech.com)** | [bulwark.studio](https://bulwark.studio)
+**Built by Bulwark** | [bulwark.studio](https://bulwark.studio)

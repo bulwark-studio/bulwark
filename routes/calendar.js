@@ -19,7 +19,8 @@ module.exports = function (app, ctx) {
   var requireRole = ctx.requireRole;
   // ── Calendar Events ──────────────────────────────────────────────────
   app.get('/api/calendar/events', function (req, res) {
-    var events = loadJSON(CAL_FILE);
+    var raw = loadJSON(CAL_FILE);
+    var events = Array.isArray(raw) ? raw : (raw.events || []);
     var start = req.query.start;
     var end = req.query.end;
     if (start && end) {
@@ -195,8 +196,10 @@ module.exports = function (app, ctx) {
 
   // Stats for overview widget
   app.get('/api/calendar/stats', function (req, res) {
-    var events = loadJSON(CAL_FILE);
-    var notes = loadJSON(NOTES_FILE);
+    var raw = loadJSON(CAL_FILE);
+    var events = Array.isArray(raw) ? raw : (raw.events || []);
+    var rawN = loadJSON(NOTES_FILE);
+    var notes = Array.isArray(rawN) ? rawN : (rawN.notes || []);
     var today = new Date().toISOString().slice(0, 10);
     var todayEvents = events.filter(function (e) { return e.date === today; });
     var weekEnd = nextDays(7);

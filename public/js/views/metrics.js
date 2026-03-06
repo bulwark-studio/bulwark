@@ -177,11 +177,12 @@
           if (badge) badge.innerHTML = window.AICache.freshnessBadge('metrics');
           return;
         }
+        // No cache and not forced — don't auto-fetch, wait for user click
+        return;
       }
+      if (!force) return;
 
-      if (!el.style.opacity) {
-        el.innerHTML = '<div class="briefing-shimmer" style="width:90%"></div><div class="briefing-shimmer" style="width:65%"></div>';
-      }
+      el.innerHTML = '<div class="briefing-shimmer" style="width:90%"></div><div class="briefing-shimmer" style="width:65%"></div>';
 
       var cpuArr = cpuHistory.slice(-30).map(function (h) { return h.v; });
       var memArr = memHistory.slice(-30).map(function (h) { return h.v; });

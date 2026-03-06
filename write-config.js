@@ -1,6 +1,6 @@
 // Helper: generates ecosystem.config.js from env vars
 // Usage on AWS:
-//   export MP=chester2026
+//   export MP=yourpassword
 //   export DP=your_db_password
 //   export VP=your_vps_db_password (optional, for VPS DB access)
 //   node write-config.js
@@ -15,8 +15,8 @@ const vp = process.env.VP || '';
 // For AWS/remote: connect via direct hostname
 const dbHost = process.env.DB_HOST || 'bulwark-db';
 const dbPort = process.env.DB_PORT || '5432';
-const dbName = process.env.DB_NAME || 'chester';
-const dbUser = process.env.DB_USER || 'chester_admin';
+const dbName = process.env.DB_NAME || 'bulwark';
+const dbUser = process.env.DB_USER || 'bulwark_admin';
 
 // VPS DB (optional — for syncing VPS tickets to dev monitor)
 const vpsDbHost = process.env.VPS_DB_HOST || '';
