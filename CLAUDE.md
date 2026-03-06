@@ -3,7 +3,9 @@
 ## Overview
 Enterprise server management platform. Express.js + Socket.IO on port 3001.
 Vanilla JS frontend — no React, no build step, no bundler.
-28 route modules | 16 libs | 34 views | 270+ endpoints | 4 npm deps.
+32 route modules | 16 libs | 34 views | 270+ endpoints | 4 npm deps.
+Repo: https://github.com/bulwark-studio/bulwark | License: AGPL-3.0
+Git author: Bulwark Studio <hello@bulwark.studio>
 
 ## Quick Start
 ```bash
@@ -27,11 +29,11 @@ data/                        → Runtime JSON stores (uptime, notifications, env
 ### .env Loader (built-in, no dotenv dependency)
 Custom 6-line parser in server.js reads `dev-monitor/.env` at startup. Sets `process.env[key]` only for keys not already set. Supports `KEY=VALUE` format, ignores comments (#) and blank lines.
 
-### Route Modules (31)
+### Route Modules (32)
 ```
 auth.js              → Login, logout, session, 2FA setup/verify
-system.js            → CPU, memory, disk, processes, server info
-tickets.js           → Support ticket CRUD + Kanban board
+system.js            → CPU, memory, disk, processes, server info (dynamic git cwd)
+tickets.js           → Support ticket CRUD + Kanban + AI triage + AI analyze
 claude.js            → Claude CLI integration, AI terminal, prompt execution
 servers.js           → Multi-server management, health checks
 docker.js            → Docker adapter proxy (legacy)
@@ -54,7 +56,8 @@ notifications.js     → Notification system
 notification-center.js → Enhanced notification center
 multi-server.js      → Multi-server aggregation
 uptime.js            → Uptime monitoring + checks
-git-enhanced.js      → Git operations, diff, log, branches
+git-projects.js      → Dynamic multi-repo management, private repo auth (SSH/HTTPS)
+git-enhanced.js      → Git operations, diff, log, branches, AI PR/cleanup/conflicts
 deploy.js            → Deployment pipeline, rollback
 calendar.js          → Calendar + scheduling with AI
 briefing.js          → Daily briefings + AI summaries
@@ -138,7 +141,7 @@ Modal.close();
 ```
 
 ### Shared Context (ctx)
-Route modules receive `ctx` with: `pool`, `vpsPool`, `dbQuery`, `vpsQuery`, `io`, `execCommand`, `REPO_DIR`, `callAdapter`, `requireAuth`, `requireAdmin`, `getSystemInfo`, plus callbacks populated by routes (`getTicketSummary`, `getRecentActivity`, `getProcessList`, `getServerHealth`, `runClaude`, `sendNotification`).
+Route modules receive `ctx` with: `pool`, `vpsPool`, `dbQuery`, `vpsQuery`, `io`, `execCommand`, `REPO_DIR`, `callAdapter`, `requireAuth`, `requireAdmin`, `requireRole`, `requireAction`, `getSystemInfo`, plus callbacks populated by routes (`getTicketSummary`, `getRecentActivity`, `getProcessList`, `getServerHealth`, `runClaude`, `sendNotification`, `getActiveGitProject`, `getGitCwd`, `getGitEnv`).
 
 ## Theme: Dimension Dark (Glass Treatment)
 
@@ -271,6 +274,11 @@ Users bring their own AI subscriptions. The app shells out to locally-installed 
 - Least-privilege role generation (Roles view)
 - Backup strategy analysis with DR planning (Backups view)
 - Commit message generation (Git view)
+- AI PR description generator (Git view)
+- AI branch cleanup recommendations (Git view)
+- AI merge conflict analysis (Git view)
+- AI ticket triage — bulk (Tickets view)
+- AI ticket analysis — per-ticket root cause, effort, risk (Tickets view)
 - Daily briefing summaries (Briefing view)
 
 ## Adapter Pattern

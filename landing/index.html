@@ -5,6 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulwark -- Your entire server, one dashboard.</title>
 <meta name="description" content="AI-powered server management platform. Terminal, Docker, Git, Deploy, Database, Security -- all in one glass-dark dashboard.">
+<meta name="theme-color" content="#0a0b10">
+
+<!-- Favicon -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bulwark.studio/">
+<meta property="og:title" content="Bulwark — Your entire server, one dashboard.">
+<meta property="og:description" content="Open-source server management platform. Terminal, Docker, Git, DB Studio, Deploy, Security — with AI and 4 npm deps.">
+<meta property="og:image" content="https://bulwark.studio/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Bulwark — Your entire server, one dashboard.">
+<meta property="og:site_name" content="Bulwark">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@BulwarkStudio">
+<meta name="twitter:title" content="Bulwark — Your entire server, one dashboard.">
+<meta name="twitter:description" content="Open-source server management platform. Terminal, Docker, Git, DB Studio, Deploy, Security — with AI and 4 npm deps.">
+<meta name="twitter:image" content="https://bulwark.studio/social-preview.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -70,6 +96,32 @@ nav .container {
 .nav-links a { color: var(--text-secondary); font-size: 13px; font-weight: 400; letter-spacing: 0.5px; }
 .nav-links a:hover { color: var(--text-primary); text-decoration: none; }
 
+/* Hamburger */
+.nav-toggle {
+  display: none; background: none; border: none; cursor: pointer;
+  width: 32px; height: 32px; position: relative; z-index: 102;
+}
+.nav-toggle span {
+  display: block; width: 20px; height: 2px; background: var(--text-secondary);
+  margin: 5px auto; transition: all 0.3s ease; border-radius: 1px;
+}
+.nav-toggle.open span:nth-child(1) { transform: rotate(45deg) translate(5px,5px); }
+.nav-toggle.open span:nth-child(2) { opacity: 0; }
+.nav-toggle.open span:nth-child(3) { transform: rotate(-45deg) translate(5px,-5px); }
+
+/* Mobile menu overlay */
+.nav-mobile {
+  display: none; position: fixed; inset: 0; z-index: 101;
+  background: rgba(10,11,16,0.95); backdrop-filter: blur(24px);
+  flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+}
+.nav-mobile.open { display: flex; }
+.nav-mobile a {
+  color: var(--text-primary); font-size: 18px; font-weight: 500;
+  letter-spacing: 1px;
+}
+.nav-mobile a:hover { color: var(--cyan); text-decoration: none; }
+
 /* HERO */
 .hero {
   min-height: 100vh;
@@ -108,7 +160,8 @@ nav .container {
 }
 .btn-primary {
   background: var(--orange);
-  color: #fff;
+  color: #000;
+  font-weight: 700;
 }
 .btn-primary:hover { background: #e85a1e; text-decoration: none; }
 .btn-secondary {
@@ -261,6 +314,217 @@ nav .container {
   margin-right: 8px;
 }
 
+/* SHOWCASE — Carousel + Lightbox */
+.showcase { padding: 120px 0 80px; }
+
+.carousel-wrap {
+  position: relative;
+  max-width: 900px; margin: 0 auto; padding: 0 72px;
+}
+.carousel-stage {
+  position: relative; overflow: hidden; border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 1px solid var(--border-top);
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+  cursor: pointer;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.carousel-stage:hover {
+  border-color: rgba(34,211,238,0.2);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.5), 0 0 0 1px rgba(34,211,238,0.12);
+}
+.carousel-slide {
+  display: none;
+}
+.carousel-slide.active {
+  display: block;
+  animation: fadeSlide 0.35s ease;
+}
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateX(12px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.carousel-slide img {
+  width: 100%; height: auto; display: block;
+}
+.carousel-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(10,11,16,0.95));
+  padding: 48px 20px 16px;
+  pointer-events: none;
+}
+.carousel-label .card-tag {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--canvas); background: var(--cyan);
+  padding: 2px 10px; border-radius: 4px; margin-bottom: 6px;
+}
+.carousel-label h3 {
+  font-size: 15px; font-weight: 600; color: var(--text-primary);
+}
+.carousel-label p {
+  font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-top: 4px;
+}
+
+/* Arrows */
+.carousel-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 48px; height: 48px; border-radius: 12px;
+  background: var(--surface);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  color: var(--text-secondary);
+  font-size: 20px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s ease;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  z-index: 2;
+}
+.carousel-arrow:hover {
+  color: var(--cyan); border-color: rgba(34,211,238,0.3);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 12px rgba(34,211,238,0.1);
+}
+.carousel-prev { left: 8px; }
+.carousel-next { right: 8px; }
+
+/* Counter + click hint */
+.carousel-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 900px; margin: 16px auto 0; padding: 0 72px;
+}
+.carousel-counter {
+  font-size: 12px; color: var(--text-tertiary); letter-spacing: 1px;
+}
+.carousel-counter span { color: var(--cyan); }
+.carousel-hint {
+  font-size: 11px; color: var(--text-tertiary); letter-spacing: 0.5px;
+}
+
+/* Progress pips */
+.carousel-pips {
+  display: flex; gap: 6px; justify-content: center;
+  margin-top: 16px;
+}
+.carousel-pip {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--border-glass); border: none; padding: 0;
+  cursor: pointer; transition: all 0.3s ease;
+}
+.carousel-pip.active {
+  background: var(--cyan); width: 20px; border-radius: 3px;
+  box-shadow: 0 0 6px rgba(34,211,238,0.4);
+}
+
+@media (max-width: 768px) {
+  .carousel-wrap { padding: 0 48px; }
+  .carousel-footer { padding: 0 48px; }
+  .carousel-arrow { width: 36px; height: 36px; font-size: 16px; border-radius: 8px; }
+  .carousel-prev { left: 4px; }
+  .carousel-next { right: 4px; }
+}
+
+/* Lightbox */
+.lightbox {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.92);
+  backdrop-filter: blur(20px);
+  display: none; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.lightbox.open { display: flex; opacity: 1; }
+.lightbox-inner {
+  position: relative; max-width: 1100px; width: 95vw;
+  animation: lbIn 0.35s cubic-bezier(0.23,1,0.32,1);
+}
+@keyframes lbIn {
+  from { transform: scale(0.92) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.lightbox-inner img {
+  width: 100%; border-radius: 12px; display: block;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+.lightbox-glass {
+  background: rgba(14,14,18,0.80);
+  backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-top: 1px solid rgba(255,255,255,0.12);
+  border-radius: 0 0 12px 12px;
+  padding: 20px 24px;
+  margin-top: -4px;
+}
+.lightbox-glass .lb-tag {
+  display: inline-block; font-size: 10px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  color: var(--canvas); background: var(--cyan);
+  padding: 3px 10px; border-radius: 4px; margin-bottom: 8px;
+}
+.lightbox-glass h3 {
+  font-size: 17px; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.lightbox-glass p {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.7;
+}
+.lightbox-close {
+  position: absolute; top: -44px; right: 0;
+  background: none; border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-secondary); font-size: 14px;
+  width: 36px; height: 36px; border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; font-family: 'JetBrains Mono', monospace;
+}
+.lightbox-close:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+.lightbox-nav {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  background: rgba(14,14,18,0.70); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-secondary); font-size: 20px;
+  width: 44px; height: 44px; border-radius: 10px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s; font-family: 'JetBrains Mono', monospace;
+}
+.lightbox-nav:hover { color: var(--cyan); border-color: rgba(34,211,238,0.3); }
+.lightbox-prev { left: -60px; }
+.lightbox-next { right: -60px; }
+.lightbox-count {
+  position: absolute; top: -40px; left: 0;
+  font-size: 12px; color: var(--text-tertiary);
+}
+@media (max-width: 1280px) {
+  .lightbox-prev { left: 12px; }
+  .lightbox-next { right: 12px; }
+}
+@media (max-width: 768px) {
+  .gallery-grid { grid-template-columns: 1fr; }
+}
+
+/* FAQ */
+.faq-list { max-width: 720px; }
+.faq-item {
+  border-bottom: 1px solid var(--border);
+}
+.faq-q {
+  width: 100%; background: none; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 0; font-family: 'JetBrains Mono', monospace;
+  font-size: 15px; font-weight: 500; color: var(--text-primary);
+  text-align: left; letter-spacing: 0.3px;
+}
+.faq-q:hover { color: var(--cyan); }
+.faq-q .arrow { font-size: 18px; color: var(--text-tertiary); transition: transform 0.2s; }
+.faq-item.open .arrow { transform: rotate(45deg); color: var(--cyan); }
+.faq-a {
+  max-height: 0; overflow: hidden; transition: max-height 0.3s ease;
+}
+.faq-item.open .faq-a { max-height: 200px; }
+.faq-a p {
+  padding: 0 0 20px; font-size: 13px; color: var(--text-secondary); line-height: 1.8;
+}
+
 /* FOOTER */
 footer {
   border-top: 1px solid var(--border);
@@ -280,6 +544,7 @@ footer .footer-links {
 /* RESPONSIVE */
 @media (max-width: 768px) {
   .nav-links { display: none; }
+  .nav-toggle { display: block; }
   .hero h1 { letter-spacing: 6px; }
   .features-grid { grid-template-columns: 1fr; }
   .pricing-grid { grid-template-columns: 1fr; }
@@ -293,14 +558,33 @@ footer .footer-links {
 <nav>
   <div class="container">
     <div class="nav-brand">BULWARK</div>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu"><span></span><span></span><span></span></button>
     <div class="nav-links">
       <a href="#features">Features</a>
+      <a href="#showcase">Screenshots</a>
       <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
       <a href="https://github.com/bulwark-studio/bulwark" target="_blank">GitHub</a>
-      <a href="#" class="btn btn-primary" style="padding:8px 20px; font-size:12px;">Get Started</a>
+      <a href="https://x.com/BulwarkStudio" target="_blank">Twitter</a>
+      <a href="https://github.com/bulwark-studio/bulwark" class="btn" style="padding:8px 20px; font-size:13px; background:#ff6b2b; color:#000; font-weight:700;" target="_blank">Get Started</a>
     </div>
   </div>
 </nav>
+
+<div class="nav-mobile" id="navMobile">
+  <a href="#features" onclick="closeMobile()">Features</a>
+  <a href="#showcase" onclick="closeMobile()">Screenshots</a>
+  <a href="#pricing" onclick="closeMobile()">Pricing</a>
+  <a href="#faq" onclick="closeMobile()">FAQ</a>
+  <a href="https://github.com/bulwark-studio/bulwark" target="_blank">GitHub</a>
+  <a href="https://x.com/BulwarkStudio" target="_blank">Twitter</a>
+  <a href="https://github.com/bulwark-studio/bulwark" target="_blank" style="color:var(--orange); font-weight:700;">Get Started</a>
+</div>
+<script>
+var navT=document.getElementById('navToggle'),navM=document.getElementById('navMobile');
+navT.onclick=function(){navT.classList.toggle('open');navM.classList.toggle('open');document.body.style.overflow=navM.classList.contains('open')?'hidden':'';};
+function closeMobile(){navT.classList.remove('open');navM.classList.remove('open');document.body.style.overflow='';}
+</script>
 
 <section class="hero">
   <div class="container">
@@ -308,7 +592,7 @@ footer .footer-links {
       <h1>BUL<span>WARK</span></h1>
       <p class="tagline">Your entire server, one dashboard.</p>
       <div class="hero-buttons">
-        <a href="#" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/bulwark-studio/bulwark" class="btn btn-primary" target="_blank">Get Started</a>
         <a href="https://github.com/bulwark-studio/bulwark" class="btn btn-secondary" target="_blank">View on GitHub</a>
       </div>
       <div class="hero-terminal">
@@ -375,6 +659,154 @@ footer .footer-links {
   </div>
 </section>
 
+<section class="showcase section" id="showcase">
+  <div class="container">
+    <div class="section-label">Inside the Dashboard</div>
+    <h2 class="section-title">See it in action.</h2>
+    <p class="section-desc">Browse with arrows. Click to expand full-size.</p>
+  </div>
+
+  <div class="carousel-wrap">
+    <button class="carousel-arrow carousel-prev" id="carPrev">&larr;</button>
+    <button class="carousel-arrow carousel-next" id="carNext">&rarr;</button>
+    <div class="carousel-stage" id="carStage">
+      <div class="carousel-slide active" data-i="0">
+        <img src="screenshots/Dashboard_open_ai_banner_3.png" alt="Dashboard">
+        <div class="carousel-label"><span class="card-tag">Overview</span><h3>AI-Powered Dashboard</h3><p>Health score, AI briefing, command hub, live metrics</p></div>
+      </div>
+      <div class="carousel-slide" data-i="1">
+        <img src="screenshots/terminal_1.png" alt="Terminal AI">
+        <div class="carousel-label"><span class="card-tag">DevOps</span><h3>Terminal AI</h3><p>Full PTY + AI assistant with natural language commands</p></div>
+      </div>
+      <div class="carousel-slide" data-i="2">
+        <img src="screenshots/sql_Editor.png" alt="SQL Editor">
+        <div class="carousel-label"><span class="card-tag">Database</span><h3>SQL Editor</h3><p>Syntax highlighting, autocomplete, AI query generation</p></div>
+      </div>
+      <div class="carousel-slide" data-i="3">
+        <img src="screenshots/Docker_9.png" alt="Docker">
+        <div class="carousel-label"><span class="card-tag">Infrastructure</span><h3>Docker Fleet</h3><p>Container management, log streaming, AI fleet analysis</p></div>
+      </div>
+      <div class="carousel-slide" data-i="4">
+        <img src="screenshots/tables_3.png" alt="Table Browser">
+        <div class="carousel-label"><span class="card-tag">Database</span><h3>Table Browser</h3><p>Two-panel explorer with columns, data, constraints, indexes</p></div>
+      </div>
+      <div class="carousel-slide" data-i="5">
+        <img src="screenshots/tickets_sidebar.png" alt="Kanban Board">
+        <div class="carousel-label"><span class="card-tag">Operations</span><h3>Kanban Tickets</h3><p>Drag-and-drop board with AI triage across 7 stages</p></div>
+      </div>
+      <div class="carousel-slide" data-i="6">
+        <img src="screenshots/roles_6.png" alt="Roles">
+        <div class="carousel-label"><span class="card-tag">Security</span><h3>Roles &amp; Permissions</h3><p>AI security audit, permission heatmap, CRUD matrix</p></div>
+      </div>
+      <div class="carousel-slide" data-i="7">
+        <img src="screenshots/Metrics_top_5.png" alt="Metrics">
+        <div class="carousel-label"><span class="card-tag">Monitoring</span><h3>Real-Time Metrics</h3><p>AI analysis, CPU/memory/disk gauges, process telemetry</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="carousel-footer">
+    <span class="carousel-counter"><span id="carCur">1</span> / 8</span>
+    <span class="carousel-hint">Click image to expand</span>
+  </div>
+  <div class="carousel-pips" id="carPips"></div>
+</section>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-inner">
+    <span class="lightbox-count" id="lbCount"></span>
+    <button class="lightbox-close" id="lbClose">&times;</button>
+    <button class="lightbox-nav lightbox-prev" id="lbPrev">&larr;</button>
+    <button class="lightbox-nav lightbox-next" id="lbNext">&rarr;</button>
+    <img id="lbImg" src="" alt="">
+    <div class="lightbox-glass">
+      <span class="lb-tag" id="lbTag"></span>
+      <h3 id="lbTitle"></h3>
+      <p id="lbDesc"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var data = [
+    { tag:'Overview', title:'AI-Powered Dashboard', desc:'98/100 health score, AI briefing, command hub with one-click diagnostics, deploy checks, and live CPU/memory/disk metrics at a glance.' },
+    { tag:'DevOps', title:'Terminal AI', desc:'Full PTY terminal with AI assistant. Natural language commands \u2014 \u201cSSH into production,\u201d \u201ccheck disk space,\u201d \u201crestart Docker containers.\u201d Shell, AI, and Vault tabs.' },
+    { tag:'Database', title:'SQL Editor', desc:'Supabase-style query editor with syntax highlighting, autocomplete, query history, saved queries, Ask Claude AI generation, and CSV export.' },
+    { tag:'Infrastructure', title:'Docker Fleet', desc:'Native Docker Engine API. Container stats, log streaming, multi-host connections, AI fleet intelligence. Start, stop, restart, inspect from the dashboard.' },
+    { tag:'Database', title:'Table Browser', desc:'Two-panel explorer with columns, data, constraints, foreign keys, and indexes tabs. Filter tables, inspect schemas, open in SQL Editor.' },
+    { tag:'Operations', title:'Kanban Tickets', desc:'Drag-and-drop ticket board with AI triage. Pending, Analyzing, Fixing, Testing, Awaiting Approval, Approved, Deployed \u2014 full lifecycle tracking.' },
+    { tag:'Security', title:'Roles & Permissions', desc:'PostgreSQL role manager with AI security audit, permission heatmap, table-level CRUD matrix. Create least-privilege roles with AI generation.' },
+    { tag:'Monitoring', title:'Real-Time Metrics', desc:'AI performance analysis, CPU/memory/connections/uptime gauges, process telemetry table with PID, user, CPU%, memory, and command details.' }
+  ];
+  var slides = document.querySelectorAll('.carousel-slide');
+  var pips = document.getElementById('carPips');
+  var curEl = document.getElementById('carCur');
+  var cur = 0;
+
+  // Build pips
+  data.forEach(function(_,i){
+    var p = document.createElement('button');
+    p.className = 'carousel-pip' + (i===0?' active':'');
+    p.onclick = function(){ go(i); };
+    pips.appendChild(p);
+  });
+  var pipEls = pips.querySelectorAll('.carousel-pip');
+
+  function go(i) {
+    slides[cur].classList.remove('active');
+    pipEls[cur].classList.remove('active');
+    cur = (i + data.length) % data.length;
+    slides[cur].classList.add('active');
+    pipEls[cur].classList.add('active');
+    curEl.textContent = cur + 1;
+  }
+
+  document.getElementById('carPrev').onclick = function(){ go(cur-1); };
+  document.getElementById('carNext').onclick = function(){ go(cur+1); };
+
+  // Click card -> lightbox
+  var lb = document.getElementById('lightbox');
+  var lbImg = document.getElementById('lbImg');
+  var lbTag = document.getElementById('lbTag');
+  var lbTitle = document.getElementById('lbTitle');
+  var lbDesc = document.getElementById('lbDesc');
+  var lbCount = document.getElementById('lbCount');
+
+  function openLb(i) {
+    var idx = (i + data.length) % data.length;
+    lbImg.src = slides[idx].querySelector('img').src;
+    lbTag.textContent = data[idx].tag;
+    lbTitle.textContent = data[idx].title;
+    lbDesc.textContent = data[idx].desc;
+    lbCount.textContent = (idx+1) + ' / ' + data.length;
+    lb.classList.add('open');
+    lb._cur = idx;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeLb() {
+    lb.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('carStage').onclick = function(){ openLb(cur); };
+  document.getElementById('lbClose').onclick = closeLb;
+  document.getElementById('lbPrev').onclick = function(){ openLb(lb._cur - 1); };
+  document.getElementById('lbNext').onclick = function(){ openLb(lb._cur + 1); };
+  lb.addEventListener('click', function(e){ if(e.target===lb) closeLb(); });
+  document.addEventListener('keydown', function(e){
+    if(lb.classList.contains('open')){
+      if(e.key==='Escape') closeLb();
+      if(e.key==='ArrowLeft') openLb(lb._cur-1);
+      if(e.key==='ArrowRight') openLb(lb._cur+1);
+    } else {
+      if(e.key==='ArrowLeft') go(cur-1);
+      if(e.key==='ArrowRight') go(cur+1);
+    }
+  });
+})();
+</script>
+
 <section class="section" id="pricing" style="padding-bottom:80px;">
   <div class="container">
     <div class="section-label">Pricing</div>
@@ -393,12 +825,12 @@ footer .footer-links {
           <li>BYOK AI (Claude/Codex)</li>
           <li>Single user</li>
         </ul>
-        <a href="#" class="btn btn-secondary" style="width:100%;justify-content:center;">Get Started</a>
+        <a href="https://github.com/bulwark-studio/bulwark" class="btn btn-secondary" style="width:100%;justify-content:center;" target="_blank">Get Started</a>
       </div>
       <div class="pricing-card featured">
         <div class="tier">Pro</div>
-        <div class="price">$15<span>/seat/mo</span></div>
-        <div class="price-note">billed annually</div>
+        <div class="price">$19<span>/seat/mo</span></div>
+        <div class="price-note">coming soon</div>
         <ul>
           <li>Everything in Community</li>
           <li>RBAC (admin/editor/viewer)</li>
@@ -407,12 +839,12 @@ footer .footer-links {
           <li>Multi-server management</li>
           <li>Priority support</li>
         </ul>
-        <a href="#" class="btn btn-primary" style="width:100%;justify-content:center;">Start Trial</a>
+        <a href="#" class="btn btn-primary" style="width:100%;justify-content:center;">Coming Soon</a>
       </div>
       <div class="pricing-card">
         <div class="tier">Team</div>
         <div class="price">$49<span>/seat/mo</span></div>
-        <div class="price-note">billed annually</div>
+        <div class="price-note">coming soon</div>
         <ul>
           <li>Everything in Pro</li>
           <li>SSO / SAML</li>
@@ -421,12 +853,12 @@ footer .footer-links {
           <li>Custom dashboards</li>
           <li>Dedicated support</li>
         </ul>
-        <a href="#" class="btn btn-secondary" style="width:100%;justify-content:center;">Contact Sales</a>
+        <a href="#" class="btn btn-secondary" style="width:100%;justify-content:center;">Coming Soon</a>
       </div>
       <div class="pricing-card">
         <div class="tier">Enterprise</div>
         <div class="price">Custom</div>
-        <div class="price-note">tailored to your needs</div>
+        <div class="price-note">coming soon</div>
         <ul>
           <li>Everything in Team</li>
           <li>On-prem deployment</li>
@@ -435,7 +867,40 @@ footer .footer-links {
           <li>Custom integrations</li>
           <li>Dedicated engineer</li>
         </ul>
-        <a href="#" class="btn btn-secondary" style="width:100%;justify-content:center;">Contact Sales</a>
+        <a href="#" class="btn btn-secondary" style="width:100%;justify-content:center;">Coming Soon</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="container">
+    <div class="section-label">FAQ</div>
+    <h2 class="section-title">Frequently asked questions</h2>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">Is Bulwark really free? <span class="arrow">+</span></button>
+        <div class="faq-a"><p>Yes. The Community edition is free forever under AGPL-3.0. Self-host on your own server with full access to all 30+ views, Terminal, Docker, Git, DB Studio, and AI features. No usage limits, no time bombs.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What does BYOK AI mean? <span class="arrow">+</span></button>
+        <div class="faq-a"><p>Bring Your Own Key. Bulwark shells out to your locally-installed CLI tools (Claude, Codex) using your own AI subscription. Zero AI cost for the product — you pay your provider directly.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What are the system requirements? <span class="arrow">+</span></button>
+        <div class="faq-a"><p>Node.js 18+ and that's it. PostgreSQL is optional — the app works without it. Runs on any Linux or macOS server. 512MB RAM minimum, 1GB recommended.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">How many npm dependencies? <span class="arrow">+</span></button>
+        <div class="faq-a"><p>Four. Express, Socket.IO, pg, and node-pty. No React, no build step, no bundler. The entire frontend is vanilla JS with self-registering view modules.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">Can I manage multiple servers? <span class="arrow">+</span></button>
+        <div class="faq-a"><p>Yes. The multi-server view aggregates metrics, health checks, and alerts across all your servers from a single dashboard. Available in Community edition.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" onclick="this.parentElement.classList.toggle('open')">What's the difference between Community and Pro? <span class="arrow">+</span></button>
+        <div class="faq-a"><p>Community is single-user with all features. Pro adds team features: RBAC roles, audit logging, TOTP 2FA, and priority support. Pro and Team tiers are coming soon.</p></div>
       </div>
     </div>
   </div>
@@ -443,11 +908,12 @@ footer .footer-links {
 
 <footer>
   <div class="container">
-    <p>Built by Bulwark</p>
+    <p>&copy; 2026 Autopilot AI Tech LLC</p>
     <div class="footer-links">
       <a href="https://github.com/bulwark-studio/bulwark" target="_blank">GitHub</a>
-      <a href="#">Docs</a>
-      <a href="#">Discord</a>
+      <a href="https://x.com/BulwarkStudio" target="_blank">Twitter</a>
+      <a href="/terms.html">Terms</a>
+      <a href="/privacy.html">Privacy</a>
     </div>
   </div>
 </footer>
