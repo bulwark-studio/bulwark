@@ -1,0 +1,23 @@
+{
+  "name": "bulwark",
+  "version": "2.1.0",
+  "description": "AI-powered, self-hosted server management platform",
+  "main": "server.js",
+  "homepage": "https://bulwark.studio",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bulwark-studio/bulwark.git"
+  },
+  "license": "AGPL-3.0",
+  "keywords": ["devops", "server-management", "self-hosted", "ai", "docker", "terminal", "monitoring", "dashboard"],
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.5",
+    "pg": "^8.13.0",
+    "node-pty": "^1.0.0"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+users.json
+ecosystem.config.js
+.git
+*.log
+.env*
+Dockerfile
+docker-compose*.yml

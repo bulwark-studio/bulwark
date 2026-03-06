@@ -1,0 +1,57 @@
+services:
+  bulwark:
+    build: .
+    container_name: bulwark
+    ports:
+      - "3001:3001"
+    environment:
+      - MONITOR_PORT=3001
+      - MONITOR_USER=${MONITOR_USER:-admin}
+      - MONITOR_PASS=${MONITOR_PASS:-admin}
+      - DATABASE_URL=postgresql://bulwark:bulwark@postgres:5432/bulwark
+      - NODE_ENV=production
+      # AI keys (BYOK — set in .env or pass at runtime)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - bulwark-data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    group_add:
+      - "0"  # Docker socket access
+    restart: unless-stopped
+    networks:
+      - bulwark-net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: bulwark-db
+    environment:
+      - POSTGRES_USER=bulwark
+      - POSTGRES_PASSWORD=bulwark
+      - POSTGRES_DB=bulwark
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bulwark"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - bulwark-net
+
+networks:
+  bulwark-net:
+    driver: bridge
+
+volumes:
+  bulwark-data:
+  pg-data:

@@ -1,0 +1,10 @@
+node_modules/
+users.json
+sessions.json
+ecosystem.config.js
+.env
+data/credentials.json
+data/audit-log.json
+data/backups/
+data/repos/
+data/.git-ssh-key-*

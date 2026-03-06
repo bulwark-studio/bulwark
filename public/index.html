@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulwark</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+  <!-- External Dependencies -->
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Theme & Layout -->
+  <link rel="stylesheet" href="/css/theme.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <link rel="stylesheet" href="/css/components.css">
+  <link rel="stylesheet" href="/css/kanban.css">
+  <link rel="stylesheet" href="/css/terminal.css">
+  <link rel="stylesheet" href="/css/modal.css">
+  <link rel="stylesheet" href="/css/db-studio.css">
+  <link rel="stylesheet" href="/css/overview.css">
+
+  <!-- CodeMirror (SQL Editor) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/theme/material-darker.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/codemirror.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/sql/sql.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/show-hint.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/hint/sql-hint.min.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo"><img src="/logo.svg" alt="Bulwark" height="28" style="display:block"></div>
+        <div class="sidebar-subtitle">Server Management Platform</div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <!-- Overview -->
+        <div class="nav-group" id="nav-group-overview">
+          <div class="nav-group-header" onclick="toggleNavGroup('overview')">
+            <span>Overview</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
+              <span>Dashboard</span>
+            </div>
+            <div class="nav-item" data-view="metrics" onclick="switchView('metrics')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><polyline points="2 16 6 10 10 13 14 5 18 8"/></svg>
+              <span>Metrics</span>
+            </div>
+            <div class="nav-item" data-view="uptime" onclick="switchView('uptime')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><polyline points="10 6 10 10 13 12"/></svg>
+              <span>Uptime</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Infrastructure -->
+        <div class="nav-group" id="nav-group-infrastructure">
+          <div class="nav-group-header" onclick="toggleNavGroup('infrastructure')">
+            <span>Infrastructure</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="servers" onclick="switchView('servers')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="2" width="14" height="6" rx="1"/><rect x="3" y="12" width="14" height="6" rx="1"/><circle cx="6" cy="5" r="1" fill="currentColor"/><circle cx="6" cy="15" r="1" fill="currentColor"/></svg>
+              <span>Servers</span>
+            </div>
+            <div class="nav-item" data-view="docker" onclick="switchView('docker')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="8" width="4" height="4"/><rect x="8" y="8" width="4" height="4"/><rect x="14" y="8" width="4" height="4"/><rect x="5" y="3" width="4" height="4"/><rect x="11" y="3" width="4" height="4"/><path d="M0 14c3 3 14 3 20 0"/></svg>
+              <span>Docker</span>
+            </div>
+            <div class="nav-item" data-view="databases" onclick="switchView('databases')" style="display:none">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><ellipse cx="10" cy="4" rx="7" ry="3"/><path d="M3 4v12c0 1.66 3.13 3 7 3s7-1.34 7-3V4"/><path d="M3 10c0 1.66 3.13 3 7 3s7-1.34 7-3"/></svg>
+              <span>Databases</span>
+            </div>
+            <div class="nav-item" data-view="pm2" onclick="switchView('pm2')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10 2v3M10 15v3M2 10h3M15 10h3M4.2 4.2l2.1 2.1M13.7 13.7l2.1 2.1M4.2 15.8l2.1-2.1M13.7 6.3l2.1-2.1"/></svg>
+              <span>PM2</span>
+            </div>
+            <div class="nav-item" data-view="ssl" onclick="switchView('ssl')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="5" y="9" width="10" height="8" rx="1.5"/><path d="M7 9V6a3 3 0 016 0v3"/></svg>
+              <span>SSL / Domains</span>
+            </div>
+            <div class="nav-item" data-view="cloudflare" onclick="switchView('cloudflare')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M2 10h16M10 3a12 12 0 013 7 12 12 0 01-3 7 12 12 0 01-3-7A12 12 0 0110 3z"/></svg>
+              <span>Cloudflare</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Database (Supabase Studio) -->
+        <div class="nav-group" id="nav-group-database">
+          <div class="nav-group-header" onclick="toggleNavGroup('database')">
+            <span>Database</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="db-projects" onclick="switchView('db-projects')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="3" width="16" height="5" rx="1.5"/><rect x="2" y="12" width="16" height="5" rx="1.5"/><circle cx="5.5" cy="5.5" r="1" fill="currentColor"/><circle cx="5.5" cy="14.5" r="1" fill="currentColor"/></svg>
+              <span>Projects</span>
+            </div>
+            <div class="nav-item" data-view="sql-editor" onclick="switchView('sql-editor')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><polyline points="6 9 9 12 6 15"/><line x1="12" y1="15" x2="16" y2="15"/></svg>
+              <span>SQL Editor</span>
+            </div>
+            <div class="nav-item" data-view="tables" onclick="switchView('tables')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="2" width="16" height="16" rx="2"/><line x1="2" y1="7" x2="18" y2="7"/><line x1="2" y1="12" x2="18" y2="12"/><line x1="8" y1="7" x2="8" y2="18"/></svg>
+              <span>Tables</span>
+            </div>
+            <div class="nav-item" data-view="schema" onclick="switchView('schema')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="5" r="3"/><circle cx="5" cy="15" r="2"/><circle cx="15" cy="15" r="2"/><path d="M10 8v2M8 12l-2 2M12 12l2 2"/></svg>
+              <span>Schema</span>
+            </div>
+            <div class="nav-item" data-view="migrations" onclick="switchView('migrations')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 4h12M4 8h12M4 12h8M4 16h6"/><polyline points="14 12 17 15 14 18"/></svg>
+              <span>Migrations</span>
+            </div>
+            <div class="nav-item" data-view="roles" onclick="switchView('roles')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="8" cy="6" r="3"/><path d="M2 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="15" cy="6" r="2"/><path d="M14 17c2-1 3-3 3-5"/></svg>
+              <span>Roles</span>
+            </div>
+            <div class="nav-item" data-view="db-backups" onclick="switchView('db-backups')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 14l4-4m0 0l4 4m-4-4V2"/><rect x="2" y="14" width="16" height="4" rx="1"/></svg>
+              <span>Backups</span>
+            </div>
+            <div class="nav-item" data-view="db-assistant" onclick="switchView('db-assistant')" style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M10 2a6 6 0 016 6c0 2.2-1.2 4.1-3 5.2V15a1 1 0 01-1 1H8a1 1 0 01-1-1v-1.8C5.2 12.1 4 10.2 4 8a6 6 0 016-6z"/><line x1="8" y1="18" x2="12" y2="18"/><line x1="9" y1="12" x2="9" y2="15"/><line x1="11" y1="12" x2="11" y2="15"/></svg>
+              <span style="color:var(--cyan);font-weight:600">AI Assistant</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- DevOps -->
+        <div class="nav-group" id="nav-group-devops">
+          <div class="nav-group-header" onclick="toggleNavGroup('devops')">
+            <span>DevOps</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="terminal" onclick="switchView('terminal')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="2" y="3" width="16" height="14" rx="2"/><polyline points="6 9 9 12 6 15"/><line x1="12" y1="15" x2="16" y2="15"/></svg>
+              <span>Terminal</span>
+            </div>
+            <div class="nav-item" data-view="tickets" onclick="switchView('tickets')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="2" width="14" height="16" rx="2"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="14" x2="11" y2="14"/></svg>
+              <span>Tickets</span>
+              <span class="nav-badge" id="ticket-badge" style="display:none">0</span>
+            </div>
+            <div class="nav-item" data-view="git" onclick="switchView('git')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="7" cy="5" r="2"/><circle cx="13" cy="10" r="2"/><circle cx="7" cy="15" r="2"/><line x1="7" y1="7" x2="7" y2="13"/><path d="M9 5h2a2 2 0 012 2v1"/></svg>
+              <span>Git</span>
+            </div>
+            <div class="nav-item" data-view="deploy" onclick="switchView('deploy')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M10 2l6 4v8l-6 4-6-4V6z"/><line x1="10" y1="10" x2="10" y2="18"/><polyline points="4 6 10 10 16 6"/></svg>
+              <span>Deploy</span>
+            </div>
+            <div class="nav-item" data-view="cron" onclick="switchView('cron')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><polyline points="10 5 10 10 14 12"/></svg>
+              <span>Cron Jobs</span>
+            </div>
+            <div class="nav-item" data-view="files" onclick="switchView('files')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M2 5a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V5z"/></svg>
+              <span>File Manager</span>
+            </div>
+            <div class="nav-item" data-view="envvars" onclick="switchView('envvars')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="2"/><line x1="7" y1="7" x2="7" y2="7.01"/><line x1="10" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="7" y2="10.01"/><line x1="10" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="7" y2="13.01"/><line x1="10" y1="13" x2="13" y2="13"/></svg>
+              <span>Env Variables</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Workspace -->
+        <div class="nav-group" id="nav-group-workspace">
+          <div class="nav-group-header" onclick="toggleNavGroup('workspace')">
+            <span>Workspace</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="calendar" onclick="switchView('calendar')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="4" width="14" height="13" rx="2"/><line x1="3" y1="8" x2="17" y2="8"/><line x1="7" y1="2" x2="7" y2="6"/><line x1="13" y1="2" x2="13" y2="6"/></svg>
+              <span>Calendar</span>
+            </div>
+            <div class="nav-item" data-view="notes" onclick="switchView('notes')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 3h12a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1z"/><line x1="7" y1="7" x2="13" y2="7"/><line x1="7" y1="10" x2="13" y2="10"/><line x1="7" y1="13" x2="10" y2="13"/></svg>
+              <span>Notes</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security -->
+        <div class="nav-group" id="nav-group-security">
+          <div class="nav-group-header" onclick="toggleNavGroup('security')">
+            <span>Security</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="security" onclick="switchView('security')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M10 2l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V5l7-3z"/></svg>
+              <span>Security Center</span>
+            </div>
+            <div class="nav-item" data-view="ftp" onclick="switchView('ftp')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 14l4-4m0 0l4 4m-4-4V2"/><rect x="2" y="14" width="16" height="4" rx="1"/></svg>
+              <span>FTP</span>
+            </div>
+            <div class="nav-item" data-view="notifications" onclick="switchView('notifications')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M10 2a5 5 0 015 5c0 5 2 7 2 7H3s2-2 2-7a5 5 0 015-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+              <span>Notifications</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- System -->
+        <div class="nav-group" id="nav-group-system">
+          <div class="nav-group-header" onclick="toggleNavGroup('system')">
+            <span>System</span>
+            <svg class="chevron" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M4.5 2L8.5 6L4.5 10" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+          </div>
+          <div class="nav-group-items">
+            <div class="nav-item" data-view="cache" onclick="switchView('cache')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M3 3h14v4H3zM3 9h14v4H3zM3 15h14v4H3z"/><circle cx="6" cy="5" r="1" fill="currentColor"/><circle cx="6" cy="11" r="1" fill="var(--cyan)"/><circle cx="6" cy="17" r="1" fill="currentColor"/></svg>
+              <span>Cache</span>
+            </div>
+            <div class="nav-item" data-view="logs" onclick="switchView('logs')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><rect x="3" y="2" width="14" height="16" rx="2"/><line x1="7" y1="6" x2="13" y2="6"/><line x1="7" y1="10" x2="11" y2="10"/></svg>
+              <span>Logs</span>
+            </div>
+            <div class="nav-item" data-view="multi-server" onclick="switchView('multi-server')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="4" r="2"/><circle cx="4" cy="14" r="2"/><circle cx="16" cy="14" r="2"/><line x1="10" y1="6" x2="4" y2="12"/><line x1="10" y1="6" x2="16" y2="12"/></svg>
+              <span>Multi-Server</span>
+            </div>
+            <div class="nav-item" data-view="settings" onclick="switchView('settings')">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><circle cx="10" cy="10" r="3"/><path d="M10 1v3M10 16v3M1 10h3M16 10h3M3.5 3.5l2 2M14.5 14.5l2 2M3.5 16.5l2-2M14.5 5.5l2-2"/></svg>
+              <span>Settings</span>
+            </div>
+            <div class="nav-item" data-view="docs" onclick="switchView('docs')" style="border-top:1px solid var(--border);margin-top:4px;padding-top:8px">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M4 2h8l4 4v12a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z"/><polyline points="12 2 12 6 16 6"/><line x1="6" y1="10" x2="14" y2="10"/><line x1="6" y1="13" x2="12" y2="13"/></svg>
+              <span>Docs / FAQ</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="sidebar-status">
+          <span class="dot dot-healthy" id="sidebar-status-dot"></span>
+          <span id="sidebar-status-text">Connected</span>
+        </div>
+        <div class="sidebar-clock" id="sidebar-clock"></div>
+        <div class="sidebar-company">&copy; 2026 Bulwark</div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <h2 class="topbar-title" id="topbar-title">Dashboard</h2>
+        </div>
+        <div class="topbar-actions">
+          <button class="btn btn-sm btn-ghost notif-bell-inline" id="notif-bell-wrap" onclick="toggleNotifPanel()" title="Notifications" style="position:relative;padding:6px 10px;">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" width="16" height="16" stroke-width="1.5"><path d="M10 2a5 5 0 00-5 5v3l-1.5 2.5h13L15 10V7a5 5 0 00-5-5z"/><path d="M8 16a2 2 0 004 0"/></svg>
+            <span class="notif-badge" id="notif-badge" style="display:none">0</span>
+          </button>
+          <button class="btn btn-sm btn-ghost" onclick="refreshCurrentView()" title="Refresh">Refresh</button>
+          <span class="topbar-user" id="topbar-user" style="font-size:11px;color:var(--text-secondary);font-family:'JetBrains Mono',monospace"></span>
+          <a href="/logout" class="btn btn-sm btn-ghost">Logout</a>
+        </div>
+      </div>
+
+      <!-- DB Project Bar — shown only on DB Studio views -->
+      <div id="db-topbar" style="display:none"></div>
+
+      <div class="content-area">
+        <!-- View containers — each view JS populates its own div -->
+        <div class="view active" id="view-dashboard"></div>
+        <div class="view" id="view-metrics"></div>
+        <div class="view" id="view-uptime"></div>
+        <div class="view" id="view-servers"></div>
+        <div class="view" id="view-docker"></div>
+        <div class="view" id="view-databases"></div>
+        <div class="view" id="view-db-projects"></div>
+        <div class="view" id="view-sql-editor"></div>
+        <div class="view" id="view-tables"></div>
+        <div class="view" id="view-schema"></div>
+        <div class="view" id="view-migrations"></div>
+        <div class="view" id="view-roles"></div>
+        <div class="view" id="view-db-backups"></div>
+        <div class="view" id="view-db-assistant"></div>
+        <div class="view" id="view-pm2"></div>
+        <div class="view" id="view-ssl"></div>
+        <div class="view" id="view-cloudflare"></div>
+        <div class="view" id="view-terminal"></div>
+        <div class="view" id="view-tickets"></div>
+        <div class="view" id="view-git"></div>
+        <div class="view" id="view-deploy"></div>
+        <div class="view" id="view-cron"></div>
+        <div class="view" id="view-files"></div>
+        <div class="view" id="view-envvars"></div>
+        <div class="view" id="view-security"></div>
+        <div class="view" id="view-ftp"></div>
+        <div class="view" id="view-notifications"></div>
+        <div class="view" id="view-calendar"></div>
+        <div class="view" id="view-notes"></div>
+        <div class="view" id="view-cache"></div>
+        <div class="view" id="view-logs"></div>
+        <div class="view" id="view-multi-server"></div>
+        <div class="view" id="view-settings"></div>
+        <div class="view" id="view-docs"></div>
+      </div>
+    </main>
+
+    <footer class="status-bar">
+      <div class="status-bar-left">
+        <span class="status-dot ok" id="sb-conn-dot"></span>
+        <span id="sb-conn-text">Connected</span>
+        <span class="status-sep">|</span>
+        <span id="sb-server">Local Dev</span>
+      </div>
+      <div class="status-bar-right">
+        <span id="sb-last-update">--</span>
+        <span class="status-sep">|</span>
+        <span id="sb-db">DB: checking...</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Core JS -->
+  <script src="/js/ai-cache.js"></script>
+  <script src="/js/app.js"></script>
+  <script src="/js/charts.js"></script>
+  <script src="/js/modal.js"></script>
+  <script src="/js/toast.js"></script>
+
+  <!-- View JS -->
+  <script src="/js/views/dashboard.js"></script>
+  <script src="/js/views/metrics.js"></script>
+  <script src="/js/views/uptime.js"></script>
+  <script src="/js/views/servers.js"></script>
+  <script src="/js/views/docker.js"></script>
+  <script src="/js/views/databases.js"></script>
+  <script src="/js/views/db-projects.js"></script>
+  <script src="/js/views/sql-editor.js"></script>
+  <script src="/js/views/tables.js"></script>
+  <script src="/js/views/schema.js"></script>
+  <script src="/js/views/migrations.js"></script>
+  <script src="/js/views/roles.js"></script>
+  <script src="/js/views/db-backups.js"></script>
+  <script src="/js/views/db-assistant.js"></script>
+  <script src="/js/views/pm2.js"></script>
+  <script src="/js/views/ssl.js"></script>
+  <script src="/js/views/cloudflare.js"></script>
+  <script src="/js/views/terminal.js"></script>
+  <script src="/js/views/claude.js"></script><!-- kept: redirects to floating terminal -->
+  <script src="/js/views/tickets.js"></script>
+  <script src="/js/views/git.js"></script>
+  <script src="/js/views/deploy.js"></script>
+  <script src="/js/views/cron.js"></script>
+  <script src="/js/views/files.js"></script>
+  <script src="/js/views/envvars.js"></script>
+  <script src="/js/views/security.js"></script>
+  <script src="/js/views/ftp.js"></script>
+  <script src="/js/views/notifications.js"></script>
+  <script src="/js/views/calendar.js"></script>
+  <script src="/js/views/notes.js"></script>
+  <script src="/js/views/cache.js"></script>
+  <script src="/js/views/logs.js"></script>
+  <script src="/js/views/multi-server.js"></script>
+  <script src="/js/views/settings.js"></script>
+  <script src="/js/views/docs.js"></script>
+  <!-- Notification panel — outside main-content to avoid overflow clipping -->
+  <div class="notif-panel" id="notif-panel" style="display:none">
+    <div class="notif-panel-header">
+      <span>Notifications</span>
+      <div class="notif-panel-actions">
+        <button onclick="markAllNotifsRead()" title="Mark all read">Read All</button>
+        <button onclick="clearAllNotifs()" title="Clear all">Clear</button>
+      </div>
+    </div>
+    <div class="notif-panel-list" id="notif-panel-list"></div>
+  </div>
+  <script src="/js/notification-bell.js"></script>
+</body>
+</html>

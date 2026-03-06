@@ -1,0 +1,220 @@
+/* ==========================================================================
+   Bulwark v2.1 — Theme & Design Tokens
+   Enterprise backend ops — Dimension Dark Theme
+   ========================================================================== */
+
+/* --- Design Tokens --- */
+:root {
+  /* Canvas & Surfaces */
+  --canvas:            #0a0b10;
+  --surface:           rgba(14, 14, 18, 0.65);
+  --surface-solid:     #0e0e12;
+  --surface-raised:    #141419;
+  --well:              rgba(0, 0, 0, 0.30);
+
+  /* Borders (opacity-based, never solid greys) */
+  --border:            rgba(255, 255, 255, 0.08);
+  --border-hover:      rgba(255, 255, 255, 0.14);
+  --border-focus:      rgba(34, 211, 238, 0.25);
+  --border-subtle:     rgba(255, 255, 255, 0.03);
+  --border-glass:      rgba(255, 255, 255, 0.10);
+  --border-top:        rgba(255, 255, 255, 0.14);
+
+  /* Text hierarchy (zinc tones — matches admin) */
+  --text-primary:      #e4e4e7;
+  --text-secondary:    #8b8b92;
+  --text-tertiary:     #52525a;
+  --text-disabled:     #3f3f46;
+
+  /* Signal colours — CYAN positive, ORANGE negative */
+  --cyan:              #22d3ee;
+  --cyan-dim:          rgba(34, 211, 238, 0.15);
+  --cyan-glow:         rgba(34, 211, 238, 0.35);
+  --orange:            #ff6b2b;
+  --orange-dim:        rgba(255, 107, 43, 0.15);
+  --orange-glow:       rgba(255, 107, 43, 0.35);
+
+  /* Data-viz palette (NOT for status) */
+  --purple:            #a78bfa;
+  --purple-dim:        rgba(167, 139, 250, 0.15);
+  --blue:              #3b82f6;
+  --blue-dim:          rgba(59, 130, 246, 0.15);
+  --yellow:            #eab308;
+  --yellow-dim:        rgba(234, 179, 8, 0.15);
+
+  /* Typography */
+  --font-mono:         'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+  --font-size-xs:      11px;
+  --font-size-sm:      12px;
+  --font-size-base:    13px;
+  --font-size-md:      14px;
+  --font-size-lg:      16px;
+  --font-size-xl:      20px;
+  --font-size-2xl:     24px;
+
+  /* Spacing scale */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+
+  /* Radius */
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --radius-xl:  18px;
+
+  /* Shadows (layered for depth) */
+  --shadow-card:
+    0 1px 2px rgba(0, 0, 0, 0.30),
+    0 4px 12px rgba(0, 0, 0, 0.20),
+    0 0 0 1px var(--border);
+  --shadow-raised:
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.25),
+    0 0 0 1px var(--border);
+  --shadow-modal:
+    0 4px 12px rgba(0, 0, 0, 0.40),
+    0 16px 48px rgba(0, 0, 0, 0.35),
+    0 0 0 1px var(--border);
+  --shadow-glow-cyan:
+    0 0 12px rgba(34, 211, 238, 0.10),
+    0 0 32px rgba(34, 211, 238, 0.05);
+  --shadow-glow-orange:
+    0 0 12px rgba(255, 107, 43, 0.10),
+    0 0 32px rgba(255, 107, 43, 0.05);
+
+  /* Transitions */
+  --transition-fast:   120ms ease;
+  --transition-base:   200ms ease;
+  --transition-slow:   320ms ease;
+}
+
+/* --- Base Styles --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--font-size-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--canvas);
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+a { color: var(--cyan); text-decoration: none; transition: color var(--transition-fast); }
+a:hover { color: #67e8f9; }
+
+::selection {
+  background: rgba(34, 211, 238, 0.25);
+  color: #f1f5f9;
+}
+
+/* --- Scrollbar --- */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.14); }
+::-webkit-scrollbar-corner { background: transparent; }
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
+}
+
+/* --- Glass Utilities (matches admin Dimension Dark) --- */
+.glass-card {
+  background: var(--surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border-glass);
+  border-top: 1px solid var(--border-top);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+}
+.glass-card:hover {
+  border-color: var(--border-hover);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.35),
+    0 0 30px rgba(100, 100, 110, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.glass-surface {
+  background: var(--surface);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--border);
+}
+
+.glass-nav {
+  background: rgba(10, 10, 14, 0.70);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--border);
+}
+
+.glass-input {
+  background: var(--well);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.glass-input:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow:
+    0 0 0 3px rgba(34, 211, 238, 0.05),
+    0 0 12px rgba(34, 211, 238, 0.06);
+}
+
+/* --- Signal Colour Helpers --- */
+.text-cyan    { color: var(--cyan); }
+.text-orange  { color: var(--orange); }
+.text-purple  { color: var(--purple); }
+.text-blue    { color: var(--blue); }
+.text-yellow  { color: var(--yellow); }
+.bg-cyan-dim  { background: var(--cyan-dim); }
+.bg-orange-dim{ background: var(--orange-dim); }
+
+/* --- Utility --- */
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); border: 0;
+}
