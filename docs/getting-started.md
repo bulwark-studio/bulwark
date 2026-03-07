@@ -13,7 +13,7 @@ docker compose up -d
 ```
 
 This starts two containers:
-- **bulwark** — Ubuntu 24.04, Node.js 22, with Claude CLI and Codex CLI pre-installed
+- **bulwark** — Ubuntu 24.04, Node.js 22, Docker CLI, Claude CLI, and Codex CLI pre-installed
 - **bulwark-db** — PostgreSQL 17
 
 Open **http://localhost:3001** in your browser.

@@ -10,6 +10,7 @@ services:
       - MONITOR_PASS=${MONITOR_PASS:-admin}
       - DATABASE_URL=postgresql://bulwark:bulwark@postgres:5432/bulwark
       - NODE_ENV=production
+      - DOCKER_HOST=unix:///var/run/docker.sock
       # AI keys (BYOK — set in .env or pass at runtime)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
