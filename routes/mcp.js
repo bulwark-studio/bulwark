@@ -489,6 +489,10 @@ module.exports = function (app, ctx) {
         result = await client.listPrompts();
       } else if (method === 'tools/call') {
         result = await client.callTool(params || {});
+      } else if (method === 'prompts/get') {
+        result = await client.getPrompt({ name: (params || {}).name, arguments: (params || {}).arguments || {} });
+      } else if (method === 'resources/read') {
+        result = await client.readResource(params || {});
       } else {
         result = { error: 'Unknown method: ' + method };
       }
