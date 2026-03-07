@@ -7,6 +7,12 @@
   var mcpInfo = null;
   var testResult = null;
 
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, function(c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   Views.mcp = {
     init: function() {
       var el = document.getElementById('view-mcp');
@@ -24,7 +30,7 @@
   };
 
   function fetchInfo() {
-    cachedFetch('/api/mcp/info', { ttl: 30000 }).then(function(r) { return r.json(); }).then(function(data) {
+    fetch('/api/mcp/info').then(function(r) { return r.json(); }).then(function(data) {
       mcpInfo = data;
       renderInfo();
     }).catch(function() {

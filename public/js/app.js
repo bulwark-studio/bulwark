@@ -431,6 +431,7 @@ window.animateValue = function(el, end, duration) {
         notifications: 'Notifications',
         logs: 'Logs',
         'multi-server': 'Multi-Server',
+        mcp: 'MCP Server',
         settings: 'Settings',
         docs: 'Docs / FAQ'
       };
