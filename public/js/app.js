@@ -101,6 +101,34 @@ window.animateValue = function(el, end, duration) {
   window.canEdit = function() { return window.state.userRole === 'admin' || window.state.userRole === 'editor'; };
   window.isAdmin = function() { return window.state.userRole === 'admin'; };
 
+  // ── Timezone-aware date formatting ──
+  // Loaded from Settings, defaults to browser timezone
+  window.userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  fetch('/api/settings').then(function(r) { return r.json(); }).then(function(s) {
+    if (s.timezone) window.userTimezone = s.timezone;
+  }).catch(function() {});
+
+  window.formatDate = function(d, opts) {
+    if (!d) return '--';
+    var date = d instanceof Date ? d : new Date(d);
+    if (isNaN(date.getTime())) return '--';
+    var defaults = { timeZone: window.userTimezone };
+    return date.toLocaleString(undefined, Object.assign(defaults, opts || {}));
+  };
+  window.formatTime = function(d, opts) {
+    if (!d) return '--';
+    var date = d instanceof Date ? d : new Date(d);
+    if (isNaN(date.getTime())) return '--';
+    var defaults = { timeZone: window.userTimezone, hour: '2-digit', minute: '2-digit' };
+    return date.toLocaleTimeString(undefined, Object.assign(defaults, opts || {}));
+  };
+  window.formatDateShort = function(d) {
+    if (!d) return '--';
+    var date = d instanceof Date ? d : new Date(d);
+    if (isNaN(date.getTime())) return '--';
+    return date.toLocaleDateString(undefined, { timeZone: window.userTimezone });
+  };
+
   // ── View Registry ──
   // Each view JS file registers itself: Views.viewName = { init(), show(), hide(), update(data) }
   window.Views = {};
@@ -118,7 +146,7 @@ window.animateValue = function(el, end, duration) {
   // ── Status Bar Update ──
   function updateStatusBar() {
     var el = document.getElementById('sb-last-update');
-    if (el) el.textContent = 'Updated ' + new Date().toLocaleTimeString();
+    if (el) el.textContent = 'Updated ' + formatTime(new Date(), { second: '2-digit' });
   }
 
   window.socket.on('connect', function () {

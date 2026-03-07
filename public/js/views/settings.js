@@ -29,6 +29,12 @@
             '<div class="card-title" style="margin-bottom:12px">AI Provider</div>' +
             '<div id="ai-provider-settings"><div style="color:var(--text-tertiary);font-size:12px">Loading...</div></div>' +
           '</div>' +
+          /* Timezone */
+          '<div class="card" style="margin-bottom:16px">' +
+            '<div class="card-title" style="margin-bottom:4px">Timezone</div>' +
+            '<p style="margin:0 0 12px;color:var(--text-tertiary);font-size:11px">All dates and times display in this timezone — your server may be in a different region</p>' +
+            '<div id="tz-settings"><div style="color:var(--text-tertiary);font-size:12px">Loading...</div></div>' +
+          '</div>' +
           /* Email (SMTP) */
           '<div class="card" style="margin-bottom:16px">' +
             '<div class="card-title" style="margin-bottom:4px">Email (SMTP)</div>' +
@@ -86,6 +92,7 @@
       loadMyAccount();
       loadUsers();
       loadAIProvider();
+      loadTimezone();
       loadSmtpSettings();
       loadAuditLog();
     },
@@ -288,6 +295,92 @@
     }).then(function (r) { return r.json(); }).then(function () {
       Toast.success('AI provider saved: ' + provider);
     }).catch(function () { Toast.error('Failed to save AI provider'); });
+  };
+
+  function loadTimezone() {
+    fetch('/api/settings').then(function (r) { return r.json(); }).then(function (settings) {
+      var el = document.getElementById('tz-settings');
+      if (!el) return;
+      var saved = settings.timezone || '';
+      var browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      var current = saved || browserTz;
+      var now = new Date();
+
+      // Common timezone groups
+      var zones = [
+        { group: 'Americas', tzs: ['America/New_York','America/Chicago','America/Denver','America/Los_Angeles','America/Anchorage','America/Toronto','America/Sao_Paulo','America/Mexico_City','America/Argentina/Buenos_Aires'] },
+        { group: 'Europe', tzs: ['Europe/London','Europe/Paris','Europe/Berlin','Europe/Amsterdam','Europe/Madrid','Europe/Rome','Europe/Moscow','Europe/Istanbul','Europe/Athens'] },
+        { group: 'Asia/Pacific', tzs: ['Asia/Tokyo','Asia/Shanghai','Asia/Hong_Kong','Asia/Singapore','Asia/Seoul','Asia/Kolkata','Asia/Dubai','Asia/Bangkok','Australia/Sydney','Australia/Melbourne','Pacific/Auckland'] },
+        { group: 'Africa', tzs: ['Africa/Cairo','Africa/Lagos','Africa/Johannesburg','Africa/Nairobi'] },
+        { group: 'UTC', tzs: ['UTC','Etc/GMT+0'] },
+      ];
+
+      var options = '<option value="">(Browser default: ' + esc(browserTz) + ')</option>';
+      zones.forEach(function (g) {
+        options += '<optgroup label="' + g.group + '">';
+        g.tzs.forEach(function (tz) {
+          var sel = tz === saved ? ' selected' : '';
+          var label = tz.replace(/_/g, ' ').replace(/\//g, ' / ');
+          var offset = '';
+          try {
+            var parts = now.toLocaleString('en-US', { timeZone: tz, timeZoneName: 'shortOffset' }).split(' ');
+            offset = parts[parts.length - 1] || '';
+          } catch (e) {}
+          options += '<option value="' + tz + '"' + sel + '>' + label + (offset ? ' (' + offset + ')' : '') + '</option>';
+        });
+        options += '</optgroup>';
+      });
+
+      var preview = '';
+      try { preview = now.toLocaleString(undefined, { timeZone: current, weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' }); } catch (e) {}
+
+      el.innerHTML =
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+          '<select id="tz-select" class="form-input" style="max-width:340px">' + options + '</select>' +
+          '<button class="btn btn-sm btn-cyan" onclick="saveTimezone()">Save</button>' +
+          '<button class="btn btn-sm" onclick="detectTimezone()">Auto-detect</button>' +
+        '</div>' +
+        '<div id="tz-preview" style="margin-top:8px;font-size:12px;color:var(--text-secondary)">' +
+          'Current time: <span style="font-family:monospace;color:var(--cyan)">' + esc(preview) + '</span>' +
+          (saved ? '' : ' <span style="color:var(--text-tertiary)">(using browser default)</span>') +
+        '</div>';
+
+      // Live preview on change
+      var sel = document.getElementById('tz-select');
+      if (sel) sel.onchange = function () {
+        var tz = sel.value || browserTz;
+        var prev = document.getElementById('tz-preview');
+        try {
+          var p = new Date().toLocaleString(undefined, { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit', timeZoneName: 'short' });
+          if (prev) prev.innerHTML = 'Preview: <span style="font-family:monospace;color:var(--cyan)">' + esc(p) + '</span>';
+        } catch (e) {}
+      };
+    }).catch(function () {});
+  }
+
+  window.saveTimezone = function () {
+    var tz = (document.getElementById('tz-select') || {}).value || '';
+    fetch('/api/settings', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ timezone: tz })
+    }).then(function (r) { return r.json(); }).then(function () {
+      window.userTimezone = tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
+      Toast.success('Timezone saved: ' + (tz || 'browser default'));
+      loadTimezone();
+    }).catch(function () { Toast.error('Failed to save timezone'); });
+  };
+
+  window.detectTimezone = function () {
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    var sel = document.getElementById('tz-select');
+    if (sel) {
+      // Try to select the matching option
+      for (var i = 0; i < sel.options.length; i++) {
+        if (sel.options[i].value === tz) { sel.selectedIndex = i; break; }
+      }
+      sel.onchange && sel.onchange();
+    }
+    Toast.info('Detected: ' + tz);
   };
 
   function loadSmtpSettings() {

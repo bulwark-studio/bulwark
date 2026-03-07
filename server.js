@@ -167,6 +167,7 @@ app.put("/api/settings", requireAdmin, (req, res) => {
   // Whitelist allowed keys
   const allowed = {
     aiProvider: updated.aiProvider || "claude-cli",
+    timezone: updated.timezone || current.timezone || "",
   };
   // Preserve SMTP config if present
   if (updated.smtp) {
