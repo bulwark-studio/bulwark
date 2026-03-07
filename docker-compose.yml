@@ -21,7 +21,7 @@ services:
       - bulwark-data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
     group_add:
-      - "0"  # Docker socket access
+      - "${DOCKER_GID:-0}"  # Docker socket GID (run: stat -c '%g' /var/run/docker.sock)
     restart: unless-stopped
     networks:
       - bulwark-net
