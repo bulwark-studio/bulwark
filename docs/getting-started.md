@@ -584,15 +584,39 @@ A: Yes. Any Ubuntu server with a public IP, ports 80/443 open, and DNS pointing 
 
 ## 11. Cloudflare
 
-Manage Cloudflare DNS records, tunnels, and zone settings.
+Manage Cloudflare DNS records, tunnels, and zone settings from a single GUI.
+
+### What You See
+
+- **AI Cloudflare Advisor** — AI analyzes your DNS configuration, security settings, and optimization opportunities
+- **Zone List** — all domains in your Cloudflare account with status (active/pending)
+- **DNS Records** — full list of A, AAAA, CNAME, TXT, MX records with proxy status (orange cloud = proxied)
+- **Tunnels** — Cloudflare Tunnel connections with status, created date, and endpoints
+- **Action buttons:** Add Record, Edit, Delete, Toggle Proxy
+
+### Setting Up Cloudflare
+
+1. Go to **Terminal > Vault** and add a credential:
+   - Type: **API Token**
+   - Name: "Cloudflare"
+   - Paste your Cloudflare API token
+2. To create a token: log into [dash.cloudflare.com](https://dash.cloudflare.com) > My Profile > API Tokens > Create Token
+3. Use the "Edit zone DNS" template (or create custom with Zone:DNS:Edit + Zone:Zone:Read permissions)
+4. Go to **Cloudflare** in the sidebar — it auto-detects your zones and DNS records
 
 ### Cloudflare FAQ
 
 **Q: How do I connect Cloudflare?**
-A: Add your Cloudflare API token in the Credential Vault. Go to Cloudflare in the sidebar — it will auto-detect your zones and DNS records.
+A: Add your Cloudflare API token in the Credential Vault (Terminal > Vault > + Add > API Token). Then open the Cloudflare view — it auto-detects all zones and DNS records associated with your token.
 
 **Q: Can I manage Cloudflare Tunnels?**
-A: Yes. View, create, and delete tunnels directly from the Cloudflare view. Requires a Cloudflare API token with tunnel permissions.
+A: Yes. View, create, and delete tunnels directly from the Cloudflare view. Requires a Cloudflare API token with tunnel permissions (Account:Cloudflare Tunnel:Edit).
+
+**Q: Can I add or edit DNS records?**
+A: Yes. Click **+ Add Record** to create new A, CNAME, TXT, or MX records. Click Edit on any existing record to modify it. Changes apply immediately to Cloudflare.
+
+**Q: What's the orange cloud icon?**
+A: It means the record is proxied through Cloudflare (traffic goes through their CDN/WAF). A grey cloud means DNS-only (traffic goes directly to your server). Toggle proxy status by clicking the cloud icon.
 
 ---
 
@@ -1097,39 +1121,104 @@ A: AI analyzes your uncommitted changes, modified files, and repo state, then gi
 
 ## 24. Cron Jobs
 
-View, create, edit, and delete cron jobs with a scheduling UI.
+View, create, edit, and delete cron jobs with a visual scheduling UI and expression builder.
+
+### What You See
+
+- **AI Cron Advisor** — AI-generated analysis of your cron schedule, workload distribution, and optimization suggestions
+- **Cron Job List** — all configured jobs with name, schedule expression, human-readable timing, command, status (active/paused), last run time, and next run time
+- **Action buttons per job:** Edit, Toggle (enable/disable), Run Now, Delete
+- **+ New Cron Job** button opens the schedule builder
+
+### Creating a Cron Job
+
+1. Click **+ New Cron Job**
+2. Fill in the form:
+
+| Field | Description | Example |
+|-------|-------------|---------|
+| **Name** | Friendly label | "Nightly DB Backup" |
+| **Schedule** | Cron expression or use the visual builder | `0 3 * * *` |
+| **Command** | Shell command to execute | `pg_dump mydb > /backups/nightly.sql` |
+| **Description** | Optional notes | "Backs up production DB" |
+
+3. The **visual builder** lets you pick: every minute, hourly, daily, weekly, monthly, or custom — without knowing cron syntax
+4. **Preview** shows the human-readable interpretation: "Every day at 3:00 AM"
+5. Click **Save**
 
 ### Cron Jobs FAQ
 
-**Q: Does it manage system crontab?**
-A: Yes. Bulwark reads and writes the system crontab. Requires appropriate permissions on the server.
+**Q: Does it manage the system crontab?**
+A: Yes. Bulwark reads and writes the system crontab directly. Requires the appropriate permissions on the server (root or the user's own crontab).
 
-**Q: Can I test a cron schedule?**
-A: The scheduling UI shows a human-readable description of when the job will run next (e.g. "Every day at 3:00 AM").
+**Q: Can I test a cron schedule before saving?**
+A: Yes. The scheduling UI shows a human-readable preview of when the job will run next (e.g. "Every day at 3:00 AM"). Click **Run Now** on any saved job to execute it immediately without waiting for the schedule.
+
+**Q: What happens if a cron job fails?**
+A: Failed jobs are logged with their exit code and stderr output. Check the Logs view or the cron job's last run status for details.
+
+**Q: Can I pause a job without deleting it?**
+A: Yes. Click the toggle button to disable a job. It stays in the list but won't execute. Toggle it back on to resume.
 
 ## 25. File Manager
 
-Browse, edit, upload, and download files on the server.
+Browse, edit, upload, and download files on the server with a dual-pane explorer and built-in code editor.
+
+### What You See
+
+- **AI File Advisor** — AI analyzes your project structure and suggests cleanup, organization improvements
+- **Breadcrumb navigation** — click any segment to jump to that directory
+- **File/folder tree** — icons for file types, size, modified date, permissions
+- **Action buttons:** New File, New Folder, Upload, Download, Rename, Delete
+- **Built-in editor** — click any text file to edit inline with syntax highlighting
+- **Preview** — image files show a thumbnail preview
 
 ### File Manager FAQ
 
 **Q: What directory does it start in?**
-A: The file manager starts in the `REPO_DIR` directory. Navigate using the breadcrumb path or sidebar tree.
+A: The file manager starts in the `REPO_DIR` directory (your project root). Navigate using the breadcrumb path or click folders in the tree.
 
 **Q: Can I edit files directly?**
-A: Yes. Click any text file to open it in an inline editor. Save changes directly to the server.
+A: Yes. Click any text file (.js, .json, .md, .env, .yml, etc.) to open it in the inline code editor. Make changes and click **Save** to write directly to the server.
+
+**Q: Can I upload files?**
+A: Yes. Click **Upload** or drag-and-drop files into the file manager. Supports any file type.
+
+**Q: Can I download files?**
+A: Yes. Click the download button next to any file, or right-click and choose Download. For folders, the contents are downloaded as a zip archive.
+
+**Q: Is there a file size limit?**
+A: There's no hard limit, but very large files (100MB+) may be slow to open in the editor. The upload limit is configured by your server's max request size.
 
 ## 26. Env Variables
 
-View and manage environment variables.
+View, create, edit, and delete environment variables with a searchable GUI and export support.
+
+### What You See
+
+- **AI Env Advisor** — AI analyzes your environment configuration for security risks and best practices
+- **Variable list** — name, value (masked for secrets), source (app/system), created date
+- **Search bar** — filter variables by name
+- **Action buttons per variable:** Edit, Copy Value, Delete
+- **+ Add Variable** button — set new key=value pairs
+- **Import / Export** — bulk import from .env file format or export all variables
 
 ### Env Variables FAQ
 
 **Q: Are env variables persisted?**
-A: Variables managed through Bulwark are stored in `data/envvars.json`. System environment variables are read-only.
+A: Yes. Variables managed through Bulwark are stored in `data/envvars.json` and persist across server restarts. System environment variables (from the OS) are shown as read-only.
 
 **Q: Can I add sensitive values?**
-A: Yes, but consider using the Credential Vault instead for sensitive data like API keys and passwords — it encrypts with AES-256-GCM.
+A: Yes, but consider using the **Credential Vault** (Terminal > Vault tab) for sensitive data like API keys and passwords — it uses AES-256-GCM encryption. Env variables are stored in plaintext JSON.
+
+**Q: Can I import from a .env file?**
+A: Yes. Click **Import** and paste your `.env` file contents or select a file. Each `KEY=VALUE` line becomes a variable.
+
+**Q: What's the difference between app and system variables?**
+A: **App variables** are created in Bulwark and stored in `data/envvars.json` — you can edit and delete them. **System variables** come from the OS environment (`process.env`) — they're read-only in the UI.
+
+**Q: Do changes take effect immediately?**
+A: App variables are saved immediately. However, if your application reads env vars at startup, you may need to restart it for changes to take effect.
 
 ---
 
@@ -1139,38 +1228,79 @@ A: Yes, but consider using the Credential Vault instead for sensitive data like 
 
 ## 27. Calendar
 
-Full calendar with month/week/agenda views, AI schedule briefing, and event planning.
+Full calendar with month/week/agenda views, AI schedule briefing, event planning, and drag-and-drop scheduling.
 
 ### What You See
 
-- **AI Schedule Briefing** — AI summary of upcoming events and priorities
+- **AI Schedule Briefing** — AI summary of upcoming events, priorities, and scheduling conflicts. Click **Analyze** to generate.
 - **View modes:** Month, Week, Agenda, AI Planner
 - **Stats cards:** Today's events, This Week, Total, High Priority (orange)
 - **Monthly calendar** — current day highlighted in cyan, click any day to add events
 - **Events** stored in `data/calendar.json`
 
+### Creating an Event
+
+1. Click any day in the month view, or click **+ New Event**
+2. Fill in the form:
+
+| Field | Description |
+|-------|-------------|
+| **Title** | Event name |
+| **Date / Time** | Start and optional end time |
+| **Priority** | Low, Normal, High (high = orange badge) |
+| **Description** | Optional notes or details |
+| **Category** | Maintenance, Meeting, Deploy, Reminder, Other |
+
+3. Click **Save** — the event appears on the calendar and the Dashboard widget
+
 ### Calendar FAQ
 
 **Q: Does it sync with Google Calendar?**
-A: Not currently. Events are stored locally. External calendar sync is on the roadmap.
+A: Not currently. Events are stored locally in `data/calendar.json`. External calendar sync (Google, Outlook) is on the roadmap.
 
 **Q: What views are available?**
-A: Month (grid), Week (7-day timeline), Agenda (list), and AI Planner (AI-powered scheduling recommendations).
+A: **Month** (full grid), **Week** (7-day timeline with hourly slots), **Agenda** (chronological list), and **AI Planner** (AI-powered scheduling recommendations based on your workload and priorities).
 
 **Q: Can I set reminders?**
-A: Events appear on the Dashboard. Push notification reminders are planned.
+A: Events appear on the Dashboard calendar widget. Push notification reminders for upcoming events are planned.
+
+**Q: How does the AI Planner work?**
+A: Click the **AI Planner** tab. Claude analyzes your upcoming events, workload patterns, and priorities, then suggests optimal scheduling, identifies conflicts, and recommends time blocks for deep work. Requires Claude CLI.
+
+**Q: Do events respect my timezone?**
+A: Yes. Events use the timezone configured in **Settings > Timezone**. If you haven't set one, it defaults to your browser's local timezone.
 
 ## 28. Notes
 
-Quick notes with pin support — jot down commands, links, or reminders.
+Quick notes with pin support, markdown rendering, and color labels — jot down commands, links, or reminders.
+
+### What You See
+
+- **Note cards** — each note shows title, content preview, timestamp, and optional color label
+- **Pinned notes** — pinned items stay at the top, marked with a pin icon
+- **+ New Note** button — opens the note editor
+- **Search** — filter notes by keyword
+
+### Creating a Note
+
+1. Click **+ New Note**
+2. Enter a title and body text (supports markdown)
+3. Optional: choose a color label for visual organization
+4. Click **Save**
 
 ### Notes FAQ
 
 **Q: Where are notes stored?**
-A: In `data/notes.json`. Notes persist across sessions and server restarts.
+A: In `data/notes.json`. Notes persist across sessions and server restarts. They're also visible in the Dashboard notes widget.
 
 **Q: Can I pin important notes?**
-A: Yes. Click the pin icon on any note to keep it at the top of the list.
+A: Yes. Click the pin icon on any note to keep it at the top of the list. Pinned notes also appear first in the Dashboard widget.
+
+**Q: Does it support markdown?**
+A: Yes. You can use markdown formatting in note bodies — headers, bold, italic, code blocks, links, and lists all render correctly.
+
+**Q: Can I use notes for runbooks or checklists?**
+A: Yes. Use markdown checklists (`- [ ] item`) to create to-do lists or operational runbooks that live right next to your infrastructure.
 
 ---
 
@@ -1180,38 +1310,85 @@ A: Yes. Click the pin icon on any note to keep it at the top of the list.
 
 ## 29. Security Center
 
-Comprehensive security scanning with a 100-point security score, AI-powered posture analysis, and multi-tab security views.
+Comprehensive security scanning with a 100-point security score, AI-powered posture analysis, and six security tabs.
 
 ### What You See
 
-- **Bulwark Security Advisor** — AI analyzes your security posture. Click **Analyze Security Posture** for a full report.
-- **Security Score** — letter grade (A-F) out of 100 points
-- **Tabs:** Posture, Secret Scan, Dependencies, Events, Firewall, SSH Keys
-- **Posture checks:** .env in .gitignore, .gitignore present, hardcoded secrets detection, dependency lock file, Node.js version, HTTPS/TLS, auth security (2FA), open ports, npm audit
-- **Re-scan** button to refresh all checks
+- **Bulwark Security Advisor** — AI analyzes your security posture. Click **Analyze Security Posture** for a detailed report with specific recommendations.
+- **Security Score** — letter grade (A-F) out of 100 points, shown as a large donut chart
+- **Six tabs:**
+
+| Tab | What it shows |
+|-----|---------------|
+| **Posture** | 9-category security checklist with pass/fail indicators |
+| **Secret Scan** | Detects hardcoded API keys, tokens, and passwords in your codebase |
+| **Dependencies** | npm audit results — vulnerable packages with severity levels |
+| **Events** | Security-related events timeline (login attempts, config changes) |
+| **Firewall** | Active firewall rules (iptables/ufw) with port status |
+| **SSH Keys** | Authorized SSH keys on the server with fingerprints |
+
+- **Posture checks:** .env in .gitignore, .gitignore present, hardcoded secrets, dependency lock file, Node.js version, HTTPS/TLS, auth security (2FA), open ports, npm audit
+- **Re-scan** button to refresh all checks instantly
+
+### Understanding the Security Score
+
+| Grade | Score | Meaning |
+|-------|-------|---------|
+| **A** | 90-100 | Excellent — all or nearly all checks passing |
+| **B** | 80-89 | Good — minor issues to address |
+| **C** | 70-79 | Fair — several checks need attention |
+| **D** | 60-69 | Poor — significant gaps in security |
+| **F** | 0-59 | Critical — immediate action required |
 
 ### Security Center FAQ
 
 **Q: What does the security scan check?**
-A: Nine categories: .env exposure, .gitignore presence, hardcoded secrets, dependency lock, Node.js version, HTTPS/TLS, auth security (2FA status), open ports, and npm audit. Each check contributes to the 100-point score.
+A: Nine categories: .env exposure, .gitignore presence, hardcoded secrets, dependency lock file, Node.js version currency, HTTPS/TLS status, auth security (2FA enabled), open ports, and npm audit vulnerabilities. Each check contributes to the 100-point score.
 
 **Q: What is the Security Score?**
-A: A composite score from 0-100 with a letter grade (A = 90+, B = 80+, etc.). All checks passing gives 100/100 (grade A).
+A: A composite score from 0-100 with a letter grade. All checks passing gives 100/100 (grade A). Each failed check deducts points based on severity — a missing .gitignore is less critical than hardcoded secrets.
 
 **Q: How often should I scan?**
-A: Run a scan after any infrastructure change (new service, port change, user added). Weekly scans are recommended for production servers.
+A: Run a scan after any infrastructure change (new service, port change, user added, dependency update). Weekly scans are recommended for production servers.
+
+**Q: The firewall tab shows "Unable to detect firewall".**
+A: Firewall detection requires `iptables` or `ufw` to be installed and the Bulwark process to have read permissions. On Docker, the firewall rules are from the host — this is expected. On local dev (Windows/macOS), native firewalls use different tools.
+
+**Q: How do I fix a failing security check?**
+A: Click any failing check for details. The AI Security Advisor also provides specific remediation steps. Common fixes: add `.env` to `.gitignore`, enable 2FA in Settings, run `npm audit fix`, update Node.js to the latest LTS version.
 
 ## 30. FTP
 
-Manage FTP server, user accounts, and active sessions.
+Manage FTP server, user accounts, active sessions, and AI-powered setup assistance.
+
+### What You See
+
+- **AI FTP Advisor** — AI analyzes your FTP configuration and suggests security improvements
+- **Server Status** — shows whether an FTP server (vsftpd, ProFTPD, pure-ftpd) is detected and running
+- **FTP Users** — list of FTP accounts with username, home directory, and status
+- **Active Sessions** — currently connected FTP clients with IP, username, and transfer status
+- **+ Add User** button — create new FTP accounts
+- **AI Setup Guide** — step-by-step instructions for installing and configuring an FTP server if none is detected
 
 ### FTP FAQ
 
 **Q: Does Bulwark include an FTP server?**
-A: No. This view manages an existing FTP server (vsftpd, ProFTPD, etc.) running on your system. It requires the adapter service.
+A: No. This view manages an existing FTP server running on your system. Bulwark auto-detects vsftpd, ProFTPD, and pure-ftpd. If none is found, the **AI Setup Guide** provides installation instructions for your OS.
+
+**Q: How do I install an FTP server?**
+A: Click **AI Setup Guide** for step-by-step instructions. The short version for Ubuntu:
+```bash
+sudo apt install -y vsftpd
+sudo systemctl enable vsftpd
+sudo systemctl start vsftpd
+```
+Then refresh the FTP view in Bulwark — it will detect vsftpd automatically.
 
 **Q: Can I create FTP users?**
-A: Yes. Click **+ Add User** to create a new FTP account with a home directory and permissions.
+A: Yes. Click **+ Add User** to create a new FTP account with a username, password, and home directory. Bulwark creates the system user and configures the FTP server accordingly.
+
+**Q: Is FTP secure?**
+A: Plain FTP transmits credentials in cleartext. For production, enable FTPS (FTP over TLS) in your FTP server config, or prefer SFTP (SSH-based) which uses the SSH keys stored in the Credential Vault. The AI FTP Advisor will flag security issues.
 
 ## 31. Notifications
 
@@ -1280,90 +1457,381 @@ curl -X POST http://localhost:3001/api/notification-center \
 
 ## 32. Cache
 
-View and manage the AI intelligence cache — content-addressed storage with anomaly detection.
+View and manage the AI intelligence cache — content-addressed storage with anomaly detection and freshness tracking.
+
+### What You See
+
+- **Cache Stats** — total entries, hit rate, total size, oldest entry age
+- **Health Ring** — visual indicator of cache health (cyan = healthy, orange = stale/oversized)
+- **Cache Tiers** — breakdown of cached content by category (briefings, SQL, security audits, etc.)
+- **Entry List** — each cached item shows key, category, size, creation time, last accessed, hit count, and freshness badge
+- **Freshness badges:** Fresh (< 5 min), Warm (< 30 min), Aging (< 2 hr), Stale (> 2 hr)
+- **Action buttons:** Delete individual entries, Clear All, Force Refresh
 
 ### Cache FAQ
 
 **Q: What does the cache store?**
-A: AI responses (briefings, analysis, SQL generation) are cached to avoid redundant API calls. Each entry has a freshness badge showing age.
+A: AI responses from every AI-powered feature — Dashboard briefings, Metrics analysis, SQL generation, security audits, backup strategy reports, and any other Claude-generated content. Each entry is content-addressed (keyed by the request hash) so identical requests return cached results instantly.
 
 **Q: Can I clear the cache?**
-A: Yes. Click **Clear All** to reset the cache. Individual entries can also be deleted.
+A: Yes. Click **Clear All** to reset the entire cache. You can also delete individual entries by clicking the trash icon. Clearing the cache means AI features will call Claude CLI again on next request.
+
+**Q: Why would I clear the cache?**
+A: If your system state has changed significantly (new deployment, major config change, etc.) and you want fresh AI analysis. The cache auto-expires stale entries, but manual clearing forces immediate refresh.
+
+**Q: Does the cache persist across server restarts?**
+A: Yes. Cache data is stored on disk and restored when Bulwark starts. Navigating between views also preserves cache state.
+
+**Q: What is anomaly detection?**
+A: The cache monitors response patterns. If an AI response is significantly different from previous responses for the same request (e.g., a health score drops 30 points), it flags the entry as anomalous so you can investigate.
 
 ## 33. Logs
 
-System logs, audit trail, and activity history.
+System logs, audit trail, and activity history — a complete record of who did what and when.
+
+### What You See
+
+- **AI Log Analyst** — AI analyzes recent activity patterns and flags anomalies
+- **Log Table** — chronological list of all system events with columns:
+
+| Column | Description |
+|--------|-------------|
+| **Timestamp** | When the action occurred (respects your timezone setting) |
+| **User** | Who performed the action |
+| **Action** | What was done (login, query, deploy, settings change, etc.) |
+| **Resource** | Which endpoint or feature was accessed |
+| **Method** | HTTP method (GET, POST, PUT, DELETE) |
+| **IP** | Client IP address |
+| **Status** | Result code (200 OK, 401 Unauthorized, 500 Error, etc.) |
+
+- **Filters** — filter by action type, user, or date range
+- **Export** — download logs as JSON or CSV
 
 ### Logs FAQ
 
 **Q: What gets logged?**
-A: Every API call is logged with timestamp, user, action, resource, method, IP, and result. View in Settings > Audit Log for the full trail.
+A: Every API call to Bulwark is logged with timestamp, authenticated user, action name, resource path, HTTP method, client IP, and result status code. This creates a complete audit trail for security and compliance.
 
 **Q: Can I export logs?**
-A: Yes. Go to Settings > Audit Log and click **Export JSON** or **Export CSV**.
+A: Yes. Click **Export JSON** or **Export CSV** to download the full audit log. Useful for compliance reporting or importing into external SIEM tools.
+
+**Q: Where are logs stored?**
+A: In `data/audit-log.json`. The log file grows over time — consider periodic exports and archival for long-running production servers.
+
+**Q: Can I see who logged in and when?**
+A: Yes. Filter the logs by the "login" action to see all authentication events with timestamps and IP addresses. Failed login attempts are also logged.
+
+**Q: Do logs show database queries?**
+A: Yes. All SQL queries executed through the SQL Editor are logged with the query text, execution time, and result. Queries are also saved in `data/query-history.json`.
 
 ## 34. Multi-Server
 
-Aggregated view across all connected servers — compare health, metrics, and status side by side.
+Aggregated view across all connected servers — compare health, metrics, and status side by side on a single screen.
+
+### What You See
+
+- **Server Cards** — one card per connected server showing hostname, IP, status (up/down), CPU, memory, disk, uptime
+- **Comparison Grid** — side-by-side metrics for all servers: CPU %, memory %, disk %, response time, last check
+- **Health Indicators** — cyan = healthy, orange = warning/down
+- **Quick Actions** — click any server card to navigate to its detailed view
 
 ### Multi-Server FAQ
 
 **Q: How do I add servers to this view?**
-A: Servers added in Infrastructure > Servers automatically appear here. The view aggregates health data from all connected servers.
+A: Servers added in **Infrastructure > Servers** automatically appear here. The view aggregates health data from all connected servers. Your local machine always appears as "Local Dev".
 
 **Q: What if a server is unreachable?**
-A: It shows as "unreachable" with an orange indicator. Other servers continue to report normally.
+A: It shows as "unreachable" with an orange indicator and its metrics display "N/A". Other servers continue to report normally. The Uptime view tracks historical availability.
+
+**Q: Can I compare metrics across servers?**
+A: Yes. The comparison grid shows CPU, memory, and disk for all servers in a single table. This makes it easy to spot which server is under load or running low on resources.
+
+**Q: How often does it refresh?**
+A: Server health checks run every 30 seconds via WebSocket. You can also click **Refresh** to force an immediate check.
 
 ## 35. Settings
 
-Account management, 2FA, AI provider configuration, audit log, and user management.
+Account management, 2FA, AI provider, timezone, email/SMTP, audit log, and user management — all in one place.
+
+### What You See
+
+Settings is organized into expandable sections:
+
+| Section | What it contains |
+|---------|-----------------|
+| **My Account** | Change username and password |
+| **Two-Factor Auth** | Enable/disable TOTP 2FA with QR code |
+| **AI Provider** | Choose Claude CLI, Codex CLI, or None |
+| **Timezone** | Set your local timezone for all date/time displays |
+| **Email (SMTP)** | Configure outgoing email for notifications |
+| **Audit Log** | Full activity log with export (JSON/CSV) |
+| **User Management** | Add/edit/delete users, assign roles (admin only) |
+
+### Setting Up Your Timezone
+
+Cloud-hosted Bulwark instances may be in a different timezone than you. Set your local timezone so all dates and times display correctly:
+
+1. Go to **Settings > Timezone**
+2. Select your timezone from the dropdown (e.g. "America/New_York", "Europe/London", "Asia/Tokyo")
+3. Or click **Auto-detect** to use your browser's timezone
+4. Quick presets are available for common US/EU/Asia timezones
+5. The **live preview** shows the current time in your selected zone
+6. Click **Save Settings**
+
+All views (Dashboard, Calendar, Logs, Notifications, etc.) will now display times in your timezone.
+
+### Setting Up Email (SMTP)
+
+Configure SMTP so Bulwark can send email notifications, alerts, and ad-hoc messages:
+
+1. Go to **Settings > Email (SMTP)**
+2. Choose a preset (**Gmail**, **Outlook**, or **Custom**) or fill in manually:
+
+| Field | Gmail Example | Outlook Example |
+|-------|---------------|-----------------|
+| **SMTP Host** | `smtp.gmail.com` | `smtp.office365.com` |
+| **Port** | `587` | `587` |
+| **Username** | `you@gmail.com` | `you@outlook.com` |
+| **Password** | Gmail App Password | Your password |
+| **From Address** | `you@gmail.com` | `you@outlook.com` |
+
+3. Click **Send Test Email** to verify — you'll receive a test message at your SMTP username
+4. Click **Save Settings**
+
+Once saved, the SMTP status indicator turns cyan and Bulwark can send email alerts via **Notifications > Add Channel > Email**.
+
+#### Gmail App Password (Step by Step)
+
+Gmail requires an App Password instead of your regular password:
+
+1. Go to [myaccount.google.com](https://myaccount.google.com)
+2. Security > 2-Step Verification — enable it if not already on
+3. Security > App passwords (or search "App passwords" in account settings)
+4. Create a new app password — name it "Bulwark" or anything you like
+5. Google gives you a 16-character password (like `abcd efgh ijkl mnop`)
+6. Paste this into the SMTP Password field in Bulwark Settings (spaces don't matter)
 
 ### Settings FAQ
 
 **Q: How do I change my password?**
-A: Go to Settings > My Account and click **Change Password**.
+A: Go to Settings > My Account and click **Change Password**. Enter your current password, then your new password twice.
 
 **Q: How do I enable 2FA?**
-A: Go to Settings > Two-Factor Authentication and click **Enable 2FA**. Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.).
+A: Go to Settings > Two-Factor Authentication and click **Enable 2FA**. Scan the QR code with your authenticator app (Google Authenticator, Authy, 1Password, etc.). Enter the 6-digit code to confirm. After this, every login requires a 2FA code.
 
 **Q: How do I switch AI providers?**
-A: Go to Settings > AI Provider. Choose between Claude CLI, Codex CLI, or None.
+A: Go to Settings > AI Provider. Choose between:
+- **Claude CLI** — requires Anthropic subscription, best for most features
+- **Codex CLI** — requires OpenAI API key, alternative provider
+- **None** — disables all AI features (everything else still works)
 
 **Q: Can I add more users?**
-A: Yes. Admins can add users in Settings > User Management. Each user gets a role (admin, editor, viewer) that controls what they can access.
+A: Yes (admin only). Go to Settings > User Management > **+ Add User**. Each user gets a role:
+- **Admin** — full access to everything including Settings and User Management
+- **Editor** — can modify data (create tickets, run queries, deploy) but can't manage users or settings
+- **Viewer** — read-only access to all views
+
+**Q: How do I set up email notifications?**
+A: Two steps: (1) Configure SMTP in Settings > Email (see above), (2) Add email channels in Notifications > + Add Channel > Email. See the [Notifications section](#31-notifications) for details.
+
+**Q: The SMTP test email didn't arrive.**
+A: Check: (1) SMTP host and port are correct, (2) Username/password are right (use App Password for Gmail), (3) "From" address matches your SMTP account, (4) Check your spam/junk folder. The test result shows the exact SMTP error if the connection fails.
+
+**Q: Where is the audit log?**
+A: Settings > Audit Log. It shows every action taken in Bulwark with timestamps, user, IP, and result. Click **Export JSON** or **Export CSV** to download.
 
 ---
 
 ## 36. MCP Server
 
-Connect AI agents (Claude Desktop, Claude Code, Cursor, VS Code) to Bulwark via the Model Context Protocol.
+Connect AI agents (Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, or any MCP-compatible client) to Bulwark via the Model Context Protocol. Once connected, your AI assistant can check server health, manage Docker containers, query databases, handle tickets, and more — all through natural conversation.
 
 ### What You See
 
-- **Connection Info** — Endpoint URL, transport type, tool/resource/prompt counts
-- **Test Panel** — List Tools, List Resources, List Prompts, Call get_system_metrics buttons with JSON response viewer
-- **Connect Instructions** — Copy-paste configs for Claude Desktop, Claude Code CLI, and curl
-- **Tools Reference** — All 18 tools with read/write/destructive badges
+- **Connection Info** — Endpoint URL (e.g. `https://your-server.com/mcp`), transport type, live status indicator
+- **Stats** — Tool count (18), Resource count (2), Prompt count (4)
+- **Test Panel** — four buttons to test the MCP endpoint directly from the browser:
+  - **List Tools** — returns all 18 available tools with descriptions and parameter schemas
+  - **List Resources** — returns the 2 data resources (server overview, uptime checks)
+  - **List Prompts** — returns the 4 pre-built prompt templates
+  - **Call get_system_metrics** — executes a real tool call and shows CPU, memory, disk data
+- **Connect Instructions** — copy-paste configs for Claude Desktop, Claude Code CLI, and curl
+- **Tools Reference** — all 18 tools in a grid with read/write/destructive safety badges
+
+### How MCP Works
+
+MCP (Model Context Protocol) is an open standard (created by Anthropic) that lets AI assistants securely call external tools. Think of it as an API specifically designed for AI agents.
+
+When you connect Claude Desktop to Bulwark's MCP server:
+1. Claude sees all 18 tools and their descriptions
+2. When you ask "What's my server CPU usage?", Claude calls `get_system_metrics` automatically
+3. Bulwark executes the tool, returns JSON data to Claude
+4. Claude formats it into a human-readable answer
+
+This means you can manage your entire infrastructure through natural conversation with Claude.
+
+### Connecting Claude Desktop (Step by Step)
+
+1. Open the **MCP Server** view in Bulwark's sidebar
+2. Click **Copy Config** in the Claude Desktop section
+3. Find your session token:
+   - In Bulwark, open browser DevTools (`F12` or `Ctrl+Shift+I`)
+   - Go to **Application** tab > **Cookies** > your Bulwark URL
+   - Find the cookie named `monitor_session` and copy its value
+4. Open your Claude Desktop config file:
+   - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+5. Paste the copied config and replace `YOUR_SESSION_TOKEN` with your actual token
+6. The final config should look like:
+```json
+{
+  "mcpServers": {
+    "bulwark": {
+      "type": "streamable-http",
+      "url": "https://your-server.com/mcp",
+      "headers": {
+        "Cookie": "monitor_session=abc123def456..."
+      }
+    }
+  }
+}
+```
+7. Restart Claude Desktop
+8. You should see "bulwark" listed in Claude's MCP connections
+
+### Connecting Claude Code (CLI)
+
+1. In the MCP Server view, click **Copy Command** in the Claude Code section
+2. Open your terminal and paste the command:
+```bash
+claude mcp add --transport http bulwark https://your-server.com/mcp
+```
+3. Claude Code now has access to all 18 Bulwark tools in your coding sessions
+
+### Connecting Cursor / VS Code / Windsurf
+
+1. Open your editor's MCP settings (usually in Settings > MCP Servers or a config file)
+2. Add a new MCP server with:
+   - **Name:** `bulwark`
+   - **Transport:** `streamable-http`
+   - **URL:** Your Bulwark MCP endpoint (shown in the connection info panel)
+   - **Headers:** `Cookie: monitor_session=YOUR_TOKEN`
+3. Save and restart the editor
+
+### Testing with curl
+
+Test the MCP endpoint directly from your terminal:
+
+```bash
+# List all available tools
+curl -X POST https://your-server.com/mcp \
+  -H "Content-Type: application/json" \
+  -b "monitor_session=YOUR_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+
+# Call a tool (get system metrics)
+curl -X POST https://your-server.com/mcp \
+  -H "Content-Type: application/json" \
+  -b "monitor_session=YOUR_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_system_metrics","arguments":{}}}'
+
+# List resources
+curl -X POST https://your-server.com/mcp \
+  -H "Content-Type: application/json" \
+  -b "monitor_session=YOUR_TOKEN" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"resources/list"}'
+```
+
+### Available Tools (18)
+
+| Tool | What it does | Safety |
+|------|-------------|--------|
+| `get_system_metrics` | CPU, memory, disk usage, uptime, load averages | Read |
+| `get_process_list` | Running processes sorted by CPU or memory | Read |
+| `get_uptime_status` | All monitored endpoints with uptime percentages | Read |
+| `add_uptime_endpoint` | Add a new URL to uptime monitoring | Write |
+| `list_docker_containers` | All Docker containers with state, image, ports | Read |
+| `get_container_logs` | Tail logs from a specific container | Read |
+| `manage_container` | Start, stop, or restart a Docker container | Destructive |
+| `list_database_tables` | All database tables with row counts and sizes | Read |
+| `query_database` | Execute a SQL query (SELECT only by default) | Write |
+| `list_tickets` | Support tickets with status, priority, assignee | Read |
+| `create_ticket` | Create a new support ticket | Write |
+| `get_deploy_history` | Recent deployments with status and timestamps | Read |
+| `get_deploy_preflight` | Pre-deploy checks (uncommitted changes, branch status) | Read |
+| `get_git_log` | Recent git commits with author, date, message | Read |
+| `get_git_diff` | Current working tree changes (staged + unstaged) | Read |
+| `get_security_score` | Security posture score with check details | Read |
+| `send_notification` | Send an alert via configured notification channels | Write |
+| `get_recent_alerts` | Recent notification history | Read |
+
+**Safety annotations** tell the AI agent how to handle each tool:
+- **Read** — safe to call anytime, no side effects
+- **Write** — creates or modifies data, AI should confirm with you first
+- **Destructive** — can stop services or lose data, AI must ask permission
+
+### Available Resources (2)
+
+| Resource | URI | What it provides |
+|----------|-----|-----------------|
+| Server Overview | `server://overview` | Full system snapshot: hostname, OS, CPU, memory, disk, uptime, Node.js version |
+| Uptime Checks | `uptime://checks` | All monitored endpoints with 24h and 7-day uptime percentages |
+
+Resources are data feeds the AI can read proactively without you asking for a specific tool call.
+
+### Available Prompts (4)
+
+| Prompt | What it does |
+|--------|-------------|
+| `diagnose_server` | Generates a comprehensive system health diagnosis — checks CPU, memory, disk, processes, uptime, and Docker. Returns prioritized findings. |
+| `incident_report` | Creates a formal incident report for a given issue — timeline, impact, root cause analysis, remediation steps. |
+| `security_audit` | Runs a full security assessment — firewall, open ports, SSH keys, secrets exposure, dependency vulnerabilities, compliance score. |
+| `daily_briefing` | Generates a morning briefing — overnight events, current health, upcoming calendar, ticket status, deployment activity. |
+
+### Example Conversations
+
+Once connected, you can have conversations like:
+
+> **You:** How's my server doing?
+> **Claude:** *[calls get_system_metrics]* Your server is healthy. CPU is at 12%, memory at 45% (3.6GB of 8GB), disk at 62%. Uptime is 14 days. Load averages are low at 0.3/0.5/0.4.
+
+> **You:** Are any of my monitored endpoints down?
+> **Claude:** *[calls get_uptime_status]* All 3 endpoints are up. api.example.com has 99.97% uptime over 7 days with 45ms average latency. Your blog endpoint had a brief 2-minute outage yesterday.
+
+> **You:** What containers are running?
+> **Claude:** *[calls list_docker_containers]* You have 4 containers: bulwark (running, 3 days), postgres (running, 3 days), redis (running, 3 days), and nginx (stopped). Want me to start nginx?
+
+> **You:** Create a ticket for the login page bug
+> **Claude:** *[calls create_ticket]* Created ticket #47: "Login page bug" with priority normal. I've added it to the Pending column on the Kanban board.
 
 ### MCP FAQ
 
 **Q: What is MCP?**
-A: Model Context Protocol — an open standard that lets AI agents (Claude, Cursor, etc.) securely connect to external tools and data sources. Bulwark's MCP server exposes system metrics, Docker, databases, tickets, deploy, git, and security features as AI-callable tools.
+A: Model Context Protocol — an open standard (by Anthropic) that lets AI agents securely connect to external tools and data sources. Instead of copy-pasting data between your browser and Claude, MCP lets Claude directly access your Bulwark instance to read metrics, manage containers, and take actions.
 
-**Q: How do I connect Claude Desktop?**
-A: Click **Copy Config** in the Claude Desktop section, paste it into your `claude_desktop_config.json`, and replace `YOUR_SESSION_TOKEN` with your Bulwark session cookie value (found in browser DevTools > Application > Cookies > `monitor_session`).
-
-**Q: How do I connect Claude Code?**
-A: Click **Copy Command** in the Claude Code section and run it in your terminal. It registers Bulwark as an MCP server via `claude mcp add`.
-
-**Q: What tools are available?**
-A: 18 tools covering system metrics, processes, uptime monitoring, Docker containers, database queries, support tickets, deployments, git operations, security scores, and notifications. Each tool has safety annotations (readOnly, destructive) so AI agents handle them appropriately.
+**Q: Do I need MCP to use Bulwark?**
+A: No. MCP is optional. Everything in Bulwark works through the web GUI and the built-in terminal. MCP adds the ability to manage your infrastructure through natural conversation with AI agents.
 
 **Q: Is it secure?**
-A: Yes. Every MCP request requires a valid Bulwark session cookie. The MCP server is auth-gated — unauthenticated requests are rejected. In SaaS mode, each customer's MCP server is isolated in their container sandbox.
+A: Yes. Every MCP request requires a valid Bulwark session cookie — the same authentication used by the web GUI. Unauthenticated requests are rejected. The AI agent can only do what your logged-in user account can do (same RBAC roles apply). In SaaS mode, each customer's MCP server is isolated in their own container.
 
-**Q: Can I use this with Cursor or VS Code?**
-A: Yes. Any MCP-compatible client can connect using the Streamable HTTP transport. Add the endpoint URL and auth header to your client's MCP configuration.
+**Q: My session token expired. How do I get a new one?**
+A: Log into Bulwark in your browser, then copy the new `monitor_session` cookie value from DevTools (Application > Cookies). Update your MCP client config with the new token. Session tokens expire based on your server's session configuration.
+
+**Q: Can multiple AI clients connect simultaneously?**
+A: Yes. The MCP server is stateless — each request is independent. Multiple Claude Desktop instances, Cursor, and Claude Code can all connect with the same (or different) session tokens.
+
+**Q: Can the AI accidentally break things?**
+A: Tools have safety annotations. Read-only tools (metrics, logs, lists) are marked safe. Write tools (create ticket, add endpoint) and destructive tools (manage container) are annotated so the AI asks for your confirmation before executing. You always have the final say.
+
+**Q: Does MCP use my AI subscription credits?**
+A: The MCP server itself is free — it's built into Bulwark. However, the AI agent (Claude Desktop, Claude Code, Cursor) uses your own subscription to process the conversation. Tool calls return raw data; the AI formats and interprets it using your subscription.
+
+**Q: What's the difference between the MCP server and the built-in AI features?**
+A: Built-in AI (Dashboard briefing, SQL generation, security audit) uses Claude CLI installed on the Bulwark server. MCP lets your LOCAL AI client (Claude Desktop on your laptop) connect to Bulwark REMOTELY. They're complementary — built-in AI is self-contained, MCP extends your local AI with infrastructure access.
+
+**Q: Can I use this with non-Anthropic AI clients?**
+A: Yes. Any client that supports the MCP Streamable HTTP transport can connect — this includes Cursor, VS Code extensions, Windsurf, and any custom client built with the MCP SDK. The protocol is open and vendor-neutral.
 
 ---
 
@@ -1375,31 +1843,90 @@ A: Yes. Any MCP-compatible client can connect using the Streamable HTTP transpor
 
 | Shortcut | Action |
 |----------|--------|
-| `Ctrl + Backtick` | Toggle terminal drawer |
+| `Ctrl + Backtick` | Toggle terminal drawer from any view |
 | `Ctrl + Shift + Backtick` | Cycle terminal size (half / full / mini) |
+| `Ctrl + V` | Paste into terminal |
+| `Ctrl + C` | Copy selected text (or send SIGINT if nothing selected) |
+| `Ctrl + Shift + C` | Always copy (never sends SIGINT) |
+
+The terminal drawer is available on every page — you don't need to navigate to the Terminal view to use it.
 
 ## 38. FAQ
 
 ### General
 
 **Q: What does Bulwark cost?**
-A: The Community edition is free and open source. AI features use your own subscriptions (Anthropic, OpenAI) — Bulwark has zero AI cost.
+A: The self-hosted Community edition is free and open source (AGPL-3.0). AI features use your own subscriptions (Anthropic for Claude, OpenAI for Codex) — Bulwark itself has zero AI cost. Hosted plans are available at $29/$79/$199 per month.
 
 **Q: What are the system requirements?**
-A: Node.js 18+ (22+ for Codex CLI). PostgreSQL optional. Docker recommended. Runs on Linux, macOS, and Windows.
+A: **Minimum:** Node.js 18+, 512MB RAM. **Recommended:** Node.js 22+, 2GB+ RAM, PostgreSQL 14+, Docker. Runs on Linux, macOS, and Windows. The Docker install is the easiest — it includes everything pre-configured.
 
 **Q: Does it work without a database?**
-A: Yes. All features work except Database views. System metrics, terminal, Docker, Git, deploy, and monitoring all function without PostgreSQL.
+A: Yes. All features work except the 8 Database views (SQL Editor, Tables, Schema, Migrations, Roles, Backups, Projects, AI Assistant) and Tickets (which use PostgreSQL). System metrics, terminal, Docker, Git, deploy, uptime, security, notifications, calendar, and MCP all function without any database.
+
+**Q: Does it work without Docker?**
+A: Yes. Docker is only needed for: (1) the Docker management view, (2) migration test-runs. Everything else works with a plain `npm start`.
+
+**Q: Can I run Bulwark behind a reverse proxy?**
+A: Yes. Bulwark works behind Nginx, Caddy, Cloudflare Tunnels, or any reverse proxy. Set `trust proxy` is already enabled. For WebSocket support, ensure your proxy passes the `Upgrade` header. Example Nginx config:
+```nginx
+location / {
+    proxy_pass http://localhost:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+}
+```
+
+**Q: How do I update Bulwark?**
+A: Pull the latest code and restart:
+```bash
+# Docker
+docker compose pull && docker compose up -d
+
+# Manual
+git pull && npm install && pm2 restart bulwark
+```
+Your data in `data/` is preserved across updates.
+
+**Q: Where is my data stored?**
+A: All data lives in the `data/` directory: `settings.json`, `calendar.json`, `notes.json`, `credentials.json` (encrypted), `audit-log.json`, `query-history.json`, `envvars.json`, and uptime history. Back up this directory to preserve your configuration.
 
 ### AI
 
 **Q: Do I need an Anthropic subscription?**
-A: Only for AI features (SQL generation, security audit, backup analysis). Everything else works without it.
+A: Only for AI-powered features (Dashboard briefing, SQL generation, security audit, backup strategy, Git intelligence, deploy intelligence, AI Compose, and all "Analyze" buttons). Everything else works perfectly without any AI subscription.
+
+**Q: Which AI features require Claude CLI?**
+A: Any feature with an "Analyze", "Ask Claude", or "AI" button. This includes: Dashboard AI Briefing, Metrics Analysis, Uptime Analysis, Docker Fleet Intelligence, SQL generation, Role Security Audit, Backup Strategy, Git Intelligence, Deploy Intelligence, Ticket AI Triage, and Calendar AI Planner.
 
 **Q: Can I use Claude and Codex at the same time?**
-A: Yes. Claude CLI and Codex CLI are independent tools. Set both API keys and use whichever you prefer.
+A: They're independent CLI tools — you can install both. Bulwark uses whichever is selected in Settings > AI Provider. You can switch between them at any time.
 
 **Q: Is my API key stored securely?**
-A: API keys passed via environment variables stay in memory only. Keys stored in the Credential Vault are encrypted with AES-256-GCM.
+A: API keys passed via environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) stay in server memory only and are never written to disk by Bulwark. Keys stored in the Credential Vault are encrypted with AES-256-GCM.
+
+### Connectivity
+
+**Q: What does the status bar "Connected" / "Disconnected" mean?**
+A: It shows the WebSocket connection status between your browser and the Bulwark server. "Connected" (cyan dot) means real-time updates are flowing. "Disconnected" (orange dot) means the WebSocket dropped — data still loads via HTTP but won't auto-update. Refresh the page to reconnect.
+
+**Q: Can I access Bulwark from my phone?**
+A: Yes. Bulwark is responsive — the sidebar collapses into a hamburger menu on mobile. All views work on tablets and phones, though the terminal and SQL editor are best on desktop.
+
+**Q: Can multiple users be logged in at the same time?**
+A: Yes. Each user gets their own session. Real-time updates (tickets, metrics) sync across all connected browsers via WebSocket.
+
+### Troubleshooting
+
+**Q: The page is blank or shows "Loading..."**
+A: Check the browser console (`F12`) for errors. Common causes: (1) server isn't running (`npm start`), (2) wrong port (default 3001), (3) ad blocker blocking WebSocket connections.
+
+**Q: I forgot my password.**
+A: Delete `data/users.json` and restart Bulwark. It will recreate the default admin/admin account. Then change the password immediately.
+
+**Q: How do I check if Bulwark is running?**
+A: Open `http://localhost:3001/api/system` in your browser or run `curl http://localhost:3001/api/system`. If you get a JSON response, the server is running.
 
 *Bulwark v2.1 — Server Management Platform*
