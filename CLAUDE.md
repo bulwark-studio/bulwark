@@ -345,6 +345,15 @@ curl -b "monitor_session=TOKEN" http://localhost:3001/api/db/tables
 Overview: Dashboard, Metrics, Uptime
 Infrastructure: Servers, Docker, PM2, SSL/Domains, Cloudflare
 Database: SQL Editor, Tables, Schema, Migrations, Roles, Backups, DB Projects, DB Assistant
-Operations: Terminal, Claude, Tickets, Git, Deploy, Cron Jobs, File Manager, Env Variables
-Security: Security Center, Credentials, FTP, Notifications
-System: MCP Server, Cache, Logs, Multi-Server, Calendar, Briefing, Notes, Settings
+DevOps: Terminal, Tickets, Git, Deploy, Cron Jobs, File Manager, Env Variables
+Workspace: Calendar, Notes
+Security: Security Center, FTP, Notifications
+System: MCP Server, Cache, Logs, Multi-Server, Settings, Docs/FAQ
+
+### Sidebar Features
+- **Auto-collapse:** Slides to 52px icon rail when cursor leaves, expands on hover (300ms ease-in-out, 400ms leave delay)
+- **Favorites:** Star icon on each nav item to pin it to a "Favorites" group at top
+- **Section reorder:** Up/down arrows on group headers to rearrange sections
+- **Collapsible groups:** Click group header to collapse/expand items
+- **All persisted:** `monitor_sidebarCollapsed`, `monitor_favorites`, `monitor_navOrder`, `monitor_navGroups` in localStorage
+- **Collapsed tooltips:** CSS `::after` tooltips on icons show view name on hover
