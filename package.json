@@ -9,15 +9,26 @@
     "url": "https://github.com/bulwark-studio/bulwark.git"
   },
   "license": "AGPL-3.0",
-  "keywords": ["devops", "server-management", "self-hosted", "ai", "docker", "terminal", "monitoring", "dashboard"],
+  "keywords": [
+    "devops",
+    "server-management",
+    "self-hosted",
+    "ai",
+    "docker",
+    "terminal",
+    "monitoring",
+    "dashboard"
+  ],
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
     "express": "^4.18.2",
-    "socket.io": "^4.7.5",
+    "node-pty": "^1.0.0",
     "pg": "^8.13.0",
-    "node-pty": "^1.0.0"
+    "socket.io": "^4.7.5",
+    "zod": "^4.3.6"
   }
 }

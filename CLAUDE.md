@@ -3,9 +3,36 @@
 ## Overview
 Enterprise server management platform. Express.js + Socket.IO on port 3001.
 Vanilla JS frontend — no React, no build step, no bundler.
-32 route modules | 16 libs | 34 views | 270+ endpoints | 4 npm deps.
+32 route modules | 16 libs | 34 views | 280+ endpoints | 4 npm deps.
 Repo: https://github.com/bulwark-studio/bulwark | License: AGPL-3.0
 Git author: Bulwark Studio <hello@bulwark.studio>
+
+## SaaS Deployment Strategy
+- **Phase 1:** Stripe (Link + Apple/Google Pay) + Fly.io per-customer containers ($3.72/customer/mo)
+- **Phase 2:** Google Cloud Marketplace listing (SaaS, 2% rev share, Google bills customer)
+- **Phase 3:** Multi-tenant mode + Coolify/Hetzner for max margin
+- **LLC:** Exists. **Stripe:** Exists. Enable Link + Apple Pay + Google Pay (remove `payment_method_types`).
+- **Pricing:** Starter $29/mo, Pro $79/mo, Enterprise $199/mo
+- **"Deploy to Cloud Run" button:** Free tier funnel — user self-hosts, upsell to hosted
+- See `memory/bulwark-saas-strategy.md` for full research
+
+## MCP Server (Built-In, Sandboxed)
+- **NOT a desktop tool.** SaaS customers run Bulwark in a cloud container — no local CLI access.
+- MCP server is **embedded inside Bulwark** at `POST /mcp` (Streamable HTTP transport).
+- Customers connect from Claude Desktop/Code/Cursor/VS Code on their local machine → Bulwark's remote `/mcp` endpoint.
+- Each customer's MCP server is isolated in their own container sandbox — tenant-scoped, auth-gated.
+- SDK: `@modelcontextprotocol/sdk` + Zod schemas
+- Tools expose: system metrics, Docker, DB, uptime, tickets, deploy, security, notifications
+- Tool annotations: `readOnlyHint` for safe reads, `destructiveHint` for dangerous actions
+- Resources: server info, metrics history, container list, open tickets
+- Prompts: diagnose_server, incident_report, security_audit, daily_briefing
+
+## Remote Monitoring Agent
+- SaaS Bulwark can't monitor localhost (it's a cloud container)
+- Customer installs `bulwark-agent` on their server(s): `npx bulwark-agent --key KEY --url URL`
+- Agent collects CPU/mem/disk/processes/Docker, POSTs to `/api/agent/report` every 10s
+- Dashboard shows THEIR server data, not the container's
+- Same model as Datadog/New Relic/Grafana (agent → cloud dashboard)
 
 ## Quick Start
 ```bash

@@ -238,6 +238,7 @@ require("./routes/envvars-enhanced")(app, ctx);
 require("./routes/security-enhanced")(app, ctx);
 require("./routes/notification-center")(app, ctx);
 require("./routes/calendar")(app, ctx);
+require("./routes/mcp")(app, ctx);
 
 // Neural Cache — register API routes
 neuralCache.registerRoutes(app, ctx);
@@ -359,5 +360,5 @@ server.listen(PORT, "0.0.0.0", () => {
   console.log(`  VPS DB: ${vpsPool ? "connected" : "NOT connected (set VPS_DATABASE_URL)"}`);
   console.log(`  Users: ${users.length} | AI: ${loadSettings().aiProvider}`);
   console.log(`  Repo: ${REPO_DIR} | PTY: ${pty ? "available" : "disabled"}`);
-  console.log(`  Routes: 28 modules | Views: 34 | Libs: 15\n`);
+  console.log(`  Routes: 29 modules | Views: 34 | Libs: 16\n`);
 });
