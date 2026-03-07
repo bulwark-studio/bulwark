@@ -1215,15 +1215,62 @@ A: Yes. Click **+ Add User** to create a new FTP account with a home directory a
 
 ## 31. Notifications
 
-Notification center for system alerts, events, and activity.
+Notification channels for email, Discord, Slack, and Telegram alerts. Get notified when endpoints go down, deploys fail, or security issues arise.
+
+### What You See
+- **SMTP Status Banner** — shows whether email is configured (links to Settings)
+- **Channel Cards** — each channel shows type, recipient, event filters, enable/disable toggle
+- **Add Channel** button — create Email, Discord, Slack, or Telegram channels
+- **Send Email** button — compose and send an ad-hoc email alert with AI assistance
+- **Event Filters** — choose which events trigger each channel (uptime, deploy, security, system, cron, git)
 
 ### Notifications FAQ
 
 **Q: What triggers notifications?**
-A: Server health changes, deploy events, security alerts, ticket updates, and cron job failures.
+A: Automatic triggers fire on: uptime endpoint state changes (down/up), deploy success/failure, and security scan alerts. Each channel can filter which event types it receives.
 
-**Q: Can I get notifications outside Bulwark?**
-A: Currently notifications are in-app only (bell icon in the top bar). Email and webhook notifications are planned.
+**Q: How do I set up email alerts?**
+A: First configure SMTP in **Settings > Email (SMTP)** — use Gmail (App Password), Outlook, or any SMTP server. Then add an Email channel here with the recipient address. Click **Test** to verify delivery.
+
+**Q: Can I CC other people on alerts?**
+A: Yes. When adding an email channel, enter a CC address. All alerts sent to that channel will CC the additional recipient.
+
+**Q: What is AI Compose?**
+A: Click **Send Email > AI Compose** to have AI write a professional alert email body from your subject line and notes. Useful for escalation emails.
+
+**Q: Can I get alerts on Discord/Slack/Telegram?**
+A: Yes. Add a channel with the webhook URL (Discord/Slack) or bot token + chat ID (Telegram). Click **AI Setup Guide** for step-by-step instructions.
+
+**Q: How do I set up Gmail SMTP?**
+A: Enable 2-Step Verification on your Google account, then go to myaccount.google.com/apppasswords and create an App Password. Use `smtp.gmail.com` port `587` with your Gmail address and the 16-character app password.
+
+**Q: Can I also do this from the terminal?**
+A: Yes. Use curl to test your SMTP or send alerts directly:
+```bash
+# Test SMTP connection
+curl -X POST http://localhost:3001/api/notifications/test-smtp \
+  -H "Content-Type: application/json" \
+  -b "monitor_session=TOKEN" \
+  -d '{"host":"smtp.gmail.com","port":587,"user":"you@gmail.com","pass":"app-password","to":"test@example.com"}'
+
+# Add an email channel
+curl -X POST http://localhost:3001/api/notifications/channels \
+  -H "Content-Type: application/json" \
+  -b "monitor_session=TOKEN" \
+  -d '{"type":"email","name":"My Alerts","email":"you@example.com","cc":"team@example.com","events":["uptime","deploy"]}'
+
+# Send ad-hoc email
+curl -X POST http://localhost:3001/api/notifications/send-email \
+  -H "Content-Type: application/json" \
+  -b "monitor_session=TOKEN" \
+  -d '{"to":"you@example.com","subject":"Server Alert","body":"<p>Server is down</p>"}'
+
+# Push a bell notification (auto-dispatches to all channels)
+curl -X POST http://localhost:3001/api/notification-center \
+  -H "Content-Type: application/json" \
+  -b "monitor_session=TOKEN" \
+  -d '{"category":"system","title":"Test Alert","message":"Testing the system","severity":"warning"}'
+```
 
 ---
 

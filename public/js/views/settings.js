@@ -29,6 +29,12 @@
             '<div class="card-title" style="margin-bottom:12px">AI Provider</div>' +
             '<div id="ai-provider-settings"><div style="color:var(--text-tertiary);font-size:12px">Loading...</div></div>' +
           '</div>' +
+          /* Email (SMTP) */
+          '<div class="card" style="margin-bottom:16px">' +
+            '<div class="card-title" style="margin-bottom:4px">Email (SMTP)</div>' +
+            '<p style="margin:0 0 12px;color:var(--text-tertiary);font-size:11px">Configure SMTP to send email alerts from Notifications</p>' +
+            '<div id="smtp-settings"><div style="color:var(--text-tertiary);font-size:12px">Loading...</div></div>' +
+          '</div>' +
           /* Audit Log */
           '<div class="card" style="margin-bottom:16px">' +
             '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
@@ -80,6 +86,7 @@
       loadMyAccount();
       loadUsers();
       loadAIProvider();
+      loadSmtpSettings();
       loadAuditLog();
     },
 
@@ -281,6 +288,138 @@
     }).then(function (r) { return r.json(); }).then(function () {
       Toast.success('AI provider saved: ' + provider);
     }).catch(function () { Toast.error('Failed to save AI provider'); });
+  };
+
+  function loadSmtpSettings() {
+    fetch('/api/settings').then(function (r) { return r.json(); }).then(function (settings) {
+      var el = document.getElementById('smtp-settings');
+      if (!el) return;
+      var smtp = settings.smtp || {};
+      var configured = !!(smtp.host && smtp.user);
+
+      var presets = [
+        { label: 'Gmail', host: 'smtp.gmail.com', port: 587, note: 'Use App Password (not your Gmail password)' },
+        { label: 'Outlook/365', host: 'smtp.office365.com', port: 587, note: 'Use your Microsoft account' },
+        { label: 'Custom', host: '', port: 587, note: '' }
+      ];
+      var presetBtns = presets.map(function (p) {
+        return '<button class="btn btn-sm" onclick="smtpPreset(\'' + p.host + '\',' + p.port + ')" style="font-size:10px">' + p.label + '</button>';
+      }).join('');
+
+      el.innerHTML =
+        (configured ?
+          '<div style="margin-bottom:12px;padding:8px;background:rgba(34,211,238,0.08);border-radius:6px;display:flex;align-items:center;gap:8px">' +
+            '<span style="color:var(--cyan)">&#9679;</span>' +
+            '<span style="font-size:12px;color:var(--text-secondary)">Connected: ' + esc(smtp.host) + ':' + (smtp.port || 587) + '</span>' +
+          '</div>'
+        : '<div style="margin-bottom:12px;padding:8px;background:rgba(255,107,43,0.08);border-radius:6px;display:flex;align-items:center;gap:8px">' +
+            '<span style="color:var(--orange)">&#9675;</span>' +
+            '<span style="font-size:12px;color:var(--text-secondary)">Not configured</span>' +
+          '</div>') +
+        '<div style="margin-bottom:8px;display:flex;gap:4px">' +
+          '<span style="font-size:11px;color:var(--text-tertiary);padding:4px 0">Presets:</span> ' + presetBtns +
+        '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+          '<div class="form-group" style="margin:0;flex:2;min-width:160px">' +
+            '<label class="form-label" style="font-size:11px">SMTP Host</label>' +
+            '<input id="smtp-host" class="form-input" placeholder="smtp.gmail.com" value="' + esc(smtp.host || '') + '">' +
+          '</div>' +
+          '<div class="form-group" style="margin:0;flex:0.5;min-width:70px">' +
+            '<label class="form-label" style="font-size:11px">Port</label>' +
+            '<input id="smtp-port" class="form-input" type="number" placeholder="587" value="' + (smtp.port || 587) + '">' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+          '<div class="form-group" style="margin:0;flex:1;min-width:160px">' +
+            '<label class="form-label" style="font-size:11px">Username / Email</label>' +
+            '<input id="smtp-user" class="form-input" placeholder="you@gmail.com" value="' + esc(smtp.user || '') + '">' +
+          '</div>' +
+          '<div class="form-group" style="margin:0;flex:1;min-width:160px">' +
+            '<label class="form-label" style="font-size:11px">Password / App Password</label>' +
+            '<input id="smtp-pass" class="form-input" type="password" placeholder="' + (configured ? '(saved)' : 'app password') + '">' +
+          '</div>' +
+        '</div>' +
+        '<div class="form-group" style="margin:0 0 8px">' +
+          '<label class="form-label" style="font-size:11px">From Address (optional)</label>' +
+          '<input id="smtp-from" class="form-input" placeholder="alerts@yourdomain.com (defaults to username)" value="' + esc(smtp.from || '') + '">' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+          '<button class="btn btn-sm btn-cyan" onclick="saveSmtp()">Save SMTP</button>' +
+          '<button class="btn btn-sm btn-primary" onclick="testSmtp()">&#9993; Send Test Email</button>' +
+          '<div id="smtp-result" style="flex:1"></div>' +
+        '</div>' +
+        '<p style="margin:8px 0 0;font-size:11px;color:var(--text-tertiary)">Gmail: Enable 2FA, then create an <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color:var(--cyan)">App Password</a>. Use the 16-char code as the password.</p>';
+    }).catch(function () {});
+  }
+
+  window.smtpPreset = function (host, port) {
+    var h = document.getElementById('smtp-host');
+    var p = document.getElementById('smtp-port');
+    if (h) h.value = host;
+    if (p) p.value = port;
+  };
+
+  window.saveSmtp = function () {
+    var host = (document.getElementById('smtp-host') || {}).value;
+    var port = (document.getElementById('smtp-port') || {}).value;
+    var user = (document.getElementById('smtp-user') || {}).value;
+    var pass = (document.getElementById('smtp-pass') || {}).value;
+    var from = (document.getElementById('smtp-from') || {}).value;
+    if (!host || !user) { Toast.warning('Host and username required'); return; }
+    var smtp = { host: host, port: parseInt(port) || 587, user: user, from: from || '' };
+    if (pass) smtp.pass = pass; // Only update password if entered
+    // Get current settings to preserve other fields, then merge
+    fetch('/api/settings').then(function (r) { return r.json(); }).then(function (current) {
+      // If no new password entered, keep existing
+      if (!pass && current.smtp && current.smtp.pass) {
+        // We can't read the existing pass (it's masked), so skip pass update
+        // The server will keep the existing smtp.pass if we send the whole object
+      }
+      return fetch('/api/settings', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ smtp: smtp })
+      });
+    }).then(function (r) { return r.json(); }).then(function () {
+      Toast.success('SMTP settings saved');
+      loadSmtpSettings();
+    }).catch(function () { Toast.error('Failed to save SMTP'); });
+  };
+
+  window.testSmtp = function () {
+    var host = (document.getElementById('smtp-host') || {}).value;
+    var port = (document.getElementById('smtp-port') || {}).value;
+    var user = (document.getElementById('smtp-user') || {}).value;
+    var pass = (document.getElementById('smtp-pass') || {}).value;
+    var from = (document.getElementById('smtp-from') || {}).value;
+    if (!host || !user) { Toast.warning('Save SMTP settings first'); return; }
+
+    // Ask for test recipient
+    Modal.open({
+      title: '&#9993; Send Test Email', size: 'sm',
+      body: '<div class="form-group"><label class="form-label">Send test email to:</label>' +
+        '<input id="smtp-test-to" class="form-input" type="email" placeholder="you@example.com" value="' + esc(user) + '"></div>',
+      footer: '<button class="btn btn-sm" onclick="Modal.close(this.closest(\'.modal-overlay\'))">Cancel</button>' +
+        '<button class="btn btn-sm btn-primary" id="smtp-test-send">Send Test</button>'
+    });
+    setTimeout(function () {
+      var btn = document.getElementById('smtp-test-send');
+      if (btn) btn.onclick = function () {
+        var to = (document.getElementById('smtp-test-to') || {}).value;
+        if (!to) { Toast.warning('Enter a recipient'); return; }
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        fetch('/api/notifications/test-smtp', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ host: host, port: parseInt(port) || 587, user: user, pass: pass, from: from, to: to })
+        }).then(function (r) { return r.json(); }).then(function (d) {
+          btn.disabled = false;
+          btn.textContent = 'Send Test';
+          if (d.error) { Toast.error('Test failed: ' + d.error); return; }
+          Toast.success(d.message || 'Test email sent!');
+          Modal.close(btn.closest('.modal-overlay'));
+        }).catch(function () { btn.disabled = false; btn.textContent = 'Send Test'; Toast.error('Failed to send test'); });
+      };
+    }, 50);
   };
 
   function loadAuditLog() {

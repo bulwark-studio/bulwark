@@ -187,12 +187,22 @@ module.exports = function (app, ctx) {
       target.lastStatus = 'success';
       writeJSON(TARGETS_PATH, targets);
 
+      // Notify: deploy success
+      if (ctx.pushNotification) {
+        ctx.pushNotification('deploy', 'Deploy succeeded: ' + target.name, 'Deployed to ' + target.name + ' (' + target.method + ') in ' + Math.round(deployLog.duration / 1000) + 's', 'info');
+      }
+
     } catch (e) {
       deployLog.status = 'failed';
       deployLog.error = e.message;
       deployLog.finishedAt = new Date().toISOString();
       target.lastStatus = 'failed';
       writeJSON(TARGETS_PATH, targets);
+
+      // Notify: deploy failed
+      if (ctx.pushNotification) {
+        ctx.pushNotification('deploy', 'Deploy FAILED: ' + target.name, 'Deploy to ' + target.name + ' failed: ' + e.message, 'critical');
+      }
     }
 
     history.push(deployLog);

@@ -165,9 +165,32 @@ app.put("/api/settings", requireAdmin, (req, res) => {
   const current = loadSettings();
   const updated = { ...current, ...req.body };
   // Whitelist allowed keys
-  const allowed = { aiProvider: updated.aiProvider || "claude-cli" };
+  const allowed = {
+    aiProvider: updated.aiProvider || "claude-cli",
+  };
+  // Preserve SMTP config if present
+  if (updated.smtp) {
+    allowed.smtp = {
+      host: updated.smtp.host || "",
+      port: parseInt(updated.smtp.port) || 587,
+      user: updated.smtp.user || "",
+      pass: updated.smtp.pass || (current.smtp ? current.smtp.pass : "") || "",
+      from: updated.smtp.from || "",
+    };
+  } else if (current.smtp) {
+    allowed.smtp = current.smtp;
+  }
+  // Preserve email alert rules
+  if (updated.emailRules) {
+    allowed.emailRules = updated.emailRules;
+  } else if (current.emailRules) {
+    allowed.emailRules = current.emailRules;
+  }
   saveSettings(allowed);
-  res.json(allowed);
+  // Don't expose SMTP password in response
+  const safe = { ...allowed };
+  if (safe.smtp && safe.smtp.pass) safe.smtp = { ...safe.smtp, pass: "••••" };
+  res.json(safe);
 });
 app.get("/api/settings/ai/detect", requireAdmin, async (req, res) => {
   const results = {};

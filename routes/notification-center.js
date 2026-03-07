@@ -1,10 +1,12 @@
 /**
  * Notification Center Routes — Toolbar bell notifications, history, read state
  * Stored in data/notification-center.json
+ * Automatically dispatches to webhook/email channels via sendNotification
  */
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { sendNotification } = require('../lib/notification-sender');
 
 const DATA = path.join(__dirname, '..', 'data');
 const NOTIFS_PATH = path.join(DATA, 'notification-center.json');
@@ -19,11 +21,12 @@ function writeNotifs(data) {
 }
 
 // Public function to push notifications from other routes
+// Also dispatches to all configured channels (email, Discord, Slack, Telegram)
 function pushNotification(category, title, message, severity) {
   const notifs = readNotifs();
   notifs.push({
     id: crypto.randomUUID(),
-    category: category || 'system', // security, deploy, cron, system, git
+    category: category || 'system', // security, deploy, cron, system, git, uptime
     title,
     message: message || '',
     severity: severity || 'info', // info, warning, critical
@@ -32,6 +35,10 @@ function pushNotification(category, title, message, severity) {
   });
   if (notifs.length > 200) notifs.splice(0, notifs.length - 200);
   writeNotifs(notifs);
+
+  // Fire to all configured channels (email, Discord, Slack, Telegram)
+  sendNotification(category, { title, message: message || '', severity: severity || 'info' })
+    .catch(e => console.error('[NOTIFY] dispatch error:', e.message));
 }
 
 module.exports = function (app, ctx) {
