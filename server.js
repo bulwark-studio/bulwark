@@ -46,6 +46,7 @@ const server = http.createServer(app);
 const io = new SocketServer(server, { cors: { origin: false } });
 
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -55,6 +56,8 @@ app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("X-XSS-Protection", "1; mode=block");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
   res.setHeader("Content-Security-Policy",
     "default-src 'self'; " +
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.socket.io https://cdn.jsdelivr.net; " +
