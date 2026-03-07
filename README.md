@@ -14,6 +14,7 @@
 [![Node 18+](https://img.shields.io/badge/Node-18%2B-green.svg)](https://nodejs.org)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](Dockerfile)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-cyan.svg)](CONTRIBUTING.md)
+[![Support](https://img.shields.io/badge/♥_Tip_Jar-Support_Bulwark-ff6b9d.svg)](https://buy.stripe.com/9B67sK5k7fzTbMV4mOenS01)
 
 Bulwark is an AI-powered, self-hosted server management platform that replaces your collection of DevOps tools with a single glass-themed dashboard. Terminal, database studio, Docker management, Git workflows, security scanning, and real-time monitoring — all in one place.
 
@@ -159,6 +160,14 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR
 ## Built With
 
 [Express.js](https://expressjs.com) | [Socket.IO](https://socket.io) | [PostgreSQL](https://postgresql.org) | [xterm.js](https://xtermjs.org) | [Chart.js](https://chartjs.org) | [CodeMirror](https://codemirror.net)
+
+---
+
+## Support
+
+If Bulwark saves you time, consider leaving a tip. Every dollar helps fund development.
+
+[♥ Tip Jar](https://buy.stripe.com/9B67sK5k7fzTbMV4mOenS01) | [Star on GitHub](https://github.com/bulwark-studio/bulwark)
 
 ---
 
