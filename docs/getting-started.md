@@ -18,15 +18,50 @@ This starts two containers:
 
 Open **http://localhost:3001** in your browser.
 
-### Manual Install
+### Bare Metal (Ubuntu/Debian)
 
 ```bash
-cd dev-monitor
+# 1. Install Node.js 22
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 2. Install PostgreSQL 17 (optional — works without it)
+sudo apt-get install -y gnupg2
+echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /etc/apt/trusted.gpg.d/postgresql.gpg
+sudo apt-get update && sudo apt-get install -y postgresql-17
+sudo -u postgres psql -c "CREATE USER bulwark WITH PASSWORD 'bulwark' CREATEDB;"
+sudo -u postgres psql -c "CREATE DATABASE bulwark OWNER bulwark;"
+
+# 3. Install AI CLIs (optional — enables AI features)
+sudo npm install -g @anthropic-ai/claude-code @openai/codex
+
+# 4. Install Docker (optional — enables Docker view)
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+
+# 5. Clone and start
+git clone https://github.com/bulwark-studio/bulwark.git
+cd bulwark
 npm install
+cat > .env <<EOF
+MONITOR_USER=admin
+MONITOR_PASS=admin
+DATABASE_URL=postgresql://bulwark:bulwark@localhost:5432/bulwark
+EOF
 npm start
 ```
 
-Requires: Node.js 18+, PostgreSQL (optional — works without it).
+### Quick Install (npm only)
+
+```bash
+git clone https://github.com/bulwark-studio/bulwark.git
+cd bulwark
+npm install
+MONITOR_USER=admin MONITOR_PASS=admin npm start
+```
+
+Requires: Node.js 18+. PostgreSQL, Docker, and AI CLIs are optional.
 
 ## 2. First Login
 

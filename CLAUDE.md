@@ -43,6 +43,15 @@ cd dev-monitor && npm install && npm start
 # Default: admin / admin (change immediately)
 ```
 
+## Bare Metal Install (Ubuntu/Debian)
+```bash
+# Node.js 22 + PostgreSQL 17 + AI CLIs + Docker
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs build-essential
+sudo npm install -g @anthropic-ai/claude-code @openai/codex pm2
+# Optional: PostgreSQL 17, Docker — see docs/getting-started.md
+```
+
 ## Architecture
 
 ### Server (orchestrator)
