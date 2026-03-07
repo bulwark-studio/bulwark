@@ -10,17 +10,26 @@ const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { z } = require('zod');
 const os = require('os');
+const { getRoleLevel } = require('../lib/rbac');
 
 module.exports = function (app, ctx) {
 
   // ── Build the MCP server with all tools/resources/prompts ───────────────
 
-  function createMcpServer() {
+  function createMcpServer(session) {
     const server = new McpServer({
       name: 'bulwark-monitor',
       version: '2.1.0',
       instructions: 'Bulwark server monitoring and management. Use tools to check system health, manage Docker containers, query databases, handle tickets, and deploy code.',
     });
+
+    function requireMcpRole(minRole, toolName) {
+      if (getRoleLevel(session?.role) >= getRoleLevel(minRole)) return null;
+      return {
+        content: [{ type: 'text', text: 'Error: ' + toolName + ' requires ' + minRole + ' role or higher.' }],
+        isError: true,
+      };
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // TOOLS — Actions the AI can invoke
@@ -90,6 +99,8 @@ module.exports = function (app, ctx) {
     server.tool('get_uptime_status', 'Get status of all monitored endpoints with uptime percentages', {},
       async () => {
         try {
+          const denied = requireMcpRole('admin', 'get_uptime_status');
+          if (denied) return denied;
           const uptimeStore = require('../lib/uptime-store');
           const endpoints = uptimeStore.getEndpoints();
           const data = endpoints.map(ep => ({
@@ -111,6 +122,8 @@ module.exports = function (app, ctx) {
       expectedStatus: z.number().default(200).describe('Expected HTTP status code'),
     }, async ({ name, url, expectedStatus }) => {
       try {
+        const denied = requireMcpRole('admin', 'add_uptime_endpoint');
+        if (denied) return denied;
         const uptimeStore = require('../lib/uptime-store');
         const id = uptimeStore.addEndpoint({ name, url, expectedStatus });
         return { content: [{ type: 'text', text: 'Endpoint added: ' + name + ' (' + url + ') id=' + id }] };
@@ -125,6 +138,8 @@ module.exports = function (app, ctx) {
       all: z.boolean().default(true).describe('Include stopped containers'),
     }, async ({ all }) => {
       try {
+        const denied = requireMcpRole('admin', 'list_docker_containers');
+        if (denied) return denied;
         const docker = require('../lib/docker-engine');
         const containers = await docker.listContainers(all);
         const summary = containers.map(c => ({
@@ -146,6 +161,8 @@ module.exports = function (app, ctx) {
       tail: z.number().default(50).describe('Number of log lines'),
     }, async ({ containerId, tail }) => {
       try {
+        const denied = requireMcpRole('admin', 'get_container_logs');
+        if (denied) return denied;
         const docker = require('../lib/docker-engine');
         const logs = await docker.getContainerLogs(containerId, tail);
         return { content: [{ type: 'text', text: logs || 'No logs available' }] };
@@ -159,6 +176,8 @@ module.exports = function (app, ctx) {
       action: z.enum(['start', 'stop', 'restart']).describe('Action to perform'),
     }, async ({ containerId, action }) => {
       try {
+        const denied = requireMcpRole('editor', 'manage_container');
+        if (denied) return denied;
         const docker = require('../lib/docker-engine');
         await docker.containerAction(containerId, action);
         return { content: [{ type: 'text', text: 'Container ' + containerId + ' ' + action + 'ed successfully' }] };
@@ -172,6 +191,8 @@ module.exports = function (app, ctx) {
     server.tool('list_database_tables', 'List all tables in the connected database', {},
       async () => {
         try {
+          const denied = requireMcpRole('admin', 'list_database_tables');
+          if (denied) return denied;
           if (!ctx.dbQuery) return { content: [{ type: 'text', text: 'No database connected' }] };
           const tables = await ctx.dbQuery("SELECT table_name, pg_size_pretty(pg_total_relation_size(quote_ident(table_name))) as size FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name");
           return { content: [{ type: 'text', text: JSON.stringify(tables, null, 2) }] };
@@ -186,6 +207,8 @@ module.exports = function (app, ctx) {
       limit: z.number().default(50).describe('Max rows to return'),
     }, async ({ sql, limit }) => {
       try {
+        const denied = requireMcpRole('editor', 'query_database');
+        if (denied) return denied;
         if (!ctx.dbQuery) return { content: [{ type: 'text', text: 'No database connected' }] };
         const trimmed = sql.trim().toUpperCase();
         if (!trimmed.startsWith('SELECT') && !trimmed.startsWith('WITH') && !trimmed.startsWith('EXPLAIN')) {
@@ -220,6 +243,8 @@ module.exports = function (app, ctx) {
       priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
     }, async ({ subject, description, priority }) => {
       try {
+        const denied = requireMcpRole('editor', 'create_ticket');
+        if (denied) return denied;
         if (!ctx.dbQuery) return { content: [{ type: 'text', text: 'No database connected' }] };
         const result = await ctx.dbQuery(
           'INSERT INTO support_tickets (subject, description, priority, status, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING id',
@@ -237,6 +262,8 @@ module.exports = function (app, ctx) {
     server.tool('get_deploy_history', 'Get recent deployment history', {},
       async () => {
         try {
+          const denied = requireMcpRole('admin', 'get_deploy_history');
+          if (denied) return denied;
           const fs = require('fs');
           const path = require('path');
           const histPath = path.join(__dirname, '..', 'data', 'deploy-history.json');
@@ -258,6 +285,8 @@ module.exports = function (app, ctx) {
     server.tool('get_deploy_preflight', 'Run pre-flight checks before deploying', {},
       async () => {
         try {
+          const denied = requireMcpRole('admin', 'get_deploy_preflight');
+          if (denied) return denied;
           const { execCommand, REPO_DIR } = ctx;
           const checks = [];
           const status = await execCommand('git status --porcelain', { cwd: REPO_DIR, timeout: 5000 });
@@ -280,6 +309,8 @@ module.exports = function (app, ctx) {
       count: z.number().default(10).describe('Number of commits to show'),
     }, async ({ count }) => {
       try {
+        const denied = requireMcpRole('admin', 'get_git_log');
+        if (denied) return denied;
         const result = await ctx.execCommand('git log --oneline -' + count, { cwd: ctx.REPO_DIR, timeout: 5000 });
         return { content: [{ type: 'text', text: result.stdout || 'No commits' }] };
       } catch (e) {
@@ -291,6 +322,8 @@ module.exports = function (app, ctx) {
       staged: z.boolean().default(false).describe('Show only staged changes'),
     }, async ({ staged }) => {
       try {
+        const denied = requireMcpRole('admin', 'get_git_diff');
+        if (denied) return denied;
         const cmd = staged ? 'git diff --cached --stat' : 'git diff --stat';
         const result = await ctx.execCommand(cmd, { cwd: ctx.REPO_DIR, timeout: 5000 });
         return { content: [{ type: 'text', text: result.stdout || 'No changes' }] };
@@ -304,6 +337,8 @@ module.exports = function (app, ctx) {
     server.tool('get_security_score', 'Run a security posture scan and get the score', {},
       async () => {
         try {
+          const denied = requireMcpRole('admin', 'get_security_score');
+          if (denied) return denied;
           // Use internal fetch to hit our own security endpoint
           const http = require('http');
           return new Promise((resolve) => {
@@ -337,6 +372,8 @@ module.exports = function (app, ctx) {
       category: z.enum(['system', 'security', 'deploy', 'uptime', 'cron', 'git']).default('system'),
     }, async ({ title, message, severity, category }) => {
       try {
+        const denied = requireMcpRole('admin', 'send_notification');
+        if (denied) return denied;
         if (ctx.pushNotification) {
           ctx.pushNotification(category, title, message, severity);
           return { content: [{ type: 'text', text: 'Notification sent: [' + severity.toUpperCase() + '] ' + title }] };
@@ -351,6 +388,8 @@ module.exports = function (app, ctx) {
       limit: z.number().default(20).describe('Number of alerts to return'),
     }, async ({ limit }) => {
       try {
+        const denied = requireMcpRole('viewer', 'get_recent_alerts');
+        if (denied) return denied;
         const fs = require('fs');
         const path = require('path');
         const notifsPath = path.join(__dirname, '..', 'data', 'notification-center.json');
@@ -446,7 +485,7 @@ module.exports = function (app, ctx) {
   // POST /mcp — Streamable HTTP transport (stateless, one request = one connection)
   app.post('/mcp', ctx.requireAuth, async (req, res) => {
     try {
-      const server = createMcpServer();
+      const server = createMcpServer(req.user);
       const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
       res.on('close', () => { transport.close().catch(() => {}); server.close().catch(() => {}); });
       await server.connect(transport);
@@ -474,7 +513,7 @@ module.exports = function (app, ctx) {
     const { method, params } = req.body;
     if (!method) return res.status(400).json({ error: 'method required' });
     try {
-      const server = createMcpServer();
+      const server = createMcpServer(req.user);
       const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
       const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
       const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();

@@ -3,13 +3,20 @@ const path = require("path");
 
 module.exports = function (app, ctx) {
   const REPO_DIR = ctx.REPO_DIR;
+  const REPO_ROOT = path.resolve(REPO_DIR);
+
+  function isWithinRepo(resolved) {
+    const relative = path.relative(REPO_ROOT, resolved);
+    return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+  }
 
   function safePath(reqPath) {
     const resolved = path.resolve(REPO_DIR, reqPath || ".");
-    if (!resolved.startsWith(path.resolve(REPO_DIR))) return null;
+    if (!isWithinRepo(resolved)) return null;
     // Block sensitive files
     const blocked = [".env.local", "users.json", ".git/config"];
-    if (blocked.some(b => resolved.endsWith(b))) return null;
+    const relative = path.relative(REPO_ROOT, resolved).replace(/\\/g, "/");
+    if (blocked.includes(relative)) return null;
     return resolved;
   }
 

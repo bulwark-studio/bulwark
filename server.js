@@ -101,6 +101,15 @@ const ctx = {
   sendNotification: null,
 };
 
+function getSafeSettings(settings) {
+  const safe = { ...settings };
+  if (safe.smtp) {
+    safe.smtp = { ...safe.smtp };
+    if (safe.smtp.pass) safe.smtp.pass = "••••";
+  }
+  return safe;
+}
+
 // ── Public assets (no auth required — favicon, logo, fonts) ──────────────────
 app.use("/favicon.svg", express.static(path.join(__dirname, "public", "favicon.svg")));
 app.use("/logo.svg", express.static(path.join(__dirname, "public", "logo.svg")));
@@ -160,7 +169,7 @@ function saveSettings(s) {
   fs_env.writeFileSync(settingsFile, JSON.stringify(s, null, 2), "utf8");
 }
 
-app.get("/api/settings", (req, res) => { res.json(loadSettings()); });
+app.get("/api/settings", (req, res) => { res.json(getSafeSettings(loadSettings())); });
 app.put("/api/settings", requireAdmin, (req, res) => {
   const current = loadSettings();
   const updated = { ...current, ...req.body };
@@ -188,10 +197,7 @@ app.put("/api/settings", requireAdmin, (req, res) => {
     allowed.emailRules = current.emailRules;
   }
   saveSettings(allowed);
-  // Don't expose SMTP password in response
-  const safe = { ...allowed };
-  if (safe.smtp && safe.smtp.pass) safe.smtp = { ...safe.smtp, pass: "••••" };
-  res.json(safe);
+  res.json(getSafeSettings(allowed));
 });
 app.get("/api/settings/ai/detect", requireAdmin, async (req, res) => {
   const results = {};
@@ -199,7 +205,8 @@ app.get("/api/settings/ai/detect", requireAdmin, async (req, res) => {
   for (const [name, cmd] of [["claude-cli", "claude --version"], ["codex-cli", "codex --version"]]) {
     try {
       const out = await execCommand(cmd);
-      results[name] = { installed: true, version: out.trim() };
+      const version = (out.stdout || out.stderr || "").trim();
+      results[name] = { installed: out.code === 0, version };
     } catch {
       results[name] = { installed: false };
     }

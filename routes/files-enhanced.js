@@ -7,6 +7,12 @@ const { askAI } = require('../lib/ai');
 
 module.exports = function (app, ctx) {
   const { requireAdmin, requireRole, execCommand, REPO_DIR } = ctx;
+  const REPO_ROOT = path.resolve(REPO_DIR);
+
+  function isWithinRepo(resolved) {
+    const relative = path.relative(REPO_ROOT, resolved);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  }
 
   // File search (name-based + content grep)
   app.get('/api/files/search', requireAdmin, async (req, res) => {
@@ -119,7 +125,7 @@ module.exports = function (app, ctx) {
       if (!filePath) return res.status(400).json({ error: 'filePath required' });
 
       const resolved = path.resolve(REPO_DIR, filePath);
-      if (!resolved.startsWith(path.resolve(REPO_DIR))) return res.status(403).json({ error: 'Access denied' });
+      if (!isWithinRepo(resolved)) return res.status(403).json({ error: 'Access denied' });
 
       const content = fs.readFileSync(resolved, 'utf8').substring(0, 4000);
       const prompt = `Summarize this file in 2-3 sentences. What does it do, key exports/functions, and any notable patterns. No markdown.\n\nFile: ${filePath}\n\n${content}`;
