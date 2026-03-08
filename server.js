@@ -254,11 +254,97 @@ require("./routes/github-hub")(app, ctx);
 // Neural Cache — register API routes
 neuralCache.registerRoutes(app, ctx);
 
-// ── Socket.IO auth + handlers ────────────────────────────────────────────────
+// ── Socket.IO auth + handlers — Persistent Terminal Sessions ─────────────────
+//
+// PTY sessions keyed by username (not socket.id) so they survive page reloads
+// & socket reconnections. Grace period keeps PTY alive on disconnect; reconnect
+// replays buffered output.
+
 let pty = null;
 try { pty = require("node-pty"); } catch { console.warn("[WARN] node-pty not available — terminal disabled"); }
 
-const ptyMap = new Map();
+const TERM_BUFFER_SIZE = 50000;      // chars to keep for replay
+const TERM_GRACE_PERIOD = 5 * 60000; // 5 min before orphan kill
+
+// Map<username, { term, sockets: Set<socket>, buffer: string, graceTimer }>
+const termSessions = new Map();
+
+function getTermSession(username) {
+  return termSessions.get(username) || null;
+}
+
+function appendTermBuffer(sess, data) {
+  sess.buffer += data;
+  if (sess.buffer.length > TERM_BUFFER_SIZE) {
+    sess.buffer = sess.buffer.slice(-TERM_BUFFER_SIZE);
+  }
+}
+
+function emitToTermSession(sess, event, data) {
+  for (const s of sess.sockets) {
+    s.emit(event, data);
+  }
+}
+
+function createTermSession(username, socket, cols, rows) {
+  try {
+    const shell = os.platform() === "win32" ? "powershell.exe" : "bash";
+    const fs = require("fs");
+    const termCwd = fs.existsSync(REPO_DIR) ? REPO_DIR : process.cwd();
+    const term = pty.spawn(shell, [], {
+      name: "xterm-256color", cols: cols || 120, rows: rows || 30,
+      cwd: termCwd, env: { ...process.env, TERM: "xterm-256color" },
+    });
+
+    const sess = {
+      term,
+      sockets: new Set([socket]),
+      buffer: "",
+      graceTimer: null,
+    };
+
+    term.onData((data) => {
+      appendTermBuffer(sess, data);
+      emitToTermSession(sess, "terminal_output", data);
+    });
+
+    term.onExit(() => {
+      emitToTermSession(sess, "terminal_output", "\r\n\x1b[33m[Session ended]\x1b[0m\r\n");
+      emitToTermSession(sess, "terminal_exited", {});
+      if (sess.graceTimer) clearTimeout(sess.graceTimer);
+      termSessions.delete(username);
+    });
+
+    termSessions.set(username, sess);
+    return sess;
+  } catch (e) {
+    socket.emit("terminal_output", "\r\n[ERROR] Terminal not available: " + e.message + "\r\n");
+    return null;
+  }
+}
+
+function detachTermSocket(username, socket) {
+  const sess = termSessions.get(username);
+  if (!sess) return;
+  sess.sockets.delete(socket);
+  if (sess.sockets.size === 0) {
+    sess.graceTimer = setTimeout(() => {
+      try { sess.term.kill(); } catch {}
+      termSessions.delete(username);
+    }, TERM_GRACE_PERIOD);
+  }
+}
+
+function attachTermSocket(username, socket) {
+  const sess = termSessions.get(username);
+  if (!sess) return false;
+  if (sess.graceTimer) {
+    clearTimeout(sess.graceTimer);
+    sess.graceTimer = null;
+  }
+  sess.sockets.add(socket);
+  return true;
+}
 
 io.use((socket, next) => {
   const cookies = parseCookies(socket.handshake.headers.cookie);
@@ -272,35 +358,57 @@ io.on("connection", (socket) => {
   console.log(`[IO] Client connected: ${socket.id}`);
   sendInitialState(socket);
 
+  const getUsername = () => socket.data.session?.username || socket.data.session?.user || "unknown";
+
   socket.on("terminal_input", (data) => {
     if (!isSocketAdmin(socket)) return;
-    const term = ptyMap.get(socket.id);
-    if (term) term.write(data);
+    const sess = getTermSession(getUsername());
+    if (sess) sess.term.write(data);
   });
 
   socket.on("terminal_resize", ({ cols, rows }) => {
     if (!isSocketAdmin(socket)) return;
-    const term = ptyMap.get(socket.id);
-    if (term) { try { term.resize(cols, rows); } catch {} }
+    const sess = getTermSession(getUsername());
+    if (sess && cols && rows) { try { sess.term.resize(cols, rows); } catch {} }
   });
 
+  // terminal_start: create new PTY or reattach to existing
   socket.on("terminal_start", (opts) => {
     if (!isSocketAdmin(socket)) { socket.emit("terminal_output", "\r\n[ERROR] terminal access requires admin role.\r\n"); return; }
     if (!pty) { socket.emit("terminal_output", "\r\n[ERROR] node-pty not available.\r\n"); return; }
-    const existing = ptyMap.get(socket.id);
-    if (existing) { try { existing.kill(); } catch {} }
+
+    const username = getUsername();
     const cols = (opts && opts.cols > 0) ? opts.cols : 120;
     const rows = (opts && opts.rows > 0) ? opts.rows : 30;
-    const shell = os.platform() === "win32" ? "powershell.exe" : "bash";
-    const fs = require("fs");
-    const termCwd = fs.existsSync(REPO_DIR) ? REPO_DIR : process.cwd();
-    const term = pty.spawn(shell, [], {
-      name: "xterm-256color", cols, rows,
-      cwd: termCwd, env: { ...process.env, TERM: "xterm-256color" },
-    });
-    term.onData((data) => socket.emit("terminal_output", data));
-    term.onExit(() => { ptyMap.delete(socket.id); socket.emit("terminal_output", "\r\n[Session ended]\r\n"); });
-    ptyMap.set(socket.id, term);
+
+    const existing = getTermSession(username);
+    if (existing) {
+      // Reattach to surviving session
+      attachTermSocket(username, socket);
+      if (existing.buffer) socket.emit("terminal_replay", existing.buffer);
+      socket.emit("terminal_reattach_ok", { reattached: true });
+      try { existing.term.resize(cols, rows); } catch {}
+      return;
+    }
+
+    createTermSession(username, socket, cols, rows);
+  });
+
+  // Explicit reattach attempt (on socket reconnect)
+  socket.on("terminal_reattach", (data) => {
+    if (!isSocketAdmin(socket)) return;
+    const username = getUsername();
+    const existing = getTermSession(username);
+    if (existing) {
+      attachTermSocket(username, socket);
+      if (existing.buffer) socket.emit("terminal_replay", existing.buffer);
+      socket.emit("terminal_reattach_ok", { reattached: true });
+      const cols = (data && data.cols) || 120;
+      const rows = (data && data.rows) || 30;
+      try { existing.term.resize(cols, rows); } catch {}
+    } else {
+      socket.emit("terminal_reattach_fail", {});
+    }
   });
 
   socket.on("claude_run", ({ prompt }) => {
@@ -310,9 +418,8 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    const term = ptyMap.get(socket.id);
-    if (term) { try { term.kill(); } catch {} }
-    ptyMap.delete(socket.id);
+    // Don't kill PTY — detach and start grace period
+    detachTermSocket(getUsername(), socket);
   });
 });
 

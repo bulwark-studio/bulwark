@@ -223,6 +223,10 @@ Route modules receive `ctx` with: `pool`, `vpsPool`, `dbQuery`, `vpsQuery`, `io`
 | `claude_output` | string | on claude run |
 | `claude_done` | object | on claude finish |
 | `terminal_output` | string | on terminal activity |
+| `terminal_replay` | string | on reattach (buffered output) |
+| `terminal_exited` | `{}` | on PTY exit |
+| `terminal_reattach_ok` | `{}` | reattach success |
+| `terminal_reattach_fail` | `{}` | no PTY to reattach |
 
 ### Client → Server
 | Event | Shape |
@@ -230,6 +234,7 @@ Route modules receive `ctx` with: `pool`, `vpsPool`, `dbQuery`, `vpsQuery`, `io`
 | `terminal_start` | `{ cols, rows }` |
 | `terminal_input` | string |
 | `terminal_resize` | `{ cols, rows }` |
+| `terminal_reattach` | `{ cols, rows }` |
 | `claude_run` | `{ prompt }` |
 | `refresh` | (empty) |
 
@@ -309,10 +314,16 @@ async function askClaudeJSON(prompt) → Promise<object>
 Users bring their own AI subscriptions. The app shells out to locally-installed CLI tools — zero AI cost for the product.
 
 ### Supported Providers (Settings > AI Provider)
-- **Claude CLI** (`claude --print`) — requires Anthropic subscription
+- **Claude CLI** (`claude --print`) — requires Anthropic subscription or Claude Max
 - **Claude Code** (`claude`) — requires Claude Max subscription
 - **Codex CLI** (`codex`) — OpenAI's open-source coding agent, requires OpenAI API key
 - **None** — AI features disabled, graceful degradation
+
+### Docker AI Setup (Max Subscription)
+- Claude CLI installed globally in container (`npm install -g @anthropic-ai/claude-code`)
+- Host OAuth credentials mounted read-only: `~/.claude/.credentials.json:/home/bulwark/.claude/.credentials.json:ro`
+- `CLAUDECODE` env var stripped before spawning CLI (prevents nested-instance refusal)
+- Timeout: 120s default (complex prompts with README content need 60-90s)
 
 ### AI-Powered Features
 - SQL generation from natural language (DB Studio)

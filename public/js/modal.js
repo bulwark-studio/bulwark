@@ -247,6 +247,20 @@
   };
 
   /**
+   * Show loading state on the current (topmost) modal
+   * Replaces body with spinner and hides footer
+   * @param {string} [message='Loading...']
+   */
+  Modal.loading = function (message) {
+    var overlay = Modal._active.length > 0 ? Modal._active[Modal._active.length - 1] : null;
+    if (!overlay) return;
+    Modal.showLoading(overlay, message);
+    // Hide footer while loading
+    var footer = overlay.querySelector('.modal-footer');
+    if (footer) footer.style.display = 'none';
+  };
+
+  /**
    * Replace modal body with a loading spinner
    * @param {HTMLElement} overlay
    * @param {string} [message='Loading...']

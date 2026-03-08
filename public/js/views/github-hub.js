@@ -590,22 +590,25 @@
   }
 
   async function _addRepo(useAccount) {
-    const url = document.getElementById("gh-add-url")?.value;
-    const category = document.getElementById("gh-add-category")?.value;
-    const notes = document.getElementById("gh-add-notes")?.value;
+    const urlEl = document.getElementById("gh-add-url");
+    const url = urlEl?.value?.trim();
+    const category = document.getElementById("gh-add-category")?.value || "";
+    const notes = document.getElementById("gh-add-notes")?.value || "";
     const accountId = useAccount ? document.getElementById("gh-add-account")?.value : null;
+    console.log("[GitHub Hub] _addRepo:", { url, category, useAccount, accountId });
     if (!url) { Toast.error("Enter a repo URL"); return; }
-    Modal.loading("Fetching repo info...");
+    Modal.loading("Fetching repo info from GitHub...");
     try {
       const body = { url, category, notes };
       if (accountId) body.accountId = accountId;
-      await api("POST", "/repos", body);
+      const result = await api("POST", "/repos", body);
       Modal.close();
-      Toast.success("Repo added");
+      Toast.success("Repo added: " + (result.repo?.fullName || url));
       loadAll();
     } catch (e) {
+      console.error("[GitHub Hub] Add repo failed:", e);
       Modal.close();
-      Toast.error(e.message);
+      Toast.error(e.message || "Failed to add repo");
     }
   }
 

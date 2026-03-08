@@ -20,6 +20,7 @@ services:
     volumes:
       - bulwark-data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/.claude/.credentials.json:/home/bulwark/.claude/.credentials.json:ro
       # Mount your app's supabase dir for the migration tool (uncomment and adjust path)
       # - /path/to/your-app/supabase:/admin/supabase:ro
     group_add:

@@ -327,19 +327,39 @@
     socket.on('terminal_output', function (data) {
       if (!term) return;
       term.write(data);
-      if (typeof data === 'string' && data.indexOf('[Session ended]') !== -1) {
-        termStarted = false;
-        updateStatus(false);
-      }
     });
+    // Replay buffered output on reattach (server sends full buffer)
+    socket.on('terminal_replay', function (data) {
+      if (!term) return;
+      term.clear();
+      term.write(data);
+    });
+    // PTY process exited (user typed exit, shell crashed)
+    socket.on('terminal_exited', function () {
+      termStarted = false;
+      updateStatus(false);
+    });
+    // Successful reattach to existing PTY session
+    socket.on('terminal_reattach_ok', function () {
+      termStarted = true;
+      updateStatus(true);
+    });
+    // No existing PTY to reattach — auto-start fresh session
+    socket.on('terminal_reattach_fail', function () {
+      termStarted = false;
+      updateStatus(false);
+      startTerminalSession();
+    });
+    // On socket reconnect: try to reattach to surviving PTY
     socket.on('connect', function () {
       if (termStarted) {
         termStarted = false;
         updateStatus(false);
-        if (term) term.write('\r\n\x1b[33m[Reconnected — session ended]\x1b[0m\r\n');
+        if (term) term.write('\r\n\x1b[33m[Reconnecting...]\x1b[0m\r\n');
+        socket.emit('terminal_reattach', { cols: term ? term.cols : 80, rows: term ? term.rows : 24 });
       }
     });
-    term.write('\x1b[36m  Bulwark Command Center\x1b[0m\r\n\x1b[90m  Ctrl+` toggle | Ctrl+Shift+` resize\x1b[0m\r\n\r\n');
+    term.write('\x1b[36m  Bulwark Command Center\x1b[0m\r\n\x1b[90m  Ctrl+` toggle | Ctrl+Shift+` resize | Session persists across reloads\x1b[0m\r\n\r\n');
   }
 
   function startTerminalSession() {

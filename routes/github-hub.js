@@ -28,6 +28,8 @@ function loadHub() {
 }
 
 function saveHub(data) {
+  const dir = path.dirname(HUB_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(HUB_FILE, JSON.stringify(data, null, 2));
 }
 
