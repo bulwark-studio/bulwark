@@ -20,11 +20,15 @@ services:
     volumes:
       - bulwark-data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
+      # Mount your app's supabase dir for the migration tool (uncomment and adjust path)
+      # - /path/to/your-app/supabase:/admin/supabase:ro
     group_add:
       - "${DOCKER_GID:-0}"  # Docker socket GID (run: stat -c '%g' /var/run/docker.sock)
     restart: unless-stopped
     networks:
       - bulwark-net
+      # To manage external databases, add their Docker networks here:
+      # - my-app-net
     logging:
       driver: json-file
       options:
@@ -52,6 +56,9 @@ services:
 networks:
   bulwark-net:
     driver: bridge
+  # Add external networks for cross-stack DB access:
+  # my-app-net:
+  #   external: true
 
 volumes:
   bulwark-data:

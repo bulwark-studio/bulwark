@@ -28,6 +28,7 @@
         '<div class="section-header" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">' +
           '<div class="section-title">Migration Manager</div>' +
           '<div style="display:flex;gap:8px;align-items:center">' +
+            '<button class="btn btn-sm" onclick="runDeployAudit()">Audit Deployment</button>' +
             '<button class="btn btn-sm" onclick="runSchemaDiff()">Schema Diff</button>' +
             '<button class="btn btn-sm btn-primary" onclick="runDockerTest()">Docker Test</button>' +
           '</div>' +
@@ -228,7 +229,9 @@
 
     var html = '<div class="db-info-bar" style="margin-bottom:12px">' +
       '<div class="info-item"><span>Live Tables:</span> <span class="info-value">' + d.live_tables + '</span></div>' +
-      '<div class="info-item"><span>Schema Tables:</span> <span class="info-value">' + d.schema_tables + '</span></div>' +
+      '<div class="info-item"><span>Expected (schema + migrations):</span> <span class="info-value">' + d.schema_tables + '</span></div>' +
+      (d.schema_only ? '<div class="info-item"><span>From schema.sql:</span> <span class="info-value">' + d.schema_only + '</span></div>' : '') +
+      (d.migration_added ? '<div class="info-item"><span>Added by migrations:</span> <span class="info-value">' + d.migration_added + '</span></div>' : '') +
       '<div class="info-item"><span>Status:</span> <span class="info-value" style="color:' + (d.match ? 'var(--cyan)' : 'var(--orange)') + '">' + (d.match ? 'IN SYNC' : 'OUT OF SYNC') + '</span></div>' +
     '</div>';
 
@@ -274,6 +277,98 @@
       })
       .catch(function (e) { Toast.error(e.message); });
   };
+
+  // ── Deployment Audit ────────────────────────────────────────────────────
+  window.runDeployAudit = function () {
+    Toast.info('Running deployment audit...');
+    var diffEl = document.getElementById('mig-diff-section');
+    if (diffEl) diffEl.innerHTML = '<div style="padding:16px;color:var(--text-tertiary);font-size:12px">Auditing database — checking tables, columns, indexes, triggers, foreign keys, extensions, migrations, seed data...</div>';
+
+    fetch('/api/db/migrations/audit?' + dbParam(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.error) { Toast.error(d.error); if (diffEl) diffEl.innerHTML = ''; return; }
+      renderAuditReport(d);
+      if (d.healthy) Toast.success('Audit passed — grade ' + d.grade);
+      else Toast.error(d.issues.length + ' issue(s) found — grade ' + d.grade);
+    })
+    .catch(function (e) { Toast.error(e.message); if (diffEl) diffEl.innerHTML = ''; });
+  };
+
+  function renderAuditReport(d) {
+    var diffEl = document.getElementById('mig-diff-section');
+    if (!diffEl) return;
+
+    var gradeColor = d.grade === 'A' ? 'var(--cyan)' : d.grade === 'B' ? '#facc15' : 'var(--orange)';
+
+    var html =
+      // Header
+      '<div style="border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:4px">' +
+        '<div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.15)">' +
+          '<div>' +
+            '<div style="font-size:15px;font-weight:600;color:var(--text-primary)">Deployment Audit</div>' +
+            '<div style="font-size:11px;color:var(--text-tertiary);margin-top:2px">' + esc(d.summary) + '</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:16px">' +
+            '<div style="text-align:center">' +
+              '<div style="font-size:28px;font-weight:700;color:' + gradeColor + ';line-height:1">' + esc(d.grade) + '</div>' +
+              '<div style="font-size:10px;color:var(--text-tertiary)">' + d.score + '/' + d.maxScore + ' checks</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+    // Issues banner
+    if (d.issues && d.issues.length) {
+      html += '<div style="padding:10px 20px;background:rgba(255,107,43,0.08);border-bottom:1px solid rgba(255,107,43,0.2)">';
+      d.issues.forEach(function (issue) {
+        html += '<div style="font-size:12px;color:var(--orange);margin:2px 0">&#9888; ' + esc(issue) + '</div>';
+      });
+      html += '</div>';
+    }
+
+    // Categories
+    d.categories.forEach(function (cat) {
+      var icon = cat.status === 'pass' ? '<span style="color:var(--cyan)">&#10003;</span>' :
+                 cat.status === 'warn' ? '<span style="color:#facc15">&#9679;</span>' :
+                 '<span style="color:var(--orange)">&#10007;</span>';
+      html += '<div style="padding:12px 20px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px">' +
+        '<div style="font-size:14px;margin-top:1px;flex-shrink:0;width:18px;text-align:center">' + icon + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+            '<span style="font-size:13px;font-weight:600;color:var(--text-primary)">' + esc(cat.name) + '</span>' +
+            '<span style="font-size:11px;color:var(--text-tertiary)">' + esc(cat.detail) + '</span>' +
+          '</div>';
+
+      // Extra details per category
+      if (cat.missing && cat.missing.length) {
+        html += '<div style="margin-top:6px;font-size:11px;color:var(--orange)">Missing: ' + cat.missing.map(esc).join(', ') + '</div>';
+      }
+      if (cat.unapplied && cat.unapplied.length) {
+        html += '<div style="margin-top:6px;font-size:11px;color:var(--orange)">Unapplied: ' + cat.unapplied.map(esc).join(', ') + '</div>';
+      }
+      if (cat.empty_tables && cat.empty_tables.length) {
+        html += '<div style="margin-top:6px;font-size:11px;color:#facc15">Empty tables: ' + cat.empty_tables.map(esc).join(', ') + '</div>';
+      }
+      if (cat.installed) {
+        html += '<div style="margin-top:6px;font-size:11px;color:var(--text-tertiary)">' + cat.installed.map(esc).join(', ') + '</div>';
+      }
+      if (cat.functions && cat.functions.length) {
+        html += '<div style="margin-top:6px;font-size:11px;color:var(--text-tertiary)">' + cat.functions.map(esc).join(', ') + '</div>';
+      }
+      if (cat.top_tables && cat.top_tables.length) {
+        html += '<div style="margin-top:6px;font-size:11px;color:var(--text-tertiary)">' +
+          cat.top_tables.map(function (t) { return esc(t.table) + ' (' + t.rows + ')'; }).join(', ') + '</div>';
+      }
+
+      html += '</div></div>';
+    });
+
+    html += '</div>';
+    diffEl.innerHTML = html;
+  }
 
   function timeAgo(date) {
     var seconds = Math.floor((new Date() - date) / 1000);

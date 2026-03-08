@@ -360,12 +360,17 @@ module.exports = function (app, ctx) {
   app.get("/api/db/migrations", requireAdmin, async (req, res) => {
     const p = getPool(req);
     try {
-      // Get applied migrations from DB
+      // Get applied migrations from DB (supports both "name" and "filename" columns)
       let applied = [];
       if (p) {
         try {
+          const cols = await runQuery(p, `
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'schema_migrations' AND column_name IN ('name', 'filename')
+          `);
+          const nameCol = cols.find(c => c.column_name === 'filename') ? 'filename' : 'name';
           applied = await runQuery(p, `
-            SELECT name, applied_at FROM schema_migrations ORDER BY applied_at DESC
+            SELECT ${nameCol} AS name, applied_at FROM schema_migrations ORDER BY applied_at DESC
           `);
         } catch { /* table may not exist */ }
       }
@@ -397,7 +402,14 @@ module.exports = function (app, ctx) {
     try {
       let applied = [];
       if (p) {
-        try { applied = await runQuery(p, "SELECT name FROM schema_migrations"); } catch {}
+        try {
+          const cols = await runQuery(p, `
+            SELECT column_name FROM information_schema.columns
+            WHERE table_name = 'schema_migrations' AND column_name IN ('name', 'filename')
+          `);
+          const nameCol = cols.find(c => c.column_name === 'filename') ? 'filename' : 'name';
+          applied = await runQuery(p, `SELECT ${nameCol} AS name FROM schema_migrations`);
+        } catch {}
       }
       const appliedSet = new Set(applied.map(a => a.name));
       let files = [];
@@ -434,10 +446,15 @@ module.exports = function (app, ctx) {
     try {
       const sql = fs.readFileSync(filePath, "utf8");
       await p.query(sql);
-      // Record in schema_migrations
+      // Record in schema_migrations (supports both "name" and "filename" columns)
       try {
+        const cols = await runQuery(p, `
+          SELECT column_name FROM information_schema.columns
+          WHERE table_name = 'schema_migrations' AND column_name IN ('name', 'filename')
+        `);
+        const nameCol = cols.find(c => c.column_name === 'filename') ? 'filename' : 'name';
         await p.query(
-          "INSERT INTO schema_migrations (name, applied_at) VALUES ($1, NOW()) ON CONFLICT (name) DO NOTHING",
+          `INSERT INTO schema_migrations (${nameCol}, applied_at) VALUES ($1, NOW()) ON CONFLICT (${nameCol}) DO NOTHING`,
           [name]
         );
       } catch { /* table may not exist */ }
@@ -568,17 +585,35 @@ module.exports = function (app, ctx) {
         liveColMap[c.table_name].push(c);
       });
 
-      // Parse schema.sql for CREATE TABLE statements
+      // Parse schema.sql + all migration files for CREATE TABLE statements
       let schemaTables = new Set();
       let schemaColMap = {};
+      const tableRegex = /CREATE TABLE(?:\s+IF NOT EXISTS)?\s+(?:public\.)?(\w+)\s*\(/gi;
+
+      // From schema.sql
       if (fs.existsSync(SCHEMA_FILE)) {
         const schemaSql = fs.readFileSync(SCHEMA_FILE, "utf8");
-        const tableRegex = /CREATE TABLE(?:\s+IF NOT EXISTS)?\s+(?:public\.)?(\w+)\s*\(/gi;
         let match;
         while ((match = tableRegex.exec(schemaSql)) !== null) {
           schemaTables.add(match[1]);
         }
       }
+
+      // From migration files (migrations can CREATE TABLE too)
+      const schemaOnlyCount = schemaTables.size;
+      try {
+        if (fs.existsSync(MIGRATIONS_DIR)) {
+          const migFiles = fs.readdirSync(MIGRATIONS_DIR).filter(f => f.endsWith('.sql')).sort();
+          for (const mf of migFiles) {
+            const migSql = fs.readFileSync(path.join(MIGRATIONS_DIR, mf), "utf8");
+            tableRegex.lastIndex = 0;
+            let m;
+            while ((m = tableRegex.exec(migSql)) !== null) {
+              schemaTables.add(m[1]);
+            }
+          }
+        }
+      } catch {}
 
       const missingInLive = [...schemaTables].filter(t => !liveTableNames.has(t));
       const extraInLive = [...liveTableNames].filter(t => !schemaTables.has(t));
@@ -586,10 +621,218 @@ module.exports = function (app, ctx) {
       res.json({
         live_tables: liveTableNames.size,
         schema_tables: schemaTables.size,
+        schema_only: schemaOnlyCount,
+        migration_added: schemaTables.size - schemaOnlyCount,
         missing_in_live: missingInLive,
         extra_in_live: extraInLive,
         match: missingInLive.length === 0 && extraInLive.length === 0,
       });
+    } catch (e) { res.status(500).json({ error: e.message }); }
+  });
+
+  // ── Deployment Audit ───────────────────────────────────────────────────────
+  // Deep comparison: live DB objects vs what schema + migrations define.
+  // Returns a human-readable report with pass/fail per category.
+  app.post("/api/db/migrations/audit", requireRole('admin'), async (req, res) => {
+    const p = getPool(req);
+    if (!p) return res.json({ error: "No database connection", degraded: true });
+
+    try {
+      const audit = { score: 0, maxScore: 0, categories: [], issues: [], ts: new Date().toISOString() };
+
+      // 1. Tables — full list
+      const liveTables = (await runQuery(p,
+        `SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' ORDER BY 1`
+      )).map(r => r.table_name);
+
+      // 2. Columns — every column with type, nullable, default
+      const liveCols = await runQuery(p, `
+        SELECT table_name, column_name, data_type,
+               COALESCE(character_maximum_length::text, '') as max_len,
+               is_nullable, COALESCE(column_default, '') as col_default
+        FROM information_schema.columns WHERE table_schema='public'
+        ORDER BY table_name, ordinal_position
+      `);
+
+      // 3. Indexes
+      const liveIndexes = await runQuery(p,
+        `SELECT tablename, indexname, indexdef FROM pg_indexes WHERE schemaname='public' ORDER BY tablename, indexname`
+      );
+
+      // 4. Triggers
+      const liveTriggers = await runQuery(p,
+        `SELECT event_object_table as table_name, trigger_name, action_timing, event_manipulation
+         FROM information_schema.triggers WHERE trigger_schema='public' ORDER BY 1, 2`
+      );
+
+      // 5. Foreign keys
+      const liveFKs = await runQuery(p, `
+        SELECT tc.table_name, tc.constraint_name,
+               kcu.column_name, ccu.table_name AS foreign_table, ccu.column_name AS foreign_column
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name AND tc.table_schema = ccu.table_schema
+        WHERE tc.constraint_type='FOREIGN KEY' AND tc.constraint_schema='public'
+        ORDER BY tc.table_name, tc.constraint_name
+      `);
+
+      // 6. Extensions
+      const liveExts = (await runQuery(p, `SELECT extname, extversion FROM pg_extension ORDER BY 1`))
+        .filter(e => e.extname !== 'plpgsql');
+
+      // 7. Custom functions (exclude extension-provided)
+      const liveFuncs = await runQuery(p, `
+        SELECT p.proname as name, pg_get_function_arguments(p.oid) as args, pg_get_function_result(p.oid) as returns
+        FROM pg_proc p JOIN pg_namespace n ON p.pronamespace=n.oid
+        LEFT JOIN pg_depend d ON d.objid = p.oid AND d.deptype = 'e'
+        WHERE n.nspname='public' AND d.objid IS NULL AND p.prokind='f'
+        ORDER BY 1
+      `);
+
+      // 8. Migrations applied
+      let appliedMigrations = [];
+      try {
+        const cols = await runQuery(p, `
+          SELECT column_name FROM information_schema.columns
+          WHERE table_name='schema_migrations' AND column_name IN ('name','filename')
+        `);
+        const nameCol = cols.find(c => c.column_name === 'filename') ? 'filename' : 'name';
+        appliedMigrations = (await runQuery(p, `SELECT ${nameCol} AS name, applied_at FROM schema_migrations ORDER BY applied_at`))
+          .map(r => r.name);
+      } catch {}
+
+      // Get migration files from disk
+      let migrationFiles = [];
+      try {
+        if (fs.existsSync(MIGRATIONS_DIR)) {
+          migrationFiles = fs.readdirSync(MIGRATIONS_DIR).filter(f => f.endsWith('.sql')).sort();
+        }
+      } catch {}
+
+      // 9. Schema.sql tables (expected baseline)
+      let schemaTables = [];
+      if (fs.existsSync(SCHEMA_FILE)) {
+        const schemaSql = fs.readFileSync(SCHEMA_FILE, 'utf8');
+        const regex = /CREATE TABLE(?:\s+IF NOT EXISTS)?\s+(?:public\.)?(\w+)\s*\(/gi;
+        let m;
+        while ((m = regex.exec(schemaSql)) !== null) schemaTables.push(m[1]);
+      }
+
+      // ── Score each category ──────────────────────────────────────────────
+
+      // Tables
+      const missingTables = schemaTables.filter(t => !liveTables.includes(t));
+      const tableScore = missingTables.length === 0 ? 1 : 0;
+      audit.categories.push({
+        name: 'Tables',
+        status: tableScore ? 'pass' : 'fail',
+        live: liveTables.length,
+        expected: schemaTables.length || liveTables.length,
+        missing: missingTables,
+        detail: `${liveTables.length} tables in live DB` + (schemaTables.length ? `, ${schemaTables.length} defined in schema.sql` : ''),
+      });
+      if (missingTables.length) audit.issues.push(`Missing tables: ${missingTables.join(', ')}`);
+
+      // Columns
+      const colsByTable = {};
+      liveCols.forEach(c => { if (!colsByTable[c.table_name]) colsByTable[c.table_name] = []; colsByTable[c.table_name].push(c); });
+      const emptyTables = liveTables.filter(t => !colsByTable[t] || colsByTable[t].length === 0);
+      audit.categories.push({
+        name: 'Columns',
+        status: emptyTables.length === 0 ? 'pass' : 'warn',
+        total: liveCols.length,
+        tables_with_columns: Object.keys(colsByTable).length,
+        empty_tables: emptyTables,
+        detail: `${liveCols.length} columns across ${Object.keys(colsByTable).length} tables`,
+      });
+      if (emptyTables.length) audit.issues.push(`Tables with no columns: ${emptyTables.join(', ')}`);
+
+      // Indexes
+      const tablesWithoutIndexes = liveTables.filter(t => !liveIndexes.find(i => i.tablename === t));
+      audit.categories.push({
+        name: 'Indexes',
+        status: tablesWithoutIndexes.length <= 5 ? 'pass' : 'warn',
+        total: liveIndexes.length,
+        tables_without_indexes: tablesWithoutIndexes.length,
+        detail: `${liveIndexes.length} indexes, ${tablesWithoutIndexes.length} tables without indexes`,
+      });
+
+      // Triggers
+      audit.categories.push({
+        name: 'Triggers',
+        status: liveTriggers.length > 0 ? 'pass' : 'warn',
+        total: liveTriggers.length,
+        detail: `${liveTriggers.length} triggers active`,
+      });
+
+      // Foreign Keys
+      audit.categories.push({
+        name: 'Foreign Keys',
+        status: 'pass',
+        total: liveFKs.length,
+        detail: `${liveFKs.length} foreign key constraints`,
+      });
+
+      // Extensions
+      const requiredExts = ['uuid-ossp', 'pgcrypto'];
+      const missingExts = requiredExts.filter(e => !liveExts.find(x => x.extname === e));
+      audit.categories.push({
+        name: 'Extensions',
+        status: missingExts.length === 0 ? 'pass' : 'fail',
+        installed: liveExts.map(e => `${e.extname} ${e.extversion}`),
+        missing: missingExts,
+        detail: liveExts.map(e => e.extname).join(', '),
+      });
+      if (missingExts.length) audit.issues.push(`Missing extensions: ${missingExts.join(', ')}`);
+
+      // Custom Functions
+      audit.categories.push({
+        name: 'Functions',
+        status: liveFuncs.length > 0 ? 'pass' : 'warn',
+        total: liveFuncs.length,
+        functions: liveFuncs.map(f => f.name),
+        detail: `${liveFuncs.length} custom functions (excluding extension functions)`,
+      });
+
+      // Migrations
+      const unapplied = migrationFiles.filter(f => !appliedMigrations.includes(f));
+      audit.categories.push({
+        name: 'Migrations',
+        status: unapplied.length === 0 ? 'pass' : 'fail',
+        applied: appliedMigrations.length,
+        total: migrationFiles.length,
+        unapplied: unapplied,
+        detail: `${appliedMigrations.length}/${migrationFiles.length} applied` + (unapplied.length ? `, ${unapplied.length} pending` : ''),
+      });
+      if (unapplied.length) audit.issues.push(`Unapplied migrations: ${unapplied.join(', ')}`);
+
+      // Seed data check — tables that should have rows
+      const rowCounts = await runQuery(p,
+        `SELECT relname as table_name, n_live_tup as rows FROM pg_stat_user_tables WHERE schemaname='public' ORDER BY n_live_tup DESC`
+      );
+      const tablesWithData = rowCounts.filter(r => r.rows > 0);
+      const totalRows = rowCounts.reduce((sum, r) => sum + parseInt(r.rows || 0), 0);
+      audit.categories.push({
+        name: 'Seed Data',
+        status: tablesWithData.length > 0 ? 'pass' : 'warn',
+        tables_with_data: tablesWithData.length,
+        total_rows: totalRows,
+        top_tables: tablesWithData.slice(0, 15).map(r => ({ table: r.table_name, rows: parseInt(r.rows) })),
+        detail: `${tablesWithData.length} tables with data, ${totalRows} total rows`,
+      });
+
+      // Calculate overall score
+      audit.maxScore = audit.categories.length;
+      audit.score = audit.categories.filter(c => c.status === 'pass').length;
+      audit.grade = audit.score === audit.maxScore ? 'A' :
+                    audit.score >= audit.maxScore - 1 ? 'B' :
+                    audit.score >= audit.maxScore - 2 ? 'C' : 'F';
+      audit.healthy = audit.issues.length === 0;
+      audit.summary = audit.healthy
+        ? `All ${audit.maxScore} checks passed. Database is fully migrated and healthy.`
+        : `${audit.issues.length} issue(s) found across ${audit.categories.filter(c => c.status === 'fail').length} failed check(s).`;
+
+      res.json(audit);
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 

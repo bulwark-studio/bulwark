@@ -2,12 +2,22 @@ node_modules/
 users.json
 sessions.json
 ecosystem.config.js
+
+# ── Secrets & credentials — NEVER commit ─────────────────────────────
 .env
-.env.local
 .env.*
 !.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+id_rsa*
+*.secret
+credentials.json
+tokens.json
 
-# Runtime data (user-specific, never commit)
+# ── Runtime data (user-specific, never commit) ───────────────────────
 data/credentials.json
 data/credentials-vault.json
 data/audit-log.json
@@ -22,10 +32,30 @@ data/users.json
 data/sessions.json
 cookies.txt
 
-# Internal — NOT for public repo
+# ── Personal notes & local overrides ─────────────────────────────────
+NOTES.md
+docker-compose.override.yml
+docker-compose.local.yml
+*.local
+*.local.*
+
+# ── Internal — NOT for public repo ───────────────────────────────────
 to-do-dev-monitor/
 landing/
 media/logo-save/
 
-# Access notes (local only)
-NOTES.md
+# ── OS / IDE ─────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+*.iml
+
+# ── Logs & temp ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+tmp/
+temp/
