@@ -24,8 +24,8 @@ Git author: Bulwark Studio <hello@bulwark.studio>
 - SDK: `@modelcontextprotocol/sdk` + Zod schemas
 - Tools expose: system metrics, Docker, DB, uptime, tickets, deploy, security, notifications
 - Tool annotations: `readOnlyHint` for safe reads, `destructiveHint` for dangerous actions
-- Resources: server overview, uptime checks
-- Prompts: diagnose_server, incident_report, security_audit, daily_briefing
+- Resources: server overview, uptime checks, github repos
+- Prompts: diagnose_server, incident_report, security_audit, daily_briefing, repo_analysis
 - GUI test endpoint: `POST /api/mcp/test` uses InMemoryTransport (bypasses HTTP handshake)
 - GUI playground: `/` command bar with fuzzy search, schema-driven param forms, prompt action cards, request log
 
@@ -75,7 +75,7 @@ tickets.js           → Support ticket CRUD + Kanban + AI triage + AI analyze
 claude.js            → Claude CLI integration, AI terminal, prompt execution
 servers.js           → Multi-server management, health checks
 docker.js            → Docker adapter proxy (legacy)
-docker-direct.js     → Native Docker Engine API (27 endpoints)
+docker-direct.js     → Native Docker Engine API (29 endpoints, incl. image layer inspector)
 databases.js         → Database adapter proxy (legacy)
 db-studio.js         → Supabase-style DB management (30+ endpoints, AI-enhanced)
 db-projects.js       → Database project management
@@ -101,7 +101,7 @@ calendar.js          → Calendar + scheduling with AI
 briefing.js          → Daily briefings + AI summaries
 cloudflare.js        → Cloudflare DNS/tunnel management
 credentials.js       → AES-256-GCM credential vault
-mcp.js               → MCP server (Streamable HTTP, 34 tools, 3 resources, 5 prompts) + GUI test endpoint
+mcp.js               → MCP server (Streamable HTTP, 35 tools, 3 resources, 5 prompts) + GUI test endpoint
 ```
 
 ### Lib Modules (16)
@@ -337,6 +337,7 @@ Users bring their own AI subscriptions. The app shells out to locally-installed 
 - AI ticket triage — bulk (Tickets view)
 - AI ticket analysis — per-ticket root cause, effort, risk (Tickets view)
 - Daily briefing summaries (Briefing view)
+- Docker image layer inspection + AI optimization (Docker view)
 
 ## Adapter Pattern
 Routes for Docker, Databases, Security, SSL, Cron, FTP proxy through `lib/adapter-client.js` → adapter service (port 4001). When adapter unavailable, returns `{ degraded: true, message: "..." }`.

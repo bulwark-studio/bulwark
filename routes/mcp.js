@@ -146,12 +146,12 @@ module.exports = function (app, ctx) {
         const docker = require('../lib/docker-engine');
         const containers = await docker.listContainers(all);
         const summary = containers.map(c => ({
-          id: (c.Id || '').substring(0, 12),
-          name: (c.Names || ['/unknown'])[0].replace(/^\//, ''),
-          image: c.Image,
-          state: c.State,
-          status: c.Status,
-          ports: (c.Ports || []).map(p => (p.PublicPort || '') + ':' + (p.PrivatePort || '')).join(', '),
+          id: c.shortId || (c.id || '').substring(0, 12),
+          name: c.name || 'unknown',
+          image: c.image,
+          state: c.state,
+          status: c.status,
+          ports: (c.ports || []).map(p => (p.publicPort || '') + ':' + (p.privatePort || '')).join(', '),
         }));
         return { content: [{ type: 'text', text: JSON.stringify(summary, null, 2) }] };
       } catch (e) {
@@ -167,7 +167,7 @@ module.exports = function (app, ctx) {
         const denied = requireMcpRole('admin', 'get_container_logs');
         if (denied) return denied;
         const docker = require('../lib/docker-engine');
-        const logs = await docker.getContainerLogs(containerId, tail);
+        const logs = await docker.containerLogs(containerId, tail);
         return { content: [{ type: 'text', text: logs || 'No logs available' }] };
       } catch (e) {
         return { content: [{ type: 'text', text: 'Error: ' + e.message }], isError: true };
@@ -247,7 +247,8 @@ module.exports = function (app, ctx) {
         if (!trimmed.startsWith('SELECT') && !trimmed.startsWith('WITH') && !trimmed.startsWith('EXPLAIN')) {
           return { content: [{ type: 'text', text: 'Only SELECT, WITH, and EXPLAIN queries are allowed via MCP for safety.' }], isError: true };
         }
-        const safeSql = sql.replace(/;\s*$/, '') + ' LIMIT ' + limit;
+        const cleaned = sql.replace(/;\s*$/, '');
+        const safeSql = /\bLIMIT\s+\d+/i.test(cleaned) ? cleaned : cleaned + ' LIMIT ' + limit;
         const rows = await ctx.dbQuery(safeSql);
         return { content: [{ type: 'text', text: JSON.stringify(rows, null, 2) }] };
       } catch (e) {
@@ -262,8 +263,12 @@ module.exports = function (app, ctx) {
     }, async ({ status }) => {
       try {
         if (!ctx.dbQuery) return { content: [{ type: 'text', text: 'No database connected' }] };
-        const where = status === 'all' ? '' : " WHERE status = '" + status + "'";
-        const tickets = await ctx.dbQuery('SELECT id, subject, status, priority, created_at FROM support_tickets' + where + ' ORDER BY created_at DESC LIMIT 20');
+        let tickets;
+        if (status === 'all') {
+          tickets = await ctx.dbQuery('SELECT id, subject, status, priority, created_at FROM support_tickets ORDER BY created_at DESC LIMIT 20');
+        } else {
+          tickets = await ctx.dbQuery('SELECT id, subject, status, priority, created_at FROM support_tickets WHERE status = $1 ORDER BY created_at DESC LIMIT 20', [status]);
+        }
         return { content: [{ type: 'text', text: JSON.stringify(tickets, null, 2) }] };
       } catch (e) {
         return { content: [{ type: 'text', text: 'Error: ' + e.message }], isError: true };
@@ -1082,7 +1087,7 @@ module.exports = function (app, ctx) {
       () => ({
         messages: [{
           role: 'user',
-          content: { type: 'text', text: 'Use the get_system_metrics and get_process_list tools to analyze the current server health. Check CPU, memory, disk, and load averages. Identify any anomalies, potential issues, or performance concerns. Provide a clear summary with specific recommendations.' },
+          content: { type: 'text', text: 'Use the get_system_metrics tool to analyze the current server health. Check CPU, memory, disk, and load averages. Use list_docker_containers to check infrastructure status. Identify any anomalies, potential issues, or performance concerns. Provide a clear summary with specific recommendations.' },
         }],
       })
     );
@@ -1109,7 +1114,7 @@ module.exports = function (app, ctx) {
       () => ({
         messages: [{
           role: 'user',
-          content: { type: 'text', text: 'Generate a daily operations briefing. Use get_system_metrics for server health, get_uptime_status for endpoint availability, get_deploy_history for recent deployments, get_recent_alerts for any incidents, and list_docker_containers for infrastructure status. Summarize everything in a concise briefing format with action items.' },
+          content: { type: 'text', text: 'Generate a daily operations briefing. Use get_system_metrics for server health, get_deploy_history for recent deployments, get_recent_alerts for any incidents, and list_docker_containers for infrastructure status. Summarize everything in a concise briefing format with action items.' },
         }],
       })
     );
@@ -1199,7 +1204,7 @@ module.exports = function (app, ctx) {
       url: mcpUrl,
       transport: 'streamable-http',
       version: '2.1.0',
-      tools: 34,
+      tools: 35,
       resources: 3,
       prompts: 5,
       instructions: {

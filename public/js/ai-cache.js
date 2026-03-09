@@ -75,9 +75,9 @@
   // ── View dependency graph ───────────────────────────────────────────
   // When system state changes in one domain, which views should be invalidated?
   var VIEW_GROUPS = {
-    system:   ['metrics', 'dashboard', 'uptime', 'servers'],
+    system:   ['metrics', 'dashboard', 'uptime', 'servers', 'multi-server', 'logs'],
     docker:   ['docker'],
-    database: ['sql-editor', 'tables', 'schema', 'roles', 'db-backups', 'db-assistant'],
+    database: ['sql-editor', 'tables', 'schema', 'roles', 'db-backups', 'db-assistant', 'db-projects', 'migrations'],
     security: ['security'],
     deploy:   ['deploy', 'git'],
     files:    ['files'],
@@ -91,7 +91,8 @@
     processes: ['pm2'],
     notifications: ['notifications', 'notification-center'],
     tickets:  ['tickets'],
-    briefing: ['briefing']
+    briefing: ['briefing'],
+    settings: ['settings', 'docs']
   };
 
   // ── Core Cache Store ────────────────────────────────────────────────
@@ -223,11 +224,14 @@
       if (!system) return null;
       var cpu = system.cpuPct || 0;
       var mem = system.usedMemPct || system.memPct || 0;
+      var disk = system.usedDiskPct || system.diskPct || 0;
 
       metricWindows.cpu.push(cpu);
       metricWindows.mem.push(mem);
+      if (disk > 0) metricWindows.disk.push(disk);
       if (metricWindows.cpu.length > WINDOW_SIZE) metricWindows.cpu.shift();
       if (metricWindows.mem.length > WINDOW_SIZE) metricWindows.mem.shift();
+      if (metricWindows.disk.length > WINDOW_SIZE) metricWindows.disk.shift();
 
       var anomalies = [];
 
@@ -237,10 +241,14 @@
       if (isAnomaly(metricWindows.mem, 3.0)) {
         anomalies.push({ metric: 'mem', value: mem, trend: detectTrend(metricWindows.mem, 10) });
       }
+      if (isAnomaly(metricWindows.disk, 3.0)) {
+        anomalies.push({ metric: 'disk', value: disk, trend: detectTrend(metricWindows.disk, 10) });
+      }
 
       // Threshold-based alerts (simpler but important)
       if (cpu > 90) anomalies.push({ metric: 'cpu', value: cpu, type: 'critical' });
       if (mem > 90) anomalies.push({ metric: 'mem', value: mem, type: 'critical' });
+      if (disk > 95) anomalies.push({ metric: 'disk', value: disk, type: 'critical' });
 
       if (anomalies.length > 0) {
         var event = { timestamp: Date.now(), anomalies: anomalies };
