@@ -148,6 +148,13 @@ Bulwark features a glass-morphism dark theme with cyan/orange signal system:
 
 ---
 
+## Docs
+
+- [Getting Started](docs/getting-started.md) — Full setup guide with screenshots
+- [Cloud VPS Deployment](docs/getting-started.md#cloud-vps-deployment-bare-metal) — Bare metal on GCloud/AWS/DO with Cloudflare tunnel
+- [Docker Setup](docs/docker-getting-started.md) — Docker Compose quickstart
+- [FAQ & Troubleshooting](docs/getting-started.md#faq) — Common issues and fixes
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, code style, and PR guidelines.

@@ -1965,4 +1965,225 @@ A: Stop Bulwark, delete `users.json`, make sure `MONITOR_USER` and `MONITOR_PASS
 **Q: How do I check if Bulwark is running?**
 A: Open `http://localhost:3001/api/system` in your browser or run `curl http://localhost:3001/api/system`. If you get a JSON response, the server is running.
 
+**Q: Login fails with the correct password.**
+A: The user record may be corrupted. Reset it from the server shell:
+```bash
+cd ~/bulwark && node -e "
+const u = require('./lib/users');
+const users = u.loadUsers();
+const admin = users.find(x => x.username === 'admin');
+const { hash, salt } = u.hashPassword('admin');
+admin.passwordHash = hash;
+admin.salt = salt;
+u.saveUsers(users);
+console.log('Password reset');
+" && pm2 restart bulwark
+```
+Important: the password must be set on `passwordHash` and `salt` fields — not a `password` object.
+
+**Q: File Manager shows "ENOENT: no such file or directory, scandir '/home/...'"**
+A: Set `REPO_DIR` in your `.env` to your Bulwark install path:
+```bash
+echo 'REPO_DIR=/home/youruser/bulwark' >> .env
+pm2 restart bulwark
+```
+
+**Q: "claude: not found" in AI features**
+A: The Claude CLI isn't installed on the server. Install it:
+```bash
+sudo npm install -g @anthropic-ai/claude-code
+pm2 restart bulwark
+```
+Then open the terminal in Bulwark and run `claude` to authenticate with your Anthropic subscription.
+
+**Q: AI Provider shows "None" even though Claude is installed.**
+A: Restart Bulwark after installing (`pm2 restart bulwark`). It detects installed CLIs at startup. Then go to Settings > AI Provider and select Claude CLI.
+
+---
+
+## Cloud VPS Deployment (Bare Metal)
+
+Step-by-step guide for deploying Bulwark on a cloud VPS (Google Cloud, AWS, DigitalOcean, etc.) with a Cloudflare tunnel for HTTPS.
+
+### 1. Provision a VPS
+
+Any Linux VPS with 1GB+ RAM works. Recommended: Debian 12/13 or Ubuntu 22/24.
+
+### 2. SSH In and Harden
+
+```bash
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install essentials
+sudo apt install -y ufw fail2ban curl git build-essential
+
+# Firewall — only allow SSH and Bulwark
+sudo ufw allow OpenSSH
+sudo ufw allow 3001/tcp
+sudo ufw enable
+
+# Enable fail2ban
+sudo systemctl enable fail2ban && sudo systemctl start fail2ban
+
+# Lock down SSH — disable root login and password auth
+sudo sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config
+sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+sudo systemctl restart sshd
+```
+
+### 3. Install Node.js 22
+
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+```
+
+### 4. Install PostgreSQL 17
+
+```bash
+sudo apt install -y postgresql-17
+sudo systemctl enable postgresql && sudo systemctl start postgresql
+
+# Generate a strong password
+openssl rand -base64 32
+# Copy the output — this is your DB_PASSWORD
+
+sudo -u postgres psql -c "CREATE USER bulwark WITH PASSWORD 'DB_PASSWORD';"
+sudo -u postgres psql -c "CREATE DATABASE bulwark OWNER bulwark;"
+```
+
+### 5. Install PM2
+
+```bash
+sudo npm install -g pm2
+```
+
+### 6. Clone and Configure Bulwark
+
+```bash
+cd ~
+git clone https://github.com/bulwark-studio/bulwark.git
+cd bulwark
+npm install
+cp .env.example .env
+```
+
+Edit `.env`:
+```bash
+nano .env
+```
+
+Set these values (generate a second random key for ENCRYPTION_KEY):
+```
+MONITOR_USER=admin
+MONITOR_PASS=pick-a-strong-password
+DATABASE_URL=postgresql://bulwark:DB_PASSWORD@localhost:5432/bulwark
+ENCRYPTION_KEY=second-random-key-here
+REPO_DIR=/home/youruser/bulwark
+```
+
+Save: `Ctrl+O`, `Enter`, `Ctrl+X`
+
+### 7. Start Bulwark with PM2
+
+```bash
+pm2 start server.js --name bulwark
+pm2 save
+pm2 startup
+```
+
+Run the command that `pm2 startup` outputs (it prints a `sudo` line to copy/paste). This ensures Bulwark starts on reboot.
+
+### 8. Install AI CLI (Optional)
+
+```bash
+sudo npm install -g @anthropic-ai/claude-code
+```
+
+Then open the Bulwark terminal in your browser and run `claude` to authenticate.
+
+### 9. Set Up Cloudflare Tunnel (HTTPS)
+
+Instead of managing SSL certificates, use a Cloudflare tunnel. This gives you HTTPS with zero port exposure.
+
+**Install cloudflared:**
+```bash
+curl -L https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+sudo dpkg -i cloudflared.deb
+rm cloudflared.deb
+```
+
+**Authenticate with Cloudflare:**
+```bash
+cloudflared tunnel login
+```
+Open the URL it prints, select your domain, and authorize.
+
+**Create the tunnel:**
+```bash
+cloudflared tunnel create my-bulwark
+```
+Note the tunnel ID from the output (e.g. `abcd1234-5678-...`).
+
+**Route DNS:**
+```bash
+cloudflared tunnel route dns my-bulwark app.yourdomain.com
+```
+
+**Configure the tunnel:**
+```bash
+nano ~/.cloudflared/config.yml
+```
+
+```yaml
+tunnel: TUNNEL_ID
+credentials-file: /home/youruser/.cloudflared/TUNNEL_ID.json
+
+ingress:
+  - hostname: app.yourdomain.com
+    service: http://localhost:3001
+  - service: http_status:404
+```
+
+Replace `TUNNEL_ID` with the actual ID and `youruser` with your username.
+
+**Copy config for the system service** (it runs as root, so it checks `/etc/cloudflared/`):
+```bash
+sudo mkdir -p /etc/cloudflared
+sudo cp ~/.cloudflared/config.yml /etc/cloudflared/config.yml
+sudo cp ~/.cloudflared/*.json /etc/cloudflared/
+sudo cp ~/.cloudflared/cert.pem /etc/cloudflared/
+```
+
+Update the credentials path in the system copy:
+```bash
+sudo nano /etc/cloudflared/config.yml
+```
+Change `credentials-file` to `/etc/cloudflared/TUNNEL_ID.json`
+
+**Start as a service:**
+```bash
+sudo cloudflared service install
+sudo systemctl enable cloudflared
+sudo systemctl start cloudflared
+```
+
+Your Bulwark instance is now live at `https://app.yourdomain.com`.
+
+### 10. Verify
+
+```bash
+# Check Bulwark is running
+pm2 status
+
+# Check tunnel is running
+sudo systemctl status cloudflared
+
+# Test locally
+curl http://localhost:3001/api/system
+```
+
+Open `https://app.yourdomain.com` in your browser. Log in with the credentials you set in `.env`.
+
 *Bulwark v2.1 — Server Management Platform*
