@@ -55,7 +55,7 @@
 
   function loadDbInfo() {
     fetch('/api/db/info?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var el = document.getElementById('tables-info-bar');
         if (!el) return;
@@ -77,7 +77,7 @@
     if (!el) return;
     el.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);font-size:11px">Loading...</div>';
     fetch('/api/db/tables?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         allTables = d.tables || [];
         renderTableList();
@@ -130,7 +130,7 @@
     detail.innerHTML = '<div style="padding:16px;color:var(--text-tertiary);font-size:11px">Loading ' + esc(name) + '...</div>';
 
     fetch('/api/db/tables/' + encodeURIComponent(name) + '?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         renderDetail(name, d);
       })
@@ -252,7 +252,7 @@
     if (!el) return;
     var sortParam = rowSort ? '&sort=' + rowSort + '&order=' + rowOrder : '';
     fetch('/api/db/tables/' + encodeURIComponent(name) + '/rows?' + dbParam() + '&limit=50&offset=' + rowOffset + sortParam)
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { el.innerHTML = '<div style="padding:12px;color:var(--orange)">' + esc(d.error) + '</div>'; return; }
         var rows = d.rows || [];

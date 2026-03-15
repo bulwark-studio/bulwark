@@ -40,7 +40,7 @@
 
   function loadNotifications() {
     fetch('/api/notification-center')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         updateBadge(d.unread || 0);
         renderNotifList(d.notifications || []);
@@ -104,7 +104,7 @@
   // Poll for unread count every 15s
   function pollUnread() {
     fetch('/api/notification-center')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) { updateBadge(d.unread || 0); })
       .catch(function () {});
   }

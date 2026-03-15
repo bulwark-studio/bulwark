@@ -93,7 +93,7 @@
 
     loadNotes: function () {
       var q = searchQuery ? '?search=' + encodeURIComponent(searchQuery) : '';
-      fetch('/api/notes' + q).then(function (r) { return r.json(); }).then(function (d) {
+      fetch('/api/notes' + q).then(safeJson).then(function (d) {
         notes = d.notes || [];
         archived = d.archived || [];
         Views.notes.renderStats();
@@ -105,7 +105,7 @@
       var el = document.getElementById('notes-ai-text');
       if (!el) return;
       el.innerHTML = '<div class="briefing-shimmer" style="width:80%"></div>';
-      fetch('/api/notes/ai-summary').then(function (r) { return r.json(); }).then(function (d) {
+      fetch('/api/notes/ai-summary').then(safeJson).then(function (d) {
         Views.notes.typewriter(el, d.summary || 'No summary available.');
       }).catch(function () { el.textContent = 'AI summary unavailable.'; });
     },
@@ -280,7 +280,7 @@
       if (!input || !input.value || !output) return;
       output.innerHTML = '<div class="briefing-shimmer" style="width:70%"></div><div class="briefing-shimmer" style="width:50%"></div>';
       fetch('/api/notes/ai-generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: input.value }) })
-        .then(function (r) { return r.json(); }).then(function (d) {
+        .then(safeJson).then(function (d) {
           if (d.note) {
             output.innerHTML = '<div class="notes-ai-preview">' +
               '<div class="notes-ai-preview-title">' + esc(d.note.title) + '</div>' +

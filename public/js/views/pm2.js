@@ -65,7 +65,7 @@
   }
 
   function loadProcesses() {
-    fetch('/api/processes').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/processes').then(safeJson).then(function (d) {
       var procs = Array.isArray(d) ? d : (d.processes || []);
       processes = procs.map(function (p) {
         var env = p.pm2_env || {};
@@ -231,7 +231,7 @@
     if (action === 'delete' && !confirm('Delete this process from PM2?')) return;
     Toast.info(action + 'ing process...');
     fetch('/api/processes/' + id + '/' + action, { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error(d.error); return; }
         Toast.success('Process ' + action + 'ed');
@@ -244,21 +244,21 @@
     if (!confirm(action + ' all processes?')) return;
     Toast.info(action + 'ing all...');
     fetch('/api/processes/all/' + action, { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function () { Toast.success('All processes ' + action + 'ed'); setTimeout(loadProcesses, 2000); })
       .catch(function () { Toast.error('Failed'); });
   };
 
   Views.pm2.flushLogs = function () {
     fetch('/api/processes/flush', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function () { Toast.success('Logs flushed'); })
       .catch(function () { Toast.error('Failed to flush logs'); });
   };
 
   Views.pm2.save = function () {
     fetch('/api/processes/save', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function () { Toast.success('Process list saved'); })
       .catch(function () { Toast.error('Failed to save'); });
   };
@@ -270,7 +270,7 @@
       body: '<div style="color:var(--text-tertiary)">Loading logs...</div>'
     });
     fetch('/api/logs/' + encodeURIComponent(name) + '?lines=500')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var body = document.querySelector('.modal-body');
         if (!body) return;
@@ -291,7 +291,7 @@
     if (!btn || !body) return;
     btn.disabled = true; btn.textContent = 'Analyzing...';
     body.innerHTML = '<span class="text-secondary">Analyzing processes...</span>';
-    fetch('/api/briefing').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/briefing').then(safeJson).then(function (d) {
       btn.disabled = false; btn.textContent = 'Analyze';
       if (d.briefing) { typewriter(body, d.briefing); } else if (d.fallback) { typewriter(body, d.fallback); }
       else { body.innerHTML = '<span class="text-secondary">Analysis unavailable</span>'; }

@@ -103,7 +103,7 @@
   };
 
   function loadMyAccount() {
-    fetch('/api/me').then(function (r) { return r.json(); }).then(function (u) {
+    fetch('/api/me').then(safeJson).then(function (u) {
       var el = document.getElementById('my-account');
       if (!el) return;
       el.innerHTML = '<div style="margin-bottom:8px"><strong>Username:</strong> ' + esc(u.username) + '</div>' +
@@ -122,7 +122,7 @@
   }
 
   function loadUsers() {
-    fetch('/api/users').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/users').then(safeJson).then(function (d) {
       var tbody = document.getElementById('users-table');
       if (!tbody) return;
       var users = d.users || [];
@@ -158,7 +158,7 @@
         fetch('/api/users/' + userId + '/password', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: pw })
-        }).then(function (r) { return r.json(); }).then(function (d) {
+        }).then(safeJson).then(function (d) {
           if (d.error) { Toast.error(d.error); return; }
           Toast.success('Password changed');
           Modal.close(btn.closest('.modal-overlay'));
@@ -169,7 +169,7 @@
 
   window.setup2FA = function (userId) {
     fetch('/api/users/' + userId + '/2fa/setup', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         Modal.open({
           title: 'Enable 2FA', size: 'sm',
@@ -187,7 +187,7 @@
             fetch('/api/users/' + userId + '/2fa/verify', {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ code: code })
-            }).then(function (r) { return r.json(); }).then(function (d2) {
+            }).then(safeJson).then(function (d2) {
               if (d2.error) { Toast.error(d2.error); return; }
               Toast.success('2FA enabled');
               Modal.close(btn.closest('.modal-overlay'));
@@ -204,7 +204,7 @@
       .then(function (ok) {
         if (!ok) return;
         fetch('/api/users/' + userId + '/2fa/disable', { method: 'POST' })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function () { Toast.success('2FA disabled'); loadMyAccount(); })
           .catch(function () { Toast.error('Failed to disable 2FA'); });
       });
@@ -218,7 +218,7 @@
     fetch('/api/users', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: username, password: password, role: role })
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       if (d.error) { Toast.error(d.error); return; }
       Toast.success('User created');
       document.getElementById('new-username').value = '';
@@ -231,7 +231,7 @@
     fetch('/api/users/' + userId + '/role', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ role: role })
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       if (d.error) { Toast.error(d.error); loadUsers(); return; }
       Toast.success('Role updated to ' + role);
     }).catch(function () { Toast.error('Failed to change role'); loadUsers(); });
@@ -242,7 +242,7 @@
       .then(function (ok) {
         if (!ok) return;
         fetch('/api/users/' + id, { method: 'DELETE' })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (d.error) { Toast.error(d.error); return; }
             Toast.success('User deleted');
@@ -254,51 +254,108 @@
 
   function loadAIProvider() {
     Promise.all([
-      fetch('/api/settings').then(function (r) { return r.json(); }),
-      fetch('/api/settings/ai/detect').then(function (r) { return r.json(); }).catch(function () { return {}; })
+      fetch('/api/settings').then(safeJson),
+      fetch('/api/brain/providers').then(safeJson).catch(function () { return { providers: [] }; })
     ]).then(function (results) {
       var settings = results[0];
-      var detect = results[1];
+      var providerStatus = results[1].providers || [];
       var el = document.getElementById('ai-provider-settings');
       if (!el) return;
       var providers = [
-        { value: 'claude-cli', label: 'Claude CLI', desc: 'claude --print (requires Anthropic subscription)' },
-        { value: 'codex-cli', label: 'Codex CLI', desc: 'codex (OpenAI open-source agent, requires API key)' },
+        { value: 'ollama', label: 'Ollama (Local)', desc: 'Local LLM server — free, private, no API key needed' },
+        { value: 'claude-api', label: 'Claude API', desc: 'Anthropic Messages API — requires ANTHROPIC_API_KEY' },
+        { value: 'claude-cli', label: 'Claude CLI', desc: 'claude --print — requires Anthropic subscription' },
+        { value: 'codex-cli', label: 'Codex CLI', desc: 'codex — OpenAI open-source coding agent' },
+        { value: 'gemini-cli', label: 'Gemini CLI', desc: 'gemini — Google Gemini CLI' },
+        { value: 'auto', label: 'Auto', desc: 'Automatically select best available provider' },
         { value: 'none', label: 'None', desc: 'AI features disabled' }
       ];
+      var current = settings.aiProvider || 'ollama';
       var options = providers.map(function (p) {
-        var selected = settings.aiProvider === p.value ? ' selected' : '';
-        var status = detect[p.value] ? (detect[p.value].installed ? ' <span style="color:var(--cyan)">installed</span>' : ' <span style="color:var(--orange)">not found</span>') : '';
-        return '<option value="' + p.value + '"' + selected + '>' + p.label + '</option>';
+        return '<option value="' + p.value + '"' + (current === p.value ? ' selected' : '') + '>' + p.label + '</option>';
       }).join('');
-      var statusHtml = providers.filter(function (p) { return p.value !== 'none'; }).map(function (p) {
-        var d = detect[p.value];
-        var icon = d && d.installed ? '<span style="color:var(--cyan)">&#10003;</span>' : '<span style="color:var(--orange)">&#10007;</span>';
-        var ver = d && d.version ? ' <span style="color:var(--text-tertiary);font-size:11px">(' + esc(d.version) + ')</span>' : '';
-        return '<div style="margin-bottom:4px">' + icon + ' ' + p.label + ': ' + p.desc + ver + '</div>';
+      var statusHtml = providerStatus.map(function (p) {
+        var icon = p.available ? '<span style="color:var(--cyan)">●</span>' : '<span style="color:var(--text-tertiary)">○</span>';
+        var def = p.isDefault ? ' <span style="color:var(--cyan);font-size:10px">(default)</span>' : '';
+        return '<div style="margin-bottom:4px;font-size:12px">' + icon + ' ' + p.id + def + '</div>';
+      }).join('');
+      var strategies = [
+        { value: 'balanced', label: 'Balanced — Ollama first, then APIs' },
+        { value: 'premium', label: 'Premium — Claude API first' },
+        { value: 'speed', label: 'Speed — fastest CLI first' },
+        { value: 'economy', label: 'Economy — local Ollama only' }
+      ];
+      var currentStrategy = settings.aiStrategy || 'balanced';
+      var strategyOpts = strategies.map(function (s) {
+        return '<option value="' + s.value + '"' + (currentStrategy === s.value ? ' selected' : '') + '>' + s.label + '</option>';
       }).join('');
       el.innerHTML =
-        '<div style="margin-bottom:12px;font-size:12px;color:var(--text-secondary)">' + statusHtml + '</div>' +
-        '<div style="display:flex;gap:8px;align-items:center">' +
-          '<select id="ai-provider-select" class="form-input" style="max-width:200px">' + options + '</select>' +
-          '<button class="btn btn-sm btn-cyan" onclick="saveAIProvider()">Save</button>' +
+        '<div style="margin-bottom:12px">' + statusHtml + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">' +
+          '<div>' +
+            '<label class="form-label" style="font-size:11px">Default Provider</label>' +
+            '<select id="ai-provider-select" class="form-input">' + options + '</select>' +
+          '</div>' +
+          '<div>' +
+            '<label class="form-label" style="font-size:11px">Fallback Strategy</label>' +
+            '<select id="ai-strategy-select" class="form-input">' + strategyOpts + '</select>' +
+          '</div>' +
         '</div>' +
-        '<p style="margin-top:8px;font-size:11px;color:var(--text-tertiary)">BYOK: Users bring their own AI subscriptions. Install CLI tools on the server.</p>';
+        // Ollama settings
+        '<div style="padding:12px;background:rgba(34,211,238,0.03);border:1px solid rgba(34,211,238,0.1);border-radius:8px;margin-bottom:12px">' +
+          '<div style="font-weight:600;font-size:12px;color:var(--text-primary);margin-bottom:8px">Ollama Settings</div>' +
+          '<div style="display:grid;grid-template-columns:2fr 1fr;gap:8px">' +
+            '<div>' +
+              '<label class="form-label" style="font-size:11px">Base URL</label>' +
+              '<input id="ai-ollama-url" class="form-input" value="' + esc(settings.ollamaBaseUrl || 'http://localhost:11434') + '" placeholder="http://localhost:11434">' +
+            '</div>' +
+            '<div>' +
+              '<label class="form-label" style="font-size:11px">Model</label>' +
+              '<input id="ai-ollama-model" class="form-input" value="' + esc(settings.ollamaModel || 'qwen3:8b') + '" placeholder="qwen3:8b">' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        // Anthropic API key
+        '<div style="margin-bottom:12px">' +
+          '<label class="form-label" style="font-size:11px">Anthropic API Key (for Claude API provider)</label>' +
+          '<input id="ai-anthropic-key" class="form-input" type="password" value="' + (settings.anthropicApiKey ? '••••••••' : '') + '" placeholder="sk-ant-...">' +
+        '</div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button class="btn btn-cyan" onclick="saveAIProvider()">Save All</button>' +
+          '<button class="btn btn-sm" onclick="refreshProviders()">Refresh Detection</button>' +
+        '</div>' +
+        '<p style="margin-top:8px;font-size:11px;color:var(--text-tertiary)">Default: Ollama (free, local). Install from ollama.com. Fallback chain tries other providers if primary is unavailable.</p>';
     });
   }
 
   window.saveAIProvider = function () {
     var provider = (document.getElementById('ai-provider-select') || {}).value;
+    var strategy = (document.getElementById('ai-strategy-select') || {}).value;
+    var ollamaUrl = (document.getElementById('ai-ollama-url') || {}).value;
+    var ollamaModel = (document.getElementById('ai-ollama-model') || {}).value;
+    var apiKeyEl = document.getElementById('ai-anthropic-key');
+    var payload = { aiProvider: provider, aiStrategy: strategy };
+    if (ollamaUrl) payload.ollamaBaseUrl = ollamaUrl;
+    if (ollamaModel) payload.ollamaModel = ollamaModel;
+    if (apiKeyEl && apiKeyEl.value && !apiKeyEl.value.startsWith('••')) payload.anthropicApiKey = apiKeyEl.value;
     fetch('/api/settings', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ aiProvider: provider })
-    }).then(function (r) { return r.json(); }).then(function () {
-      Toast.success('AI provider saved: ' + provider);
-    }).catch(function () { Toast.error('Failed to save AI provider'); });
+      body: JSON.stringify(payload)
+    }).then(safeJson).then(function () {
+      Toast.success('AI settings saved');
+      loadAIProvider();
+    }).catch(function () { Toast.error('Failed to save AI settings'); });
+  };
+
+  window.refreshProviders = function () {
+    fetch('/api/brain/providers?refresh=true').then(safeJson).then(function () {
+      Toast.success('Provider detection refreshed');
+      loadAIProvider();
+    }).catch(function () { Toast.error('Failed to refresh'); });
   };
 
   function loadTimezone() {
-    fetch('/api/settings').then(function (r) { return r.json(); }).then(function (settings) {
+    fetch('/api/settings').then(safeJson).then(function (settings) {
       var el = document.getElementById('tz-settings');
       if (!el) return;
       var saved = settings.timezone || '';
@@ -363,7 +420,7 @@
     fetch('/api/settings', {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ timezone: tz })
-    }).then(function (r) { return r.json(); }).then(function () {
+    }).then(safeJson).then(function () {
       window.userTimezone = tz || Intl.DateTimeFormat().resolvedOptions().timeZone;
       Toast.success('Timezone saved: ' + (tz || 'browser default'));
       loadTimezone();
@@ -384,7 +441,7 @@
   };
 
   function loadSmtpSettings() {
-    fetch('/api/settings').then(function (r) { return r.json(); }).then(function (settings) {
+    fetch('/api/settings').then(safeJson).then(function (settings) {
       var el = document.getElementById('smtp-settings');
       if (!el) return;
       var smtp = settings.smtp || {};
@@ -462,7 +519,7 @@
     var smtp = { host: host, port: parseInt(port) || 587, user: user, from: from || '' };
     if (pass) smtp.pass = pass; // Only update password if entered
     // Get current settings to preserve other fields, then merge
-    fetch('/api/settings').then(function (r) { return r.json(); }).then(function (current) {
+    fetch('/api/settings').then(safeJson).then(function (current) {
       // If no new password entered, keep existing
       if (!pass && current.smtp && current.smtp.pass) {
         // We can't read the existing pass (it's masked), so skip pass update
@@ -472,7 +529,7 @@
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ smtp: smtp })
       });
-    }).then(function (r) { return r.json(); }).then(function () {
+    }).then(safeJson).then(function () {
       Toast.success('SMTP settings saved');
       loadSmtpSettings();
     }).catch(function () { Toast.error('Failed to save SMTP'); });
@@ -504,7 +561,7 @@
         fetch('/api/notifications/test-smtp', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ host: host, port: parseInt(port) || 587, user: user, pass: pass, from: from, to: to })
-        }).then(function (r) { return r.json(); }).then(function (d) {
+        }).then(safeJson).then(function (d) {
           btn.disabled = false;
           btn.textContent = 'Send Test';
           if (d.error) { Toast.error('Test failed: ' + d.error); return; }

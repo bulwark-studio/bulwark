@@ -19,7 +19,7 @@
     },
 
     show: function () {
-      fetch('/api/docs/getting-started').then(function (r) { return r.json(); }).then(function (d) {
+      fetch('/api/docs/getting-started').then(safeJson).then(function (d) {
         var body = document.getElementById('docs-body');
         var toc = document.getElementById('docs-toc');
         if (!body || !d.content) return;

@@ -29,7 +29,7 @@
     if (!el) return;
     el.innerHTML = '<div style="color:var(--text-tertiary);padding:16px">Detecting FTP service...</div>';
 
-    fetch('/api/ftp/status').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/ftp/status').then(safeJson).then(function (d) {
       // No FTP server detected
       if (d.installed === false || d.tool === 'none') {
         el.innerHTML =
@@ -128,7 +128,7 @@
     Modal.open({ title: '&#10024; AI FTP Setup Guide', size: 'lg',
       body: '<div id="ftp-ai-result" style="color:var(--text-secondary);font-size:13px;line-height:1.7">Generating FTP setup guide...<span class="cursor-blink"></span></div>'
     });
-    fetch('/api/ftp/ai-setup').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/ftp/ai-setup').then(safeJson).then(function (d) {
       var el = document.getElementById('ftp-ai-result');
       if (el) el.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7">' + esc(d.guide || 'Could not generate guide.') + '</pre>';
     }).catch(function () {
@@ -156,7 +156,7 @@
         btn.disabled = true;
         fetch('/api/ftp/ai-ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: q }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (ans) ans.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:rgba(0,0,0,0.3);border-radius:6px">' + esc(d.answer || 'No answer.') + '</pre>';
             btn.disabled = false;
@@ -184,7 +184,7 @@
         btn.disabled = true;
         fetch('/api/ftp/ai-ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: 'Generate the exact Linux commands to: ' + desc + '. Include useradd, password, home directory, and vsftpd user list configuration. Explain each command. Warn about security implications.' }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (out) out.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:rgba(0,0,0,0.3);border-radius:6px">' + esc(d.answer || 'No answer.') + '</pre>' +
               '<div style="color:var(--text-tertiary);font-size:11px;margin-top:8px">&#9888; Copy and run these commands in your terminal. Bulwark generates but does not auto-execute user changes for safety.</div>';

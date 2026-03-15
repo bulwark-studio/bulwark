@@ -24,12 +24,22 @@ window.Cache = {
   clear: function() { this._store.clear(); }
 };
 
+// Safe JSON response parser — handles HTML error pages gracefully
+window.safeJson = function(r) {
+  if (!r.ok) {
+    return r.text().then(function(t) {
+      try { return JSON.parse(t); } catch(e) { throw new Error('HTTP ' + r.status + ': ' + (t || '').substring(0, 80)); }
+    });
+  }
+  return r.json();
+};
+
 // Cached fetch wrapper
 window.cachedFetch = function(url, ttlMs) {
   ttlMs = ttlMs || 30000;
   var cached = Cache.get(url);
   if (cached) return Promise.resolve(cached);
-  return fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+  return fetch(url).then(safeJson).then(function(data) {
     Cache.set(url, data, ttlMs);
     return data;
   });
@@ -75,7 +85,7 @@ window.animateValue = function(el, end, duration) {
 
   // ── Load Current User Role ──
   function loadCurrentUser() {
-    fetch('/api/me').then(function(r) { return r.json(); }).then(function(u) {
+    fetch('/api/me').then(safeJson).then(function(u) {
       if (!u || u.error) return;
       window.state.userRole = u.role || 'viewer';
       window.state.userName = u.username || '';
@@ -90,7 +100,7 @@ window.animateValue = function(el, end, duration) {
   loadCurrentUser();
 
   // ── Load Branding ──
-  fetch('/api/branding').then(function(r) { return r.json(); }).then(function(b) {
+  fetch('/api/branding').then(safeJson).then(function(b) {
     window.appName = b.name || 'Bulwark';
     var logo = document.querySelector('.sidebar-logo');
     if (logo) {
@@ -108,7 +118,7 @@ window.animateValue = function(el, end, duration) {
   // ── Timezone-aware date formatting ──
   // Loaded from Settings, defaults to browser timezone
   window.userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  fetch('/api/settings').then(function(r) { return r.json(); }).then(function(s) {
+  fetch('/api/settings').then(safeJson).then(function(s) {
     if (s.timezone) window.userTimezone = s.timezone;
   }).catch(function() {});
 
@@ -169,7 +179,7 @@ window.animateValue = function(el, end, duration) {
     if (sbText) sbText.textContent = 'Connected';
     console.log('[Monitor] Socket connected:', window.socket.id);
     // Check DB status
-    fetch('/api/db/info').then(function(r){return r.json();}).then(function(d){
+    fetch('/api/db/info').then(safeJson).then(function(d){
       var dbEl = document.getElementById('sb-db');
       if (dbEl) dbEl.textContent = (d && !d.error && !d.degraded) ? 'DB: ' + (d.database || 'connected') : 'DB: not connected';
     }).catch(function(){ var dbEl = document.getElementById('sb-db'); if (dbEl) dbEl.textContent = 'DB: not connected'; });

@@ -76,7 +76,7 @@
 
   // ── Config Check ──
   function checkConfig() {
-    fetch('/api/cloudflare/config').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/cloudflare/config').then(safeJson).then(function (d) {
       if (d.configured) {
         config = d;
         show('cf-main'); hide('cf-setup-panel');
@@ -115,7 +115,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apiToken: token, accountId: account }),
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       btn.disabled = false; btn.textContent = 'Connect';
       if (d.zones && d.zones.length > 0) {
         if (window.Toast) Toast.success('Connected! Found ' + d.zones.length + ' domains.');
@@ -132,7 +132,7 @@
 
   // ── Data Loading ──
   function loadZones() {
-    fetch('/api/cloudflare/zones').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/cloudflare/zones').then(safeJson).then(function (d) {
       zones = d.zones || [];
       renderDomainTabs();
       loadData();
@@ -143,7 +143,7 @@
     var url = selectedZone
       ? '/api/cloudflare/analytics/' + selectedZone + '?range=' + range
       : '/api/cloudflare/analytics/overview?range=' + range;
-    fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+    fetch(url).then(safeJson).then(function (d) {
       if (d.error) return;
       analytics = d;
       renderHeroStats();
@@ -340,7 +340,7 @@
     if (!btn || !body) return;
     btn.disabled = true; btn.textContent = 'Analyzing...';
     body.innerHTML = '<span class="text-secondary">Consulting Claude about traffic patterns...</span>';
-    fetch('/api/cloudflare/ai-analysis?range=' + range).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/cloudflare/ai-analysis?range=' + range).then(safeJson).then(function (d) {
       btn.disabled = false; btn.textContent = 'Analyze';
       if (d.analysis) { typewriter(body, d.analysis); } else { body.innerHTML = '<span class="text-secondary">' + esc(d.error || 'Unavailable') + '</span>'; }
     }).catch(function () { btn.disabled = false; btn.textContent = 'Analyze'; body.innerHTML = '<span class="text-secondary">Failed to reach analysis endpoint.</span>'; });

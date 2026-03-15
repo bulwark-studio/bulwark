@@ -85,7 +85,7 @@
     update: function () {},
 
     loadEvents: function () {
-      fetch('/api/calendar/events').then(function (r) { return r.json(); }).then(function (d) {
+      fetch('/api/calendar/events').then(safeJson).then(function (d) {
         events = d.events || [];
         Views.calendar.renderMonth();
         Views.calendar.renderStats();
@@ -96,7 +96,7 @@
       var el = document.getElementById('cal-ai-text');
       if (!el) return;
       el.innerHTML = '<div class="briefing-shimmer" style="width:80%"></div><div class="briefing-shimmer" style="width:55%"></div>';
-      fetch('/api/calendar/ai-briefing').then(function (r) { return r.json(); }).then(function (d) {
+      fetch('/api/calendar/ai-briefing').then(safeJson).then(function (d) {
         Views.calendar.typewriter(el, d.briefing || 'No briefing available.');
       }).catch(function () { el.textContent = 'AI briefing unavailable.'; });
     },
@@ -262,7 +262,7 @@
       if (!input || !input.value) return;
       Toast.info('AI parsing...');
       fetch('/api/calendar/ai-parse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: input.value }) })
-        .then(function (r) { return r.json(); }).then(function (d) {
+        .then(safeJson).then(function (d) {
           if (d.events && d.events.length > 0) {
             var ev = d.events[0];
             if (ev.title) document.getElementById('cal-add-title').value = ev.title;
@@ -424,7 +424,7 @@
       if (!input || !input.value || !output) return;
       output.innerHTML = '<div class="briefing-shimmer" style="width:70%"></div><div class="briefing-shimmer" style="width:50%"></div>';
       fetch('/api/calendar/ai-suggest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ context: input.value }) })
-        .then(function (r) { return r.json(); }).then(function (d) {
+        .then(safeJson).then(function (d) {
           var sugs = d.suggestions || [];
           if (!sugs.length) { output.innerHTML = '<div class="cal-no-events">No suggestions generated.</div>'; return; }
           output.innerHTML = sugs.map(function (s) {

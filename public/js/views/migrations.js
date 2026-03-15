@@ -58,7 +58,7 @@
     if (statusEl) statusEl.innerHTML = 'Loading migrations...';
 
     fetch('/api/db/migrations?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         migrations = d.migrations || [];
         var applied = d.applied || 0;
@@ -109,7 +109,7 @@
 
   window.previewMigration = function (name) {
     fetch('/api/db/migrations/' + encodeURIComponent(name) + '/preview')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error(d.error); return; }
         Modal.open({
@@ -138,7 +138,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name })
       })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error('Migration failed: ' + d.error); return; }
         Toast.success('Migration applied: ' + name);
@@ -158,7 +158,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name })
     })
-    .then(function (r) { return r.json(); })
+    .then(safeJson)
     .then(function (d) {
       loadMigrations(); // restore status bar
       if (d.error) {
@@ -214,7 +214,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     })
-    .then(function (r) { return r.json(); })
+    .then(safeJson)
     .then(function (d) {
       if (d.error) { diffEl.innerHTML = '<div style="color:var(--orange)">' + esc(d.error) + '</div>'; return; }
       diffResult = d;
@@ -262,7 +262,7 @@
     Modal.close(document.querySelector('.modal-overlay'));
     Toast.info('Asking Claude to review migration...');
     fetch('/api/db/migrations/' + encodeURIComponent(name) + '/preview')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (!d.sql) { Toast.error('Could not load migration'); return; }
         fetch('/api/claude/start', {
@@ -288,7 +288,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     })
-    .then(function (r) { return r.json(); })
+    .then(safeJson)
     .then(function (d) {
       if (d.error) { Toast.error(d.error); if (diffEl) diffEl.innerHTML = ''; return; }
       renderAuditReport(d);

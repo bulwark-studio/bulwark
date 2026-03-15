@@ -94,7 +94,7 @@
 
   function loadSchemaSummary() {
     fetch('/api/db/assistant/schema-summary?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var el = document.getElementById('ai-schema-chip');
         if (!el || d.error) return;
@@ -308,7 +308,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sql: sql })
     })
-    .then(function (r) { return r.json(); })
+    .then(safeJson)
     .then(function (d) {
       if (d.error) {
         resultEl.innerHTML = '<div class="ai-sql-error">' + esc(d.error) + '</div>';
@@ -415,7 +415,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ checkId: checkId })
     })
-    .then(function (r) { return r.json(); })
+    .then(safeJson)
     .then(function (d) {
       if (d.error) { Toast.error(d.error); return; }
       if (!d.fixSql) { Toast.info('No automatic fix available'); return; }

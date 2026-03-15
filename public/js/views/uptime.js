@@ -136,7 +136,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prompt })
-      }).then(function (r) { return r.json(); }).then(function (d) {
+      }).then(safeJson).then(function (d) {
         var text = d.response || d.error || 'Analysis unavailable';
         typeWriter(el, text);
         if (window.AICache) {
@@ -207,7 +207,7 @@
           }
 
           fetch('/api/uptime/endpoints', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-            .then(function (r) { return r.json(); }).then(function (d) {
+            .then(safeJson).then(function (d) {
               if (d.error) { Toast.error(d.error); return; }
               Toast.success('Endpoint added');
               Modal.close(btn.closest('.modal-overlay'));
@@ -278,7 +278,7 @@
 
           fetch('/api/uptime/endpoints/' + encodeURIComponent(id), {
             method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-          }).then(function (r) { return r.json(); }).then(function (d) {
+          }).then(safeJson).then(function (d) {
             if (d.error) { Toast.error(d.error); return; }
             Toast.success('Endpoint updated');
             Modal.close(btn.closest('.modal-overlay'));
@@ -302,7 +302,7 @@
       });
 
       fetch('/api/uptime/content/' + encodeURIComponent(id))
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           var body = document.getElementById('cm-history-body');
           if (!body) return;
@@ -346,7 +346,7 @@
           checkBtn.disabled = true;
           checkBtn.textContent = 'Checking...';
           fetch('/api/uptime/content/' + encodeURIComponent(id) + '/check', { method: 'POST' })
-            .then(function (r) { return r.json(); })
+            .then(safeJson)
             .then(function (d) {
               if (d.error) { Toast.error(d.error); checkBtn.disabled = false; checkBtn.textContent = 'Check Now'; return; }
               var check = d.check || {};
@@ -371,7 +371,7 @@
           fetch('/api/uptime/content/ai-analyze', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ endpointId: id })
-          }).then(function (r) { return r.json(); }).then(function (d) {
+          }).then(safeJson).then(function (d) {
             aiBtn.disabled = false;
             aiBtn.textContent = 'AI Analyze';
             var analysis = d.analysis || d.error || 'Analysis unavailable';
@@ -419,7 +419,7 @@
           fetch('/api/uptime/scrape', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url: url, selector: selector })
-          }).then(function (r) { return r.json(); }).then(function (d) {
+          }).then(safeJson).then(function (d) {
             btn.disabled = false;
             btn.textContent = 'Scrape';
             if (d.error) { resultEl.innerHTML = '<div class="cm-empty" style="color:#ff6b2b">' + esc(d.error) + '</div>'; return; }
@@ -457,7 +457,7 @@
   }
 
   function loadServers() {
-    fetch('/api/servers').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/servers').then(safeJson).then(function (d) {
       serverData = d.servers || [];
       renderServers();
       updateBanner();
@@ -466,7 +466,7 @@
   }
 
   function loadEndpoints() {
-    fetch('/api/uptime').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/uptime').then(safeJson).then(function (d) {
       uptimeData = d.endpoints || [];
       renderEndpoints();
     }).catch(function () {});

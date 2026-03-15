@@ -108,8 +108,8 @@
   function checkDocker() {
     // Load connections list + status in parallel
     Promise.all([
-      fetch('/api/docker/connections').then(function (r) { return r.json(); }),
-      fetch('/api/docker/status').then(function (r) { return r.json(); })
+      fetch('/api/docker/connections').then(safeJson),
+      fetch('/api/docker/status').then(safeJson)
     ]).then(function (results) {
       var connData = results[0];
       var statusData = results[1];
@@ -165,7 +165,7 @@
   // ── Connection Actions ──
   Views.docker.activateConn = function (id) {
     fetch('/api/docker/connections/' + id + '/activate', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.success) {
           Toast.success('Connection activated');
@@ -182,7 +182,7 @@
     Modal.confirm({ title: 'Remove Connection', message: 'Remove "' + (conn ? conn.name : 'this connection') + '"? You can add it back anytime.', confirmText: 'Remove', dangerous: true }).then(function (ok) {
       if (!ok) return;
       fetch('/api/docker/connections/' + id, { method: 'DELETE' })
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           if (d.success) {
             Toast.success('Connection removed');
@@ -303,7 +303,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config)
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       if (btn) { btn.disabled = false; btn.textContent = 'Test Connection'; }
       if (d.success) {
         if (status) status.innerHTML = '<span style="color:#22d3ee">✓ Connected — Docker ' + esc(d.version) + ' (' + esc(d.os) + ')</span>';
@@ -334,7 +334,7 @@
         host: config.host || null,
         port: config.port || null
       })
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       if (d.success) {
         Modal.close();
         Toast.success('Connection added');
@@ -379,13 +379,13 @@
 
   // ── Containers ──
   function loadContainers() {
-    fetch('/api/docker/containers?all=true').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/docker/containers?all=true').then(safeJson).then(function (d) {
       containers = d.containers || [];
       renderFleetBanner();
       renderContainers();
       // Load stats for running containers
       containers.filter(function (c) { return c.state === 'running'; }).slice(0, 20).forEach(function (c) {
-        fetch('/api/docker/containers/' + c.id + '/stats').then(function (r) { return r.json(); }).then(function (s) {
+        fetch('/api/docker/containers/' + c.id + '/stats').then(safeJson).then(function (s) {
           if (s && !s.error) {
             stats[c.id] = s;
             updateContainerCard(c.id, s);
@@ -496,7 +496,7 @@
   Views.docker.action = function (id, action) {
     if (window.Toast) Toast.info(action + 'ing container...');
     fetch('/api/docker/containers/' + id + '/' + action, { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error(d.error); return; }
         Toast.success('Container ' + action + 'ed');
@@ -508,7 +508,7 @@
   Views.docker.remove = function (id, name) {
     if (!confirm('Remove container "' + name + '"? This cannot be undone.')) return;
     fetch('/api/docker/containers/' + id + '?force=true', { method: 'DELETE' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error(d.error); return; }
         Toast.success('Container removed');
@@ -542,7 +542,7 @@
     var el = document.getElementById('docker-logs-content');
     if (el) el.textContent = 'Loading...';
     fetch('/api/docker/containers/' + id + '/logs?tail=' + tail)
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         Views.docker._logsRaw = d.logs || '';
         Views.docker.filterLogs();
@@ -616,7 +616,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(config),
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       btn.disabled = false; btn.textContent = 'Deploy';
       if (d.success || d.status === 201) {
         Toast.success('Container deployed!');
@@ -632,7 +632,7 @@
   function loadImages() {
     var el = document.getElementById('docker-panel-images');
     if (!el) return;
-    fetch('/api/docker/images').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/docker/images').then(safeJson).then(function (d) {
       images = d.images || [];
       var html = '<div class="docker-images-header">' +
         '<div class="docker-pull-form">' +
@@ -668,7 +668,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: parts[0], tag: parts[1] || 'latest' }),
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       if (d.success) { Toast.success('Image pulled'); loadImages(); }
       else Toast.error(d.error || 'Pull failed');
     }).catch(function () { Toast.error('Pull failed'); });
@@ -677,7 +677,7 @@
   Views.docker.removeImage = function (id) {
     if (!confirm('Remove this image?')) return;
     fetch('/api/docker/images/' + id + '?force=true', { method: 'DELETE' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.success) { Toast.success('Image removed'); loadImages(); }
         else Toast.error(d.error || 'Remove failed');
@@ -695,7 +695,7 @@
     });
 
     fetch('/api/docker/images/' + id + '/inspect-layers')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (data) {
         if (data.error) { Toast.error(data.error); Modal.close(overlay); return; }
         var body = overlay.querySelector('.modal-body');
@@ -716,7 +716,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       aiBtn.disabled = false; aiBtn.textContent = 'Get AI Recommendations';
       aiPanel.innerHTML = '<div class="dive-ai-result">' + formatAIText(d.recommendations || 'No recommendations available.') + '</div>';
     }).catch(function () {
@@ -836,8 +836,8 @@
     var el = document.getElementById('docker-panel-networks');
     if (!el) return;
     Promise.all([
-      fetch('/api/docker/networks').then(function (r) { return r.json(); }),
-      fetch('/api/docker/volumes').then(function (r) { return r.json(); }),
+      fetch('/api/docker/networks').then(safeJson),
+      fetch('/api/docker/volumes').then(safeJson),
     ]).then(function (results) {
       networks = results[0].networks || [];
       volumes = results[1].volumes || [];
@@ -884,7 +884,7 @@
     if (!force) return;
     btn.disabled = true; btn.textContent = 'Analyzing...';
     body.innerHTML = '<span class="text-secondary">Analyzing container fleet...</span>';
-    fetch('/api/docker/ai-analysis').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/docker/ai-analysis').then(safeJson).then(function (d) {
       btn.disabled = false; btn.textContent = 'Analyze';
       if (d.analysis) {
         typewriter(body, d.analysis);
@@ -924,7 +924,7 @@
   }
 
   function fetchSystemInfo() {
-    fetch('/api/docker/system/info').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/docker/system/info').then(safeJson).then(function (d) {
       var el = document.getElementById('docker-sys-info');
       if (!el) return;
       var v = d.version || {};
@@ -945,7 +945,7 @@
   }
 
   function fetchDiskUsage() {
-    fetch('/api/docker/system/df').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/docker/system/df').then(safeJson).then(function (d) {
       var el = document.getElementById('docker-sys-disk');
       if (!el) return;
       var sections = [
@@ -986,7 +986,7 @@
   Views.docker.prune = function (type) {
     if (!confirm('Prune ' + type + '? This removes unused ' + type + '.')) return;
     fetch('/api/docker/prune/' + type, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.success) { Toast.success(type + ' pruned successfully'); fetchDiskUsage(); }
         else Toast.error(d.error || 'Prune failed');
@@ -997,7 +997,7 @@
     if (!confirm('System Prune removes ALL unused containers, networks, images, and optionally volumes. Continue?')) return;
     var inclVol = confirm('Also prune volumes? (This deletes unused volume data!)');
     fetch('/api/docker/system/prune', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ includeVolumes: inclVol }) })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.success) { Toast.success('System pruned'); fetchDiskUsage(); loadContainers(); loadImages(); }
         else Toast.error(d.error || 'System prune failed');
@@ -1057,10 +1057,10 @@
 
     // Gather context then ask Claude
     Promise.all([
-      fetch('/api/docker/containers?all=true').then(function (r) { return r.json(); }).catch(function () { return { containers: [] }; }),
-      fetch('/api/docker/images').then(function (r) { return r.json(); }).catch(function () { return { images: [] }; }),
-      fetch('/api/docker/system/df').then(function (r) { return r.json(); }).catch(function () { return {}; }),
-      fetch('/api/docker/system/info').then(function (r) { return r.json(); }).catch(function () { return {}; }),
+      fetch('/api/docker/containers?all=true').then(safeJson).catch(function () { return { containers: [] }; }),
+      fetch('/api/docker/images').then(safeJson).catch(function () { return { images: [] }; }),
+      fetch('/api/docker/system/df').then(safeJson).catch(function () { return {}; }),
+      fetch('/api/docker/system/info').then(safeJson).catch(function () { return {}; }),
     ]).then(function (results) {
       var ctrs = results[0].containers || [];
       var imgs = results[1].images || [];
@@ -1085,7 +1085,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: prompt })
       });
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       var text = d.response || 'I couldn\'t analyze the fleet right now. Try again in a moment.';
       bulwarkHistory.push({ role: 'bulwark-ai', text: text });
       responseDiv.innerHTML = '';

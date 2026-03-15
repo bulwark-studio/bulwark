@@ -59,7 +59,7 @@
     if (!el) return;
     el.innerHTML = '<div style="color:var(--text-tertiary)">Loading...</div>';
     fetch('/adapter/databases')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.degraded || d.error) { el.innerHTML = degraded(d.error); return; }
         var dbs = Array.isArray(d) ? d : d.databases || [];
@@ -80,7 +80,7 @@
     if (!el) return;
     el.innerHTML = '<div style="color:var(--text-tertiary)">Loading...</div>';
     fetch('/adapter/databases/users')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.degraded || d.error) { el.innerHTML = degraded(d.error); return; }
         var users = Array.isArray(d) ? d : d.users || [];
@@ -97,7 +97,7 @@
     if (!el) return;
     el.innerHTML = '<div style="color:var(--text-tertiary)">Loading...</div>';
     fetch('/adapter/databases/backups')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.degraded || d.error) { el.innerHTML = degraded(d.error); return; }
         var backups = Array.isArray(d) ? d : d.backups || [];
@@ -127,7 +127,7 @@
         var owner = (document.getElementById('create-db-owner') || {}).value;
         if (!name) { Toast.warning('Database name required'); return; }
         fetch('/adapter/databases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, engine: engine, owner: owner }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (d.error) { Toast.error(d.error); return; }
             Toast.success('Database created'); Modal.close(btn.closest('.modal-overlay')); loadDatabases();
@@ -153,7 +153,7 @@
         var resEl = document.getElementById('query-results');
         if (resEl) resEl.innerHTML = '<div style="color:var(--text-tertiary)">Running...</div>';
         fetch('/adapter/databases/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: sql }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (!resEl) return;
             if (d.error) { resEl.innerHTML = '<div style="color:var(--orange)">' + esc(d.error) + '</div>'; return; }

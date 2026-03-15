@@ -43,7 +43,7 @@
   function checkSmtpStatus() {
     var banner = document.getElementById('smtp-status-banner');
     if (!banner) return;
-    fetch('/api/settings').then(function (r) { return r.json(); }).then(function (s) {
+    fetch('/api/settings').then(safeJson).then(function (s) {
       if (s.smtp && s.smtp.host) {
         banner.innerHTML =
           '<div class="card" style="margin-bottom:16px;padding:12px;display:flex;align-items:center;gap:8px">' +
@@ -69,7 +69,7 @@
     if (!el) return;
     el.innerHTML = '<div style="color:var(--text-tertiary)">Loading channels...</div>';
     fetch('/api/notifications/channels')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var channels = d.channels || [];
         if (!channels.length) {
@@ -171,7 +171,7 @@
           body.webhookUrl = val('ch-webhook');
         }
         fetch('/api/notifications/channels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (d.error) { Toast.error(d.error); return; }
             Toast.success('Channel added'); Modal.close(btn.closest('.modal-overlay')); loadChannels();
@@ -183,7 +183,7 @@
 
   window.editChannel = function (id) {
     // Reload full config to get unmasked data
-    fetch('/api/notifications/channels').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/notifications/channels').then(safeJson).then(function (d) {
       var ch = (d.channels || []).find(function (c) { return c.id === id; });
       if (!ch) { Toast.error('Channel not found'); return; }
 
@@ -214,7 +214,7 @@
             body.cc = val('ch-edit-cc');
           }
           fetch('/api/notifications/channels/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-            .then(function (r) { return r.json(); })
+            .then(safeJson)
             .then(function () { Toast.success('Updated'); Modal.close(btn.closest('.modal-overlay')); loadChannels(); })
             .catch(function () { Toast.error('Failed'); });
         };
@@ -231,7 +231,7 @@
   window.testChannel = function (id) {
     Toast.info('Sending test notification...');
     fetch('/api/notifications/test/' + id, { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error('Test failed: ' + d.error); return; }
         Toast.success('Test sent successfully!');
@@ -271,7 +271,7 @@
         aiBtn.textContent = 'Composing...';
         fetch('/api/notifications/ai-compose', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ category: 'system', title: title, message: message, severity: 'warning' }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             var el = document.getElementById('adhoc-body');
             if (el && d.body) el.value = d.body;
@@ -288,7 +288,7 @@
         var result = document.getElementById('adhoc-result');
         fetch('/api/notifications/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ to: to, cc: val('adhoc-cc'), subject: val('adhoc-subject'), body: val('adhoc-body') }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             sendBtn.disabled = false;
             sendBtn.textContent = 'Send Email';
@@ -312,7 +312,7 @@
     });
     fetch('/api/ftp/ai-ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question: 'Explain how to set up email notifications for a server monitoring tool. Cover: 1) Getting SMTP credentials from Gmail (App Passwords), Outlook, or a custom SMTP server. 2) What are Discord webhooks and how to create one. 3) What are Slack incoming webhooks. 4) How to create a Telegram bot and get a chat ID. Keep it beginner-friendly with exact steps. No markdown formatting.' }) })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var el = document.getElementById('notif-ai-result');
         if (el) el.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7">' + esc(d.answer || 'Could not generate guide.') + '</pre>';

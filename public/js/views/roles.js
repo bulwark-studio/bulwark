@@ -97,7 +97,7 @@
     if (el) el.innerHTML = '<div style="padding:12px;color:var(--text-tertiary);font-size:11px">Loading...</div>';
 
     fetch('/api/db/roles?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         roles = d.roles || [];
         renderRoleList();
@@ -212,7 +212,7 @@
     if (!el) return;
 
     fetch('/api/db/roles/' + encodeURIComponent(name) + '/permissions?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var perms = d.permissions || {};
         var tables = Object.keys(perms).sort();
@@ -380,7 +380,7 @@
     }
 
     fetch('/api/db/roles/ai/audit?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         auditData = d;
         if (btn) { btn.disabled = false; btn.textContent = 'AI Security Audit'; }
@@ -462,7 +462,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ description: desc.value.trim() })
     })
-    .then(function (r) { return r.json(); })
+    .then(safeJson)
     .then(function (d) {
       if (btn) { btn.disabled = false; btn.textContent = 'AI Generate'; }
       var sqlEl = document.getElementById('new-role-ai-sql');
@@ -495,7 +495,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sql: sql })
     })
-    .then(function (r) { return r.json(); })
+    .then(safeJson)
     .then(function (d) {
       if (d.error) { Toast.error('Error: ' + d.error); return; }
       Toast.success('Role created successfully');

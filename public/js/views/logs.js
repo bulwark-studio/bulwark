@@ -71,7 +71,7 @@
     viewerEl.textContent = 'Loading logs for ' + service + '...';
 
     fetch('/api/logs/' + encodeURIComponent(service) + '?lines=' + lines)
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var logLines = d.lines || [];
         if (!logLines.length) {

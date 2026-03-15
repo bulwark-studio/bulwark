@@ -40,8 +40,8 @@
 
   function loadCronData() {
     Promise.all([
-      fetch('/api/cron/jobs').then(function (r) { return r.json(); }),
-      fetch('/api/cron/analytics').then(function (r) { return r.json(); }),
+      fetch('/api/cron/jobs').then(safeJson),
+      fetch('/api/cron/analytics').then(safeJson),
     ]).then(function (results) {
       jobs = results[0].jobs || [];
       analytics = results[1];
@@ -123,7 +123,7 @@
 
   function renderHistory(el) {
     el.innerHTML = '<div class="cron-section"><h3>Execution History</h3><div id="cron-history-list" style="color:var(--text-tertiary)">Loading...</div></div>';
-    fetch('/api/cron/history').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/cron/history').then(safeJson).then(function (d) {
       var runs = d.runs || [];
       var list = document.getElementById('cron-history-list');
       if (!list) return;
@@ -243,7 +243,7 @@
         if (!schedule || !command) { Toast.warning('Schedule and command required'); return; }
         fetch('/api/cron/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name: name, schedule: schedule, command: command, category: category, description: description }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (d.error) { Toast.error(d.error); return; }
             Toast.success('Job created'); Modal.close(btn.closest('.modal-overlay')); loadCronData();
@@ -267,7 +267,7 @@
     humanEl.textContent = 'Parsing...';
     fetch('/api/cron/ai-parse', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: input.value }) })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.schedule) {
           schedEl.value = d.schedule;
@@ -283,7 +283,7 @@
   window.runCronJob = function (id) {
     Toast.info('Running job...');
     fetch('/api/cron/jobs/' + id + '/run', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.status === 'success') Toast.success('Job completed in ' + d.duration + 'ms');
         else Toast.error('Job failed: ' + (d.output || '').substring(0, 100));
@@ -293,7 +293,7 @@
 
   window.toggleCronJob = function (id) {
     fetch('/api/cron/jobs/' + id + '/toggle', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function () { Toast.success('Toggled'); loadCronData(); })
       .catch(function () { Toast.error('Failed'); });
   };
@@ -308,7 +308,7 @@
   };
 
   window.cronJobHistory = function (jobId) {
-    fetch('/api/cron/history?jobId=' + jobId).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/cron/history?jobId=' + jobId).then(safeJson).then(function (d) {
       var runs = d.runs || [];
       Modal.open({
         title: 'Job History', size: 'lg',
@@ -337,7 +337,7 @@
       }
     }
     body.innerHTML = 'Analyzing schedule health...<span class="cursor-blink"></span>';
-    fetch('/api/cron/ai-analysis').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/cron/ai-analysis').then(safeJson).then(function (d) {
       var text = d.analysis || 'No analysis available.';
       typewriter(body, text);
       if (window.AICache) {

@@ -58,7 +58,7 @@
   }
 
   function loadServers() {
-    fetch('/api/servers').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/servers').then(safeJson).then(function (d) {
       servers = d.servers || [];
       servers.forEach(function (s) {
         if (!latencyHistory[s.name]) latencyHistory[s.name] = [];
@@ -180,7 +180,7 @@
   function renderTopology() {
     var el = document.getElementById('srv-topology');
     if (!el) return;
-    fetch('/api/cloudflare/config').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/cloudflare/config').then(safeJson).then(function (d) {
       drawTopology(el, d.configured);
     }).catch(function () { drawTopology(el, false); });
   }
@@ -239,7 +239,7 @@
     if (!btn || !body) return;
     btn.disabled = true; btn.textContent = 'Analyzing...';
     body.innerHTML = '<span class="text-secondary">Analyzing infrastructure...</span>';
-    fetch('/api/briefing').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/briefing').then(safeJson).then(function (d) {
       btn.disabled = false; btn.textContent = 'Analyze';
       if (d.briefing) { typewriter(body, d.briefing); } else if (d.fallback) { typewriter(body, d.fallback); }
       else { body.innerHTML = '<span class="text-secondary">Analysis unavailable</span>'; }

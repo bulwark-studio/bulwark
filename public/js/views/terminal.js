@@ -402,7 +402,7 @@
     var existing = document.getElementById('qc-dropdown');
     if (existing) { existing.remove(); return; }
 
-    fetch('/api/credentials').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/credentials').then(safeJson).then(function (d) {
       var creds = (d.credentials || []).filter(function (c) { return c.type === 'ssh_key' || c.type === 'password'; });
       var dd = document.createElement('div');
       dd.id = 'qc-dropdown';
@@ -430,7 +430,7 @@
 
   Views.terminal.connectTo = function (id) {
     if (!hasVaultAccess()) return;
-    fetch('/api/credentials/' + id + '/inject', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/credentials/' + id + '/inject', { method: 'POST' }).then(safeJson).then(function (d) {
       if (d.command) {
         Views.terminal.switchTab('shell');
         if (!termStarted) startTerminalSession();
@@ -474,39 +474,22 @@
     msgs.scrollTop = msgs.scrollHeight;
     if (btn) btn.disabled = true;
 
-    // Smart context: load credentials for SSH resolution
-    var contextPromise = Promise.all([
-      hasVaultAccess()
-        ? fetch('/api/credentials').then(function (r) { return r.json(); }).catch(function () { return { credentials: [] }; })
-        : Promise.resolve({ credentials: [] }),
-    ]);
+    // Build conversation history for brain system
+    var history = bulwarkHistory.slice(-8).map(function (item) {
+      return { role: item.role === 'user' ? 'user' : 'assistant', content: item.text };
+    });
 
-    contextPromise.then(function (results) {
-      var creds = results[0].credentials || [];
-      var credContext = creds.length > 0 ? '\n\nAvailable credentials in vault (use these when user asks to SSH or connect):\n' +
-        creds.map(function (c) { return '- ' + c.name + ' (' + c.type + ')' + (c.host ? ' → ' + c.host + (c.port ? ':' + c.port : '') : '') + (c.username ? ' user=' + c.username : ''); }).join('\n') : '';
+    bulwarkHistory.push({ role: 'user', text: msg });
 
-      var histStr = bulwarkHistory.slice(-8).map(function (h) { return h.role + ': ' + h.text; }).join('\n');
-      var prompt = 'You are Bulwark, an AI DevOps assistant in a floating terminal command center. The user manages production servers, Docker, databases, deployments.\n' +
-        credContext + '\n\n' +
-        (histStr ? 'Previous:\n' + histStr + '\n\n' : '') +
-        'User: ' + msg + '\n\n' +
-        'Rules:\n' +
-        '- Be concise (2-5 sentences)\n' +
-        '- If user asks to SSH/connect to a server, check the vault credentials above and auto-use the matching one. Wrap the SSH command in [CMD]ssh command[/CMD] tags.\n' +
-        '- For any executable command, wrap in [CMD]command[/CMD] so the UI shows a run button\n' +
-        '- If the user asks to run something ambiguous, pick the best command — don\'t ask clarifying questions\n' +
-        '- Reference real tools: pm2, docker, git, ssh, psql, nginx, systemctl\n' +
-        '- No markdown. Plain text only.';
-
-      bulwarkHistory.push({ role: 'user', text: msg });
-
-      return fetch('/api/bulwark/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: prompt })
-      });
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/bulwark/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: msg,
+        sectionContext: 'terminal',
+        history: history
+      })
+    }).then(safeJson).then(function (d) {
       var text = d.response || 'Couldn\'t process that. Try again.';
       bulwarkHistory.push({ role: 'bulwark-ai', text: text });
 
@@ -516,7 +499,47 @@
           '<svg viewBox="0 0 10 10" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="1,0 9,5 1,10"/></svg> ' + h(cmd) + '</button>';
       });
 
-      think.innerHTML = '<div class="cht-msg-avatar"><svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="var(--cyan)" stroke-width="1.3"><circle cx="7" cy="7" r="5.5"/><path d="M5 6.5h0M9 6.5h0M6 9.5c.5.5 1.5.5 2 0"/></svg></div><div class="cht-msg-text">' + rendered + '</div>';
+      // Build extras: KB sources, suggested actions, discovery question, profile badge
+      var extras = '';
+
+      // KB citations
+      if (d.sources && d.sources.length > 0) {
+        extras += '<div class="cht-sources"><span class="cht-sources-label">KB Sources:</span>';
+        d.sources.forEach(function (src) {
+          extras += '<span class="cht-source-tag" title="' + h(src.title || src.id) + '">' + h(src.id || src.title) + '</span>';
+        });
+        extras += '</div>';
+      }
+
+      // Suggested actions
+      if (d.suggestedActions && d.suggestedActions.length > 0) {
+        extras += '<div class="cht-actions">';
+        d.suggestedActions.forEach(function (action) {
+          if (action.command) {
+            extras += '<button class="cht-action-btn" onclick="Views.terminal.execCmd(\'' + h(action.command).replace(/'/g, "\\'") + '\')" title="' + h(action.description || '') + '">' +
+              '<svg viewBox="0 0 10 10" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="1,0 9,5 1,10"/></svg> ' + h(action.label || action.command) + '</button>';
+          } else if (action.view) {
+            extras += '<button class="cht-action-btn" onclick="switchView(\'' + h(action.view) + '\')" title="' + h(action.description || '') + '">' +
+              h(action.label || action.view) + '</button>';
+          }
+        });
+        extras += '</div>';
+      }
+
+      // Profile completion badge
+      if (d.profileCompletion != null) {
+        var pct = Math.round(d.profileCompletion);
+        var pctClass = pct >= 75 ? 'cht-profile-high' : pct >= 40 ? 'cht-profile-mid' : 'cht-profile-low';
+        extras += '<div class="cht-profile-badge ' + pctClass + '">Profile: ' + pct + '% complete</div>';
+      }
+
+      // Discovery question
+      if (d.discoveryQuestion) {
+        extras += '<div class="cht-discovery"><span class="cht-discovery-label">Follow-up:</span> ' +
+          '<button class="cht-sug" onclick="Views.terminal.chtSend(\'' + h(d.discoveryQuestion).replace(/'/g, "\\'") + '\')">' + h(d.discoveryQuestion) + '</button></div>';
+      }
+
+      think.innerHTML = '<div class="cht-msg-avatar"><svg viewBox="0 0 14 14" width="12" height="12" fill="none" stroke="var(--cyan)" stroke-width="1.3"><circle cx="7" cy="7" r="5.5"/><path d="M5 6.5h0M9 6.5h0M6 9.5c.5.5 1.5.5 2 0"/></svg></div><div class="cht-msg-text">' + rendered + extras + '</div>';
       if (btn) btn.disabled = false;
       msgs.scrollTop = msgs.scrollHeight;
     }).catch(function (e) {
@@ -599,7 +622,7 @@
   };
 
   Views.terminal.editCred = function (id) {
-    fetch('/api/credentials/' + id).then(function (r) { return r.json(); }).then(function (c) {
+    fetch('/api/credentials/' + id).then(safeJson).then(function (c) {
       Modal.open({ title: 'Edit: ' + c.name, body: credForm(c),
         footer: '<button class="btn btn-sm" onclick="Modal.close()">Cancel</button><button class="btn btn-sm btn-primary" onclick="saveCred(\'' + id + '\')">Update</button>'
       });
@@ -608,7 +631,7 @@
 
   Views.terminal.delCred = function (id, name) {
     if (!confirm('Delete "' + name + '"?')) return;
-    fetch('/api/credentials/' + id, { method: 'DELETE' }).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/credentials/' + id, { method: 'DELETE' }).then(safeJson).then(function (d) {
       if (d.success) { Toast.success('Deleted'); loadCredentials(); }
     });
   };
@@ -662,7 +685,7 @@
     var url = id ? '/api/credentials/' + id : '/api/credentials';
     var method = id ? 'PUT' : 'POST';
     fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.success || d.id) { Toast.success(id ? 'Updated' : 'Saved'); Modal.close(); loadCredentials(); }
         else Toast.error(d.error || 'Failed');

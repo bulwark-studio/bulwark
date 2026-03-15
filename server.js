@@ -262,9 +262,23 @@ require("./routes/notification-center")(app, ctx);
 require("./routes/calendar")(app, ctx);
 require("./routes/mcp")(app, ctx);
 require("./routes/github-hub")(app, ctx);
+require("./routes/brain")(app, ctx);
+require("./routes/agents")(app, ctx);
+require("./routes/flows")(app, ctx);
 
 // Neural Cache — register API routes
 neuralCache.registerRoutes(app, ctx);
+
+// ── Catch-all for unmatched API routes → JSON 404 (not HTML) ──────────────
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ error: 'Not found: ' + req.method + ' ' + req.path });
+});
+
+// ── SPA fallback — serve index.html for all non-API, non-file routes ──────
+// This handles client-side routing (browser refresh on /agents, /flows, etc.)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // ── Socket.IO auth + handlers — Persistent Terminal Sessions ─────────────────
 //
@@ -485,10 +499,19 @@ uptimeStore.start();
 // ── Start ────────────────────────────────────────────────────────────────────
 const users = ensureDefaultAdmin();
 server.listen(PORT, "0.0.0.0", () => {
-  console.log(`\n  Bulwark v2.1 running on http://0.0.0.0:${PORT}`);
+  console.log(`\n  Bulwark v3.0 running on http://0.0.0.0:${PORT}`);
   console.log(`  Dev DB: ${pool ? "connected" : "NOT connected (set DATABASE_URL)"}`);
   console.log(`  VPS DB: ${vpsPool ? "connected" : "NOT connected (set VPS_DATABASE_URL)"}`);
   console.log(`  Users: ${users.length} | AI: ${loadSettings().aiProvider}`);
   console.log(`  Repo: ${REPO_DIR} | PTY: ${pty ? "available" : "disabled"}`);
-  console.log(`  Routes: 29 modules | Views: 35 | Libs: 16\n`);
+  console.log(`  Routes: 31 modules | Views: 37 | Libs: 20+\n`);
+
+  // Eager provider detection (non-blocking, warms cache for first brain/agent call)
+  try {
+    const { detectProviders } = require("./lib/ai");
+    detectProviders().then(detected => {
+      const available = Object.entries(detected).filter(([, v]) => v).map(([k]) => k);
+      console.log(`  AI Providers: ${available.length ? available.join(", ") : "none detected"}`);
+    }).catch(() => {});
+  } catch {}
 });

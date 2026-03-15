@@ -207,7 +207,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: prompt })
-      }).then(function (r) { return r.json(); }).then(function (d) {
+      }).then(safeJson).then(function (d) {
         var text = d.response || d.error || 'Analysis unavailable';
         el.style.opacity = '';
         // Store in AICache
@@ -254,7 +254,7 @@
   // ── Fetch initial data ─────────────────────────────────────────────
   function fetchAll() {
     // System info
-    fetch('/api/system').then(function (r) { return r.json(); }).then(function (s) {
+    fetch('/api/system').then(safeJson).then(function (s) {
       setHero('m-cpu', (s.cpuPct || 0).toFixed(1) + '%', s.cpuPct || 0);
       setHero('m-mem', (s.usedMemPct || 0).toFixed(1) + '%', s.usedMemPct || 0);
       setHero('m-cores', s.cpuCount || 0);
@@ -271,7 +271,7 @@
     }).catch(function () {});
 
     // History
-    fetch('/api/metrics/history?type=cpu&count=' + timeRange).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/metrics/history?type=cpu&count=' + timeRange).then(safeJson).then(function (d) {
       if (d.data && d.data.length) {
         cpuHistory = d.data.map(function (p) {
           return { t: new Date(p.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), v: p.value || p.cpuPct || 0 };
@@ -292,7 +292,7 @@
       }
     }).catch(function () {});
 
-    fetch('/api/metrics/history?type=memory&count=' + timeRange).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/metrics/history?type=memory&count=' + timeRange).then(safeJson).then(function (d) {
       if (d.data && d.data.length) {
         memHistory = d.data.map(function (p) {
           return { t: new Date(p.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), v: p.pct || p.value || 0 };
@@ -305,7 +305,7 @@
     }).catch(function () {});
 
     // Extended (per-core live)
-    fetch('/api/metrics/extended').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/metrics/extended').then(safeJson).then(function (d) {
       if (d.perCore) {
         updateCoreHeatmap(d.perCore);
         trackCoreHistory(d.perCore);
@@ -462,7 +462,7 @@
       btns[i].className = 'metrics-range-btn' + (parseInt(btns[i].dataset.range) === pts ? ' active' : '');
     }
     // Re-fetch with new range
-    fetch('/api/metrics/history?type=cpu&count=' + pts).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/metrics/history?type=cpu&count=' + pts).then(safeJson).then(function (d) {
       if (d.data && d.data.length) {
         cpuHistory = d.data.map(function (p) {
           return { t: new Date(p.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), v: p.value || p.cpuPct || 0 };
@@ -474,7 +474,7 @@
         }
       }
     }).catch(function () {});
-    fetch('/api/metrics/history?type=memory&count=' + pts).then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/metrics/history?type=memory&count=' + pts).then(safeJson).then(function (d) {
       if (d.data && d.data.length) {
         memHistory = d.data.map(function (p) {
           return { t: new Date(p.ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), v: p.pct || p.value || 0 };

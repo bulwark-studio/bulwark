@@ -114,7 +114,7 @@
 
   function loadSchema() {
     fetch('/api/db/tables?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (!d.tables) return;
         tableSchema = {};
@@ -129,7 +129,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sql: "SELECT table_name, column_name FROM information_schema.columns WHERE table_schema = 'public' ORDER BY table_name, ordinal_position" })
         })
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (cd) {
           if (cd.rows) {
             cd.rows.forEach(function (row) {
@@ -149,7 +149,7 @@
 
   function loadHistory() {
     fetch('/api/db/query/history')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var el = document.getElementById('sql-history-list');
         if (!el) return;
@@ -166,7 +166,7 @@
 
   function loadSaved() {
     fetch('/api/db/query/saved')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var el = document.getElementById('sql-saved-list');
         if (!el) return;
@@ -212,7 +212,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sql: sql })
     })
-    .then(function (r) { return r.json(); })
+    .then(safeJson)
     .then(function (d) {
       if (d.error) {
         showError(d.error, d.position);
@@ -253,7 +253,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ prompt: prompt })
         })
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           if (d.sql && editor) {
             editor.setValue(d.sql);
@@ -313,7 +313,7 @@
 
   window.sqlLoadHistory = function (idx) {
     fetch('/api/db/query/history')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var item = (d.history || [])[idx];
         if (item && editor) editor.setValue(item.sql || '');
@@ -323,7 +323,7 @@
 
   window.sqlLoadSaved = function (idx) {
     fetch('/api/db/query/saved')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var item = (d.queries || [])[idx];
         if (item && editor) editor.setValue(item.sql || '');

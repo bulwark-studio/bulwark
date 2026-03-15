@@ -21,6 +21,14 @@ function recordFailedLogin(ip) {
   else entry.count++;
 }
 
+// Periodic GC: remove expired rate-limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of loginAttempts) {
+    if (now - entry.firstAttempt > LOGIN_WINDOW) loginAttempts.delete(ip);
+  }
+}, 300000).unref();
+
 function getLoginHTML(errorMsg = "") {
   const error = errorMsg ? `<div class="error">${errorMsg}</div>` : "";
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">

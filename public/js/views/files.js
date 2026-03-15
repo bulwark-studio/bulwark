@@ -78,7 +78,7 @@
     if (!listing) return;
     listing.innerHTML = '<div style="color:var(--text-tertiary)">Loading...</div>';
     fetch('/api/files/browse?path=' + encodeURIComponent(p))
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { listing.innerHTML = '<div style="color:var(--orange)">' + esc(d.error) + '</div>'; return; }
         currentPath = d.path || '.';
@@ -153,7 +153,7 @@
     if (!q || !results) return;
     results.innerHTML = '<div style="color:var(--text-tertiary)">Searching...</div>';
     fetch('/api/files/search?q=' + encodeURIComponent(q) + '&mode=' + mode)
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var items = d.results || [];
         if (!items.length) { results.innerHTML = '<div class="files-empty">No results found</div>'; return; }
@@ -173,8 +173,8 @@
   function renderStats(el) {
     el.innerHTML = '<div class="files-section"><div style="color:var(--text-tertiary)">Loading stats...</div></div>';
     Promise.all([
-      fetch('/api/files/stats').then(function (r) { return r.json(); }),
-      fetch('/api/files/large').then(function (r) { return r.json(); }),
+      fetch('/api/files/stats').then(safeJson),
+      fetch('/api/files/large').then(safeJson),
     ]).then(function (results) {
       var stats = results[0];
       var large = results[1];
@@ -235,7 +235,7 @@
 
   function renderRecent(el) {
     el.innerHTML = '<div class="files-section"><div style="color:var(--text-tertiary)">Loading...</div></div>';
-    fetch('/api/files/recent').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/files/recent').then(safeJson).then(function (d) {
       var files = d.files || [];
       el.innerHTML = '<div class="files-section"><h3>Recently Modified Files</h3>' +
         (files.length ? '<div class="files-recent-list">' +
@@ -254,7 +254,7 @@
 
   window.openFileEnhanced = function (filePath) {
     fetch('/api/files/read?path=' + encodeURIComponent(filePath))
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error(d.error); return; }
         Modal.open({
@@ -273,7 +273,7 @@
           if (btn) btn.onclick = function () {
             var content = (document.getElementById('file-editor') || {}).value;
             fetch('/api/files/write', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filePath: filePath, content: content }) })
-              .then(function (r) { return r.json(); })
+              .then(safeJson)
               .then(function (d2) {
                 if (d2.error) { Toast.error(d2.error); return; }
                 Toast.success('Saved'); Modal.close(btn.closest('.modal-overlay'));
@@ -286,7 +286,7 @@
   window.aiSummarize = function (filePath) {
     Toast.info('Summarizing...');
     fetch('/api/files/ai-summarize', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filePath: filePath }) })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         Modal.open({ title: 'AI Summary: ' + filePath, size: 'md',
           body: '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6">' + esc(d.summary || 'No summary available') + '</div>' +
@@ -297,7 +297,7 @@
 
   window.fileGitInfo = function (filePath) {
     fetch('/api/files/git-info?path=' + encodeURIComponent(filePath))
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var commits = d.commits || [];
         Modal.open({ title: 'Git History: ' + filePath, size: 'md',
@@ -327,7 +327,7 @@
         if (!name) return;
         var path = currentPath === '.' ? name : currentPath + '/' + name;
         fetch('/api/files/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filePath: path, type: type }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (d.error) { Toast.error(d.error); return; }
             Toast.success(label + ' created'); Modal.close(btn.closest('.modal-overlay')); browseDir(currentPath);
@@ -340,7 +340,7 @@
     Modal.confirm({ title: 'Delete', message: 'Delete "' + path + '"?', dangerous: true, confirmText: 'Delete' }).then(function (ok) {
       if (!ok) return;
       fetch('/api/files/delete?path=' + encodeURIComponent(path), { method: 'DELETE' })
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           if (d.error) { Toast.error(d.error); return; }
           Toast.success('Deleted'); browseDir(currentPath);
@@ -361,7 +361,7 @@
       }
     }
     body.innerHTML = 'Analyzing project structure...<span class="cursor-blink"></span>';
-    fetch('/api/files/ai-analysis').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/files/ai-analysis').then(safeJson).then(function (d) {
       var text = d.analysis || 'No analysis available.';
       typewriter(body, text);
       if (window.AICache) {

@@ -33,7 +33,7 @@
     if (!el) return;
     el.innerHTML = '<div style="color:var(--text-tertiary)">Loading agents...</div>';
     fetch('/api/multi-server/agents')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var agents = d.agents || [];
         if (!agents.length) {
@@ -72,7 +72,7 @@
         var authKey = (document.getElementById('agent-key') || {}).value;
         if (!name || !host) { Toast.warning('Name and host required'); return; }
         fetch('/api/multi-server/agents', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name, host: host, authKey: authKey }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (d.error) { Toast.error(d.error); return; }
             Toast.success('Agent registered'); Modal.close(btn.closest('.modal-overlay')); loadAgents();
@@ -85,7 +85,7 @@
   window.agentDetail = function (id) {
     var overlay = Modal.open({ title: 'Agent Health', body: '<div style="text-align:center;padding:20px"><div class="spinner"></div></div>' });
     fetch('/api/multi-server/agents/' + id + '/health')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var body = overlay.querySelector('.modal-body');
         if (!body) return;
@@ -111,7 +111,7 @@
   window.checkAllAgents = function () {
     Toast.info('Checking all agents...');
     fetch('/api/multi-server/overview')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function () { Toast.success('Check complete'); loadAgents(); })
       .catch(function () { Toast.error('Failed'); });
   };

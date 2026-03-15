@@ -55,7 +55,7 @@
   }
 
   function loadData() {
-    fetch('/adapter/ssl/certificates').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/adapter/ssl/certificates').then(safeJson).then(function (d) {
       if (d.degraded) { renderDegraded(); return; }
       certs = Array.isArray(d) ? d : (d.certificates || []);
       renderCerts();
@@ -63,7 +63,7 @@
       renderTimeline();
     }).catch(function () { renderDegraded(); });
 
-    fetch('/adapter/ssl/vhosts').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/adapter/ssl/vhosts').then(safeJson).then(function (d) {
       if (d.degraded) return;
       vhosts = Array.isArray(d) ? d : (d.vhosts || []);
       renderVhosts();
@@ -176,7 +176,7 @@
   Views.ssl.renewCert = function (domain) {
     Toast.info('Renewing certificate for ' + domain + '...');
     fetch('/adapter/ssl/certificates/renew/' + encodeURIComponent(domain), { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error(d.error); return; }
         Toast.success('Certificate renewed');
@@ -204,7 +204,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain: domain.value.trim(), email: email ? email.value.trim() : '' }),
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       if (d.error) { Toast.error(d.error); return; }
       Toast.success('Certificate issued');
       Modal.close();
@@ -255,7 +255,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ domain: domain.value.trim(), upstream: upstream ? upstream.value.trim() : '' }),
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       if (d.error) { Toast.error(d.error); return; }
       Toast.success('Vhost created');
       Modal.close();
@@ -266,7 +266,7 @@
   Views.ssl.deleteVhost = function (domain) {
     if (!confirm('Delete vhost ' + domain + '?')) return;
     fetch('/adapter/ssl/vhosts/' + encodeURIComponent(domain), { method: 'DELETE' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) { Toast.error(d.error); return; }
         Toast.success('Vhost deleted');
@@ -280,7 +280,7 @@
     if (!btn || !body) return;
     btn.disabled = true; btn.textContent = 'Analyzing...';
     body.innerHTML = '<span class="text-secondary">Analyzing SSL certificates...</span>';
-    fetch('/api/briefing').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/briefing').then(safeJson).then(function (d) {
       btn.disabled = false; btn.textContent = 'Analyze';
       if (d.briefing) { typewriter(body, d.briefing); } else if (d.fallback) { typewriter(body, d.fallback); }
       else { body.innerHTML = '<span class="text-secondary">Analysis unavailable</span>'; }

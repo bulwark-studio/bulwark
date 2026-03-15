@@ -60,7 +60,7 @@
 
   function renderPosture(el) {
     el.innerHTML = '<div class="sec-section"><div style="color:var(--text-tertiary)">Running security checks...</div></div>';
-    fetch('/api/security/posture').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/security/posture').then(safeJson).then(function (d) {
       posture = d;
       var scoreColor = d.score >= 80 ? 'var(--cyan)' : d.score >= 60 ? '#f59e0b' : 'var(--orange)';
       var gradeColor = scoreColor;
@@ -106,7 +106,7 @@
     var results = document.getElementById('sec-secret-results');
     if (!results) return;
     results.innerHTML = '<div style="color:var(--text-tertiary)">Scanning codebase for secrets...</div>';
-    fetch('/api/security/secret-scan').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/security/secret-scan').then(safeJson).then(function (d) {
       var findings = d.findings || [];
       if (!findings.length) {
         results.innerHTML = '<div class="sec-section" style="text-align:center;padding:24px"><div style="color:var(--cyan);font-size:24px;margin-bottom:8px">&#10003;</div><div style="color:var(--cyan);font-weight:600">No secrets found</div><div style="color:var(--text-tertiary);font-size:11px;margin-top:4px">Scanned at ' + (d.scannedAt ? new Date(d.scannedAt).toLocaleString() : 'now') + '</div></div>';
@@ -131,7 +131,7 @@
 
   function renderDeps(el) {
     el.innerHTML = '<div class="sec-section"><div style="color:var(--text-tertiary)">Running npm audit...</div></div>';
-    fetch('/api/security/dependencies').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/security/dependencies').then(safeJson).then(function (d) {
       var vulns = d.vulnerabilities || [];
       var summary = d.summary || {};
       var sevCounts = '<div class="sec-dep-summary">';
@@ -164,7 +164,7 @@
 
   function renderEvents(el) {
     el.innerHTML = '<div class="sec-section"><div style="color:var(--text-tertiary)">Loading...</div></div>';
-    fetch('/api/security/events').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/security/events').then(safeJson).then(function (d) {
       var events = d.events || [];
       el.innerHTML = '<div class="sec-section"><h3>Security Events</h3>' +
         '<button class="btn btn-sm btn-ghost" onclick="logSecEvent()" style="margin-bottom:12px">+ Log Event</button>' +
@@ -208,7 +208,7 @@
 
   function renderFirewall(el) {
     el.innerHTML = '<div class="sec-section"><div style="color:var(--text-tertiary)">Detecting firewall...</div></div>';
-    fetch('/api/security/firewall').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/security/firewall').then(safeJson).then(function (d) {
       var status = d.status || 'unknown';
       var rules = d.rules || [];
       var tool = d.tool || 'none';
@@ -285,7 +285,7 @@
     Modal.open({ title: '&#10024; AI Firewall Setup', size: 'lg',
       body: '<div id="fw-ai-result" style="color:var(--text-secondary);font-size:13px;line-height:1.7">Generating firewall recommendations...<span class="cursor-blink"></span></div>'
     });
-    fetch('/api/security/firewall/ai-setup').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/security/firewall/ai-setup').then(safeJson).then(function (d) {
       var el = document.getElementById('fw-ai-result');
       if (el) el.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7">' + esc(d.guide || 'Could not generate guide.') + '</pre>';
     }).catch(function () {
@@ -313,7 +313,7 @@
         btn.disabled = true;
         fetch('/api/security/firewall/ai-ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: q }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (ans) ans.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:rgba(0,0,0,0.3);border-radius:6px">' + esc(d.answer || 'No answer.') + '</pre>';
             btn.disabled = false;
@@ -341,7 +341,7 @@
         btn.disabled = true;
         fetch('/api/security/firewall/ai-ask', { method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ question: 'Generate the exact ufw or iptables command for: ' + rule + '. Show the command, explain what it does, and warn about any risks.' }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (out) out.innerHTML = '<pre style="white-space:pre-wrap;font-family:JetBrains Mono,monospace;font-size:12px;color:var(--text-secondary);line-height:1.7;margin-top:8px;padding:12px;background:rgba(0,0,0,0.3);border-radius:6px">' + esc(d.answer || 'No answer.') + '</pre>' +
               '<div style="color:var(--text-tertiary);font-size:11px;margin-top:8px">&#9888; Copy and run this command in your terminal. Bulwark generates but does not auto-execute firewall changes for safety.</div>';
@@ -355,7 +355,7 @@
 
   function renderSSH(el) {
     el.innerHTML = '<div class="sec-section"><div style="color:var(--text-tertiary)">Loading SSH keys...</div></div>';
-    fetch('/api/security/ssh-keys').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/security/ssh-keys').then(safeJson).then(function (d) {
       var keys = d.keys || [];
       if (d.unavailable) {
         el.innerHTML =
@@ -406,7 +406,7 @@
       }
     }
     body.innerHTML = 'Analyzing security posture...<span class="cursor-blink"></span>';
-    fetch('/api/security/ai-analysis').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/security/ai-analysis').then(safeJson).then(function (d) {
       var text = d.analysis || 'No analysis available.';
       typewriter(body, text);
       if (window.AICache) {
@@ -421,7 +421,7 @@
     Toast.info('Getting AI fix recommendation...');
     fetch('/api/security/ai-fix', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ finding: finding }) })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         Modal.open({ title: 'AI Fix: ' + finding.substring(0, 50), size: 'md',
           body: '<div style="font-size:13px;color:var(--text-secondary);line-height:1.6">' + esc(d.fix || 'No recommendation') + '</div>'

@@ -41,7 +41,7 @@
   };
 
   function loadApps() {
-    fetch('/api/envvars').then(function (r) { return r.json(); }).then(function (d) {
+    fetch('/api/envvars').then(safeJson).then(function (d) {
       apps = d.apps || [];
       if (apps.length && !currentApp) currentApp = apps[0].name;
       renderBanner();
@@ -102,7 +102,7 @@
     if (!currentApp) { el.innerHTML = '<div class="env-section"><div class="env-empty">Select an app to view variables</div></div>'; return; }
     el.innerHTML = '<div class="env-section"><div style="color:var(--text-tertiary)">Loading...</div></div>';
     fetch('/api/envvars/' + encodeURIComponent(currentApp))
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var vars = d.vars || [];
         if (!vars.length) { el.innerHTML = '<div class="env-section"><div class="env-empty">No variables for ' + esc(currentApp) + '</div></div>'; return; }
@@ -132,7 +132,7 @@
     if (!currentApp) { el.innerHTML = '<div class="env-section"><div class="env-empty">Select an app</div></div>'; return; }
     el.innerHTML = '<div class="env-section"><div style="color:var(--text-tertiary)">Loading...</div></div>';
     fetch('/api/envvars/' + encodeURIComponent(currentApp) + '/categorized')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var cats = d.categories || {};
         var risks = d.risks || [];
@@ -190,7 +190,7 @@
     if (!a1 || !a2 || !results) return;
     results.innerHTML = '<div style="color:var(--text-tertiary)">Comparing...</div>';
     fetch('/api/envvars/compare/' + encodeURIComponent(a1) + '/' + encodeURIComponent(a2))
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var diff = d.diff || [];
         results.innerHTML =
@@ -224,7 +224,7 @@
     if (!results) return;
     results.innerHTML = '<div style="color:var(--text-tertiary)">Scanning...</div>';
     fetch('/api/envvars/scan-codebase')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var missing = d.missing || [];
         var defined = d.defined || [];
@@ -249,7 +249,7 @@
     if (!currentApp) { el.innerHTML = '<div class="env-section"><div class="env-empty">Select an app</div></div>'; return; }
     el.innerHTML = '<div class="env-section"><div style="color:var(--text-tertiary)">Loading...</div></div>';
     fetch('/api/envvars/' + encodeURIComponent(currentApp) + '/history')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var items = d.history || [];
         el.innerHTML = '<div class="env-section"><h3>Change History: ' + esc(currentApp) + '</h3>' +
@@ -274,7 +274,7 @@
     if (!el) return;
     if (el.dataset.revealed === 'true') { el.textContent = '••••••••'; el.dataset.revealed = 'false'; return; }
     fetch('/api/envvars/' + encodeURIComponent(app) + '?reveal=true')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var v = (d.vars || []).find(function (x) { return x.key === key; });
         if (v) { el.textContent = v.value; el.dataset.revealed = 'true'; }
@@ -298,7 +298,7 @@
         var value = (document.getElementById('env-add-value') || {}).value;
         if (!key) { Toast.warning('Key required'); return; }
         fetch('/api/envvars/' + encodeURIComponent(app), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: key, value: value }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) {
             if (d.error) { Toast.error(d.error); return; }
             Toast.success('Saved'); Modal.close(btn.closest('.modal-overlay')); currentApp = app; loadApps();
@@ -310,7 +310,7 @@
   window.editEnvVar = function (key) {
     // Reveal value first, then show edit modal
     fetch('/api/envvars/' + encodeURIComponent(currentApp) + '?reveal=true')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var v = (d.vars || []).find(function (x) { return x.key === key; });
         Modal.open({
@@ -323,7 +323,7 @@
           if (btn) btn.onclick = function () {
             var value = (document.getElementById('env-edit-value') || {}).value;
             fetch('/api/envvars/' + encodeURIComponent(currentApp), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: key, value: value }) })
-              .then(function (r) { return r.json(); })
+              .then(safeJson)
               .then(function () { Toast.success('Updated'); Modal.close(btn.closest('.modal-overlay')); renderTab(); })
               .catch(function () { Toast.error('Failed'); });
           };
@@ -354,7 +354,7 @@
         var app = (document.getElementById('bulk-app') || {}).value || appName;
         var content = (document.getElementById('bulk-content') || {}).value;
         fetch('/api/envvars/' + encodeURIComponent(app) + '/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: content }) })
-          .then(function (r) { return r.json(); })
+          .then(safeJson)
           .then(function (d) { Toast.success('Imported ' + (d.imported || 0) + ' variables'); Modal.close(btn.closest('.modal-overlay')); currentApp = app; loadApps(); })
           .catch(function () { Toast.error('Import failed'); });
       };
@@ -364,7 +364,7 @@
   window.exportEnv = function () {
     if (!currentApp) { Toast.warning('Select an app first'); return; }
     fetch('/api/envvars/' + encodeURIComponent(currentApp) + '/export')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         Modal.open({
           title: 'Export: ' + currentApp + ' (' + d.count + ' vars)', size: 'lg',
@@ -389,7 +389,7 @@
     }
     body.innerHTML = 'Analyzing environment security...<span class="cursor-blink"></span>';
     fetch('/api/envvars/' + encodeURIComponent(currentApp) + '/ai-analysis')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var text = d.analysis || 'No analysis available.';
         typewriter(body, text);

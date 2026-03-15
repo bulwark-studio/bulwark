@@ -75,7 +75,7 @@
     el.innerHTML = '<div style="padding:16px;color:var(--text-tertiary)">Loading...</div>';
 
     fetch('/api/db/' + tab + '?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         var items = d[tab] || [];
         cachedData[tab] = items;

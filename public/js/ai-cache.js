@@ -27,8 +27,14 @@
 
   function fingerprint(data, sensitivity) {
     var step = sensitivity === 'low' ? 10 : sensitivity === 'high' ? 2 : 5;
+    // Sort keys for consistent hashing regardless of property order
     var str = JSON.stringify(data, function (key, val) {
       if (typeof val === 'number') return quantize(val, step);
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        var sorted = {};
+        Object.keys(val).sort().forEach(function (k) { sorted[k] = val[k]; });
+        return sorted;
+      }
       return val;
     });
     // FNV-1a 32-bit hash — fast, good distribution
@@ -273,7 +279,20 @@
      * Listen for cache updates on a specific view.
      */
     onUpdate: function (viewId, callback) {
+      // Cap listeners to prevent memory leak
+      if (listeners.length > 200) {
+        listeners = listeners.slice(-100);
+      }
       listeners.push({ viewId: viewId, callback: callback });
+    },
+
+    /**
+     * Remove listener for a view.
+     */
+    offUpdate: function (viewId, callback) {
+      listeners = listeners.filter(function (l) {
+        return !(l.viewId === viewId && (!callback || l.callback === callback));
+      });
     },
 
     /**
@@ -359,7 +378,7 @@
 
       // Fetch fresh
       var self = this;
-      return fetch(url, fetchOpts).then(function (r) { return r.json(); }).then(function (d) {
+      return fetch(url, fetchOpts).then(safeJson).then(function (d) {
         var text = d[responseKey] || d.analysis || d.briefing || d.summary || d.error || 'Analysis unavailable';
         self.set(viewId, dataContext, text, cacheOpts);
         return {

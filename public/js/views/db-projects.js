@@ -50,7 +50,7 @@
 
   function loadProjects(cb) {
     fetch('/api/db/projects')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (data) {
         window.DbProjects.list = data.projects || [];
         // If stored active no longer exists, clear it
@@ -157,7 +157,7 @@
 
       // Async: load connection info
       fetch('/api/db/info?' + dbParam())
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           var info = document.getElementById('db-topbar-info');
           if (!info) return;
@@ -443,7 +443,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: name.trim(), url: url.trim(), description: desc.trim(), color: color, ssl: ssl }),
       })
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           Modal.close();
           if (d.error) { Toast.error(d.error); return; }
@@ -474,7 +474,7 @@
       var orig = btn ? btn.textContent : '';
       if (btn) { btn.textContent = 'Testing...'; btn.disabled = true; }
       fetch('/api/db/projects/' + id + '/test', { method: 'POST' })
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           if (btn) { btn.textContent = orig; btn.disabled = false; }
           if (d.ok) Toast.success('✓ Connected — ' + d.database + ' (' + d.version + ')');

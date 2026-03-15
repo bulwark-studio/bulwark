@@ -40,7 +40,7 @@
     },
 
     show: function () {
-      fetch('/api/tickets').then(function (r) { return r.json(); }).then(function (d) {
+      fetch('/api/tickets').then(safeJson).then(function (d) {
         var tickets = d.tickets || [];
         state.tickets = tickets;
         state.ticketSummary = d.summary || [];
@@ -103,7 +103,7 @@
           '<div style="color:var(--text-secondary)">Claude is analyzing pending tickets...</div></div>';
       }
       fetch('/api/tickets/ai/triage', { method: 'POST' })
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           if (btn) { btn.disabled = false; btn.textContent = 'AI Triage'; }
           renderTriageResults(d);
@@ -131,7 +131,7 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ subject: subject, issue_type: type, issue_description: desc, priority: priority, target_env: env })
-    }).then(function (r) { return r.json(); }).then(function (d) {
+    }).then(safeJson).then(function (d) {
       if (d.error) { Toast.error(d.error); btn.disabled = false; btn.textContent = 'Create Ticket'; return; }
       Toast.success('Ticket created');
       Modal.close(btn.closest('.modal-overlay'));
@@ -344,7 +344,7 @@
       '<span style="color:var(--cyan)">Analyzing with Claude...</span></div>';
 
     fetch('/api/tickets/' + id + '/ai/analyze', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) { renderAnalysisInModal(el, d); })
       .catch(function () {
         el.innerHTML = '<div style="padding:12px;background:rgba(255,107,43,0.05);border:1px solid rgba(255,107,43,0.15);border-radius:6px">' +
@@ -388,7 +388,7 @@
   function analyzeTicket(ticket) {
     Toast.info('Analyzing ticket with AI...');
     fetch('/api/tickets/' + ticket.id + '/ai/analyze', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         openTicketDetail(ticket);
         setTimeout(function () {
@@ -403,7 +403,7 @@
     fetch('/api/tickets/' + id + '/status', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ fix_status: newStatus })
-    }).then(function (r) { return r.json(); }).then(function () {
+    }).then(safeJson).then(function () {
       Toast.success('Ticket moved to ' + newStatus);
       Views.tickets.show();
     }).catch(function () { Toast.error('Failed to move ticket'); });
@@ -411,7 +411,7 @@
 
   function approveTicket(id) {
     fetch('/api/tickets/' + id + '/approve', { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function () { Toast.success('Ticket approved'); Views.tickets.show(); })
       .catch(function () { Toast.error('Failed to approve'); });
   }

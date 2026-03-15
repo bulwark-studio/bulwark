@@ -78,7 +78,7 @@
 
   function loadBackups() {
     fetch('/api/db/backups')
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         backups = d.backups || [];
         renderBackupList();
@@ -297,7 +297,7 @@
     }
 
     fetch('/api/db/backups/ai/strategy?' + dbParam())
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         strategyData = d;
         if (btn) { btn.disabled = false; btn.textContent = 'AI Strategy'; }
@@ -338,7 +338,7 @@
     Toast.info('Creating backup...');
 
     fetch('/api/db/backup?' + dbParam(), { method: 'POST' })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.error) {
           Toast.error('Backup failed: ' + d.error);
@@ -379,7 +379,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename: filename })
       })
-      .then(function (r) { return r.json(); })
+      .then(safeJson)
       .then(function (d) {
         if (d.success) {
           Toast.success('Backup restored successfully');
@@ -405,7 +405,7 @@
     }).then(function (yes) {
       if (!yes) return;
       fetch('/api/db/backups/' + encodeURIComponent(filename), { method: 'DELETE' })
-        .then(function (r) { return r.json(); })
+        .then(safeJson)
         .then(function (d) {
           if (d.success) { Toast.success('Backup deleted'); loadBackups(); }
           else Toast.error(d.error || 'Delete failed');
