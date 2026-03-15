@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Uptime Intelligence Center
+ * Bulwark v3.0 — Uptime Intelligence Center
  * Real-time server monitoring, latency tracking, content-aware web monitoring, AI incident analysis
  */
 (function () {

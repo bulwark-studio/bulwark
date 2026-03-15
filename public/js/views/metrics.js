@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Metrics Command Center
+ * Bulwark v3.0 — Metrics Command Center
  * AI-powered system intelligence with real-time visualization
  */
 (function () {

@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Reactive AI Intelligence Layer
+ * Bulwark v3.0 — Reactive AI Intelligence Layer
  *
  * Solves: AI re-fetches on every view navigation, wasting tokens and time.
  *

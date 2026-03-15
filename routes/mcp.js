@@ -29,7 +29,7 @@ module.exports = function (app, ctx) {
   function createMcpServer(session) {
     const server = new McpServer({
       name: 'bulwark-monitor',
-      version: '2.1.0',
+      version: '3.0.0',
       instructions: 'Bulwark server monitoring and management. Use tools to check system health, manage Docker containers, query databases, handle tickets, and deploy code.',
     });
 
@@ -1240,7 +1240,7 @@ module.exports = function (app, ctx) {
     res.json({
       url: mcpUrl,
       transport: 'streamable-http',
-      version: '2.1.0',
+      version: '3.0.0',
       tools: 37,
       resources: 3,
       prompts: 5,

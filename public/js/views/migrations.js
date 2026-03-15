@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Migration Manager View
+ * Bulwark v3.0 — Migration Manager View
  * Migration list, run, Docker test-run, schema diff, Claude review
  */
 (function () {

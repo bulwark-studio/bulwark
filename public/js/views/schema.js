@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Schema Browser View
+ * Bulwark v3.0 — Schema Browser View
  * Functions, Triggers, Extensions, Indexes overview
  */
 (function () {

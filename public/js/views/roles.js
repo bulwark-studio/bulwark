@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Roles & Permissions Intelligence
+ * Bulwark v3.0 — Roles & Permissions Intelligence
  * AI-powered security audit, permission heatmap, least-privilege analysis
  */
 (function () {

@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Databases View
+ * Bulwark v3.0 — Databases View
  * Database list, create database, query console, users, backups
  */
 (function () {

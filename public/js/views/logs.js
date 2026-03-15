@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Logs View
+ * Bulwark v3.0 — Logs View
  * Service selector, log output area, auto-scroll
  */
 (function () {

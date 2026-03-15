@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Chart.js Helper System
+ * Bulwark v3.0 — Chart.js Helper System
  * Dark glass theme with gradient fills, smooth curves, vibrant colors
  */
 

@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Overview Dashboard (AI Command Center)
+ * Bulwark v3.0 — Overview Dashboard (AI Command Center)
  * 8 sections: Briefing, Health Ring, Commands, Pulse Gauges, Infra Map, DB Stats, Timeline, Tickets
  */
 (function () {

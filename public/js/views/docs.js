@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Docs / FAQ View
+ * Bulwark v3.0 — Docs / FAQ View
  * Renders getting-started.md as styled markdown
  */
 (function () {

@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Glass Modal System
+ * Bulwark v3.0 — Glass Modal System
  * Global Modal object for dialogs, confirms, alerts
  */
 

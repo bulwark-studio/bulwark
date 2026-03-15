@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // =============================================================================
-// Bulwark v2.1 — Enterprise Server Management Platform
+// Bulwark v3.0 — AI-Powered Server Management Platform
 // Express.js + Socket.IO | Port 3001
 //
 // Usage:
@@ -116,7 +116,7 @@ function getSafeSettings(settings) {
 // ── Public assets (no auth required — favicon, logo, fonts) ──────────────────
 app.use("/favicon.svg", express.static(path.join(__dirname, "public", "favicon.svg")));
 app.use("/logo.svg", express.static(path.join(__dirname, "public", "logo.svg")));
-app.get("/api/branding", (req, res) => { res.json({ name: APP_NAME, version: "2.1.0" }); });
+app.get("/api/branding", (req, res) => { res.json({ name: APP_NAME, version: "3.0.0" }); });
 
 // ── Route modules (auth routes BEFORE requireAuth middleware) ─────────────────
 require("./routes/auth")(app, ctx);

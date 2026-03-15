@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Main Application Controller
+ * Bulwark v3.0 — Main Application Controller
  * Global state, Socket.IO, view registry, navigation
  */
 

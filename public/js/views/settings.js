@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Settings View
+ * Bulwark v3.0 — Settings View
  * My Account, 2FA, User Management
  */
 (function () {

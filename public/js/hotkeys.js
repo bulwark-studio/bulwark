@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Centralized Hotkey System
+ * Bulwark v3.0 — Centralized Hotkey System
  * All keyboard shortcuts registered and managed from one place.
  * Shift+? opens the cheatsheet overlay.
  */

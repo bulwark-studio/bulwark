@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Tickets View (Kanban Board + AI Triage)
+ * Bulwark v3.0 — Tickets View (Kanban Board + AI Triage)
  * 7-column drag-drop kanban: Pending, Analyzing, Fixing, Testing, Awaiting Approval, Approved, Deployed
  */
 (function () {

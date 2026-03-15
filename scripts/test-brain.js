@@ -194,7 +194,40 @@ try {
   assert(false, 'Section context: ' + e.message);
 }
 
-// Test 7: System prompt builder
+// Test 7: GCP KB coverage (v3.0)
+console.log('\nGCP Knowledge Base (v3.0):');
+try {
+  const kb = require('../lib/brain/kb');
+  const gcpIds = ['GCP-028', 'GCP-029', 'GCP-030', 'GCP-031', 'GCP-032', 'GCP-033', 'GCP-034', 'GCP-035', 'GCP-036', 'GCP-037', 'GCP-038', 'GCP-039', 'GCP-040', 'GCP-041', 'GCP-042'];
+  const gcpQ = ['dataflow', 'dataproc', 'cloud tasks', 'cloud scheduler', 'bigtable', 'vertex ai', 'kms', 'security command center', 'app engine', 'gcloud', 'alloydb', 'vpc service controls', 'cloud interconnect', 'multi-region', 'quota'];
+  let gcpFound = 0;
+  for (let i = 0; i < gcpIds.length; i++) {
+    const results = kb.searchKB(gcpQ[i], { maxResults: 3 });
+    if (results.find(r => r.id === gcpIds[i])) gcpFound++;
+  }
+  assert(gcpFound === gcpIds.length, 'GCP KB: ' + gcpFound + '/' + gcpIds.length + ' v3.0 entries searchable');
+} catch (e) {
+  assert(false, 'GCP KB coverage: ' + e.message);
+}
+
+// Test 8: Full sidebar wiring (v3.0)
+console.log('\nSidebar Wiring (v3.0):');
+try {
+  const catalog = require('../lib/brain/action-catalog');
+  const ctx = require('../lib/brain/section-context');
+  const sections = ['dashboard', 'metrics', 'uptime', 'agents', 'flows', 'mcp', 'servers', 'docker', 'databases', 'pm2', 'ssl', 'cloudflare', 'db-projects', 'sql-editor', 'tables', 'schema', 'migrations', 'roles', 'db-backups', 'db-assistant', 'terminal', 'tickets', 'git', 'github-hub', 'deploy', 'cron', 'files', 'envvars', 'calendar', 'notes', 'security', 'ftp', 'notifications', 'cache', 'logs', 'multi-server', 'settings', 'docs'];
+  let wired = 0;
+  for (const s of sections) {
+    const hasCtx = ctx.getSectionContext(s) !== null;
+    const hasAction = catalog.ACTIONS.some(a => a.targetSection === s);
+    if (hasCtx && hasAction) wired++;
+  }
+  assert(wired === sections.length, 'All ' + sections.length + ' sidebar sections wired (' + wired + '/' + sections.length + ')');
+} catch (e) {
+  assert(false, 'Sidebar wiring: ' + e.message);
+}
+
+// Test 9: System prompt builder
 console.log('\nSystem Prompt Builder:');
 (async function () {
   try {
@@ -207,6 +240,7 @@ console.log('\nSystem Prompt Builder:');
     assert(typeof result.systemPrompt === 'string', 'buildSystemPrompt returns systemPrompt string');
     assert(result.systemPrompt.includes('Bulwark Brain'), 'System prompt includes identity');
     assert(result.systemPrompt.includes('Docker'), 'System prompt includes Docker expertise');
+    assert(result.systemPrompt.includes('Cloud Run'), 'System prompt includes GCP services (v3.0)');
     assert(result.tokenEstimate > 0, 'Token estimate is positive: ' + result.tokenEstimate);
     assert(Array.isArray(result.kbHits), 'Returns kbHits array');
     assert(Array.isArray(result.suggestedActions), 'Returns suggestedActions array');

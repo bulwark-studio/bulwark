@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — Notifications View
+ * Bulwark v3.0 — Notifications View
  * Webhook channels: Discord/Slack/Telegram/Email, test, enable/disable
  * Email alerts with AI-composed messages, SMTP config link
  */

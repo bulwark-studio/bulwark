@@ -1,6 +1,6 @@
 # ══════════════════════════════════════════════════════════════════
-# Bulwark v2.1 — Ubuntu 24.04 + Node.js 22 + AI CLIs
-# Self-contained server management platform
+# Bulwark v3.0 — Ubuntu 24.04 + Node.js 22 + AI CLIs + Ollama
+# AI-powered server management platform
 # ══════════════════════════════════════════════════════════════════
 
 FROM ubuntu:24.04
@@ -57,12 +57,15 @@ COPY lib/ ./lib/
 COPY docs/ ./docs/
 COPY public/ ./public/
 COPY media/ ./media/
+COPY scripts/ ./scripts/
 
 # Ensure data dirs exist with write permissions
 RUN mkdir -p /app/data/backups && chown -R bulwark:bulwark /app
 
 ENV NODE_ENV=production
 ENV MONITOR_PORT=3001
+ENV OLLAMA_BASE_URL=http://ollama:11434
+ENV OLLAMA_MODEL=qwen3:8b
 
 EXPOSE 3001
 

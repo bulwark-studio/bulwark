@@ -1,5 +1,5 @@
 /**
- * Bulwark v2.1 — FTP Management View
+ * Bulwark v3.0 — FTP Management View
  * Native detection of vsftpd/proftpd, AI-powered setup & management
  */
 (function () {

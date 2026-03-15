@@ -11,11 +11,16 @@ services:
       - DATABASE_URL=postgresql://bulwark:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/bulwark
       - NODE_ENV=production
       - DOCKER_HOST=unix:///var/run/docker.sock
+      # AI — Ollama (default local LLM)
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3:8b}
       # AI keys (BYOK — set in .env or pass at runtime)
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     depends_on:
       postgres:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     volumes:
       - bulwark-data:/app/data
@@ -35,6 +40,25 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: bulwark-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - bulwark-net
 
   postgres:
     image: postgres:17-alpine
@@ -64,3 +88,4 @@ networks:
 volumes:
   bulwark-data:
   pg-data:
+  ollama-models:

@@ -2,12 +2,13 @@
 set -euo pipefail
 
 # ============================================================================
-#  Bulwark Installer — AI-powered server management platform
+#  Bulwark v3.0 Installer — AI-powered server management platform
 #  Usage: curl -fsSL https://bulwark.studio/install.sh | bash
 # ============================================================================
 
 CYAN='\033[0;36m'
 ORANGE='\033[0;33m'
+GREEN='\033[0;32m'
 BOLD='\033[1m'
 NC='\033[0m'
 
@@ -19,7 +20,7 @@ cat << 'BANNER'
 | |_) | |_| | |\ V  V / (_| | |  |   <
 |____/ \__,_|_| \_/\_/ \__,_|_|  |_|\_\
 
-Your entire server, one dashboard.
+AI-powered server management. Your entire server, one dashboard.
 BANNER
 echo -e "${NC}"
 
@@ -93,6 +94,36 @@ if ! command -v git &>/dev/null; then
 fi
 echo -e "  ${CYAN}✓${NC} Git $(git --version | cut -d' ' -f3)"
 
+# --- Check/Install Ollama (default AI provider) ---
+echo ""
+echo -e "${BOLD}Setting up AI provider...${NC}"
+
+if command -v ollama &>/dev/null; then
+  echo -e "  ${CYAN}✓${NC} Ollama $(ollama --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo 'installed')"
+else
+  echo -e "  ${ORANGE}—${NC} Ollama not found. Installing (default local AI provider)..."
+  if [[ "$OS" == "Linux" ]]; then
+    curl -fsSL https://ollama.com/install.sh | sh
+  elif [[ "$OS" == "Darwin" ]]; then
+    if command -v brew &>/dev/null; then
+      brew install ollama
+    else
+      echo -e "  ${ORANGE}Install Ollama manually: https://ollama.com/download${NC}"
+    fi
+  fi
+fi
+
+# Pull default model if Ollama is available
+if command -v ollama &>/dev/null; then
+  OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:8b}"
+  if ! ollama list 2>/dev/null | grep -q "${OLLAMA_MODEL}"; then
+    echo -e "  Pulling default model: ${BOLD}${OLLAMA_MODEL}${NC} (this may take a few minutes)..."
+    ollama pull "${OLLAMA_MODEL}" || echo -e "  ${ORANGE}Model pull failed — you can run 'ollama pull ${OLLAMA_MODEL}' later${NC}"
+  else
+    echo -e "  ${CYAN}✓${NC} Model ${OLLAMA_MODEL} ready"
+  fi
+fi
+
 # --- Clone / Update ---
 echo ""
 if [[ -d "$INSTALL_DIR" ]]; then
@@ -116,21 +147,53 @@ echo -e "${BOLD}Installing dependencies...${NC}"
 npm install --production
 echo -e "  ${CYAN}✓${NC} Dependencies installed"
 
+# --- Ensure data directory ---
+mkdir -p data/backups
+echo -e "  ${CYAN}✓${NC} Data directories ready"
+
 # --- Generate config ---
 ADMIN_PASS=$(openssl rand -hex 16 | head -c16)
 
 if [[ ! -f ".env" ]]; then
   echo -e "${BOLD}Creating configuration...${NC}"
+
+  # Detect Ollama URL
+  OLLAMA_URL="http://localhost:11434"
+  if curl -sf "${OLLAMA_URL}/api/tags" &>/dev/null; then
+    echo -e "  ${CYAN}✓${NC} Ollama detected at ${OLLAMA_URL}"
+  fi
+
   cat > .env << EOF
 MONITOR_PORT=${PORT}
 MONITOR_USER=admin
 MONITOR_PASS=${ADMIN_PASS}
 # DATABASE_URL=postgresql://user:password@localhost:5432/dbname
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+
+# ── AI Providers ────────────────────────────────────────────────
+# Ollama (default local LLM — install from ollama.com)
+OLLAMA_BASE_URL=${OLLAMA_URL}
+OLLAMA_MODEL=${OLLAMA_MODEL:-qwen3:8b}
+
+# Anthropic Claude API (optional — for premium analysis tasks)
+# ANTHROPIC_API_KEY=sk-ant-...
+
+# OpenAI (optional — for Codex CLI fallback)
+# OPENAI_API_KEY=sk-...
 EOF
   echo -e "  ${CYAN}✓${NC} .env created"
 else
   echo -e "  ${CYAN}—${NC} .env already exists, keeping current config"
   ADMIN_PASS="(existing)"
+fi
+
+# --- Run tests ---
+echo ""
+echo -e "${BOLD}Running tests...${NC}"
+if npm test 2>/dev/null; then
+  echo -e "  ${GREEN}✓${NC} All tests passed"
+else
+  echo -e "  ${ORANGE}—${NC} Some tests failed (non-critical, check logs)"
 fi
 
 # --- Create systemd service (Linux only) ---
@@ -142,9 +205,9 @@ if [[ "$OS" == "Linux" ]] && command -v systemctl &>/dev/null; then
 
   sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null << EOF
 [Unit]
-Description=Bulwark — Server Management Platform
-After=network.target postgresql.service
-Wants=postgresql.service
+Description=Bulwark v3.0 — AI-Powered Server Management Platform
+After=network.target postgresql.service ollama.service
+Wants=postgresql.service ollama.service
 
 [Service]
 Type=simple
@@ -168,12 +231,13 @@ fi
 # --- Done ---
 echo ""
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}  Bulwark installed successfully!${NC}"
+echo -e "${BOLD}  Bulwark v3.0 installed successfully!${NC}"
 echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "  ${BOLD}URL:${NC}      http://$(hostname -I 2>/dev/null | awk '{print $1}' || echo 'localhost'):${PORT}"
 echo -e "  ${BOLD}User:${NC}     admin"
 echo -e "  ${BOLD}Password:${NC} ${ADMIN_PASS}"
+echo -e "  ${BOLD}AI:${NC}       Ollama (local) — ${OLLAMA_MODEL:-qwen3:8b}"
 echo ""
 if [[ "$OS" == "Linux" ]] && command -v systemctl &>/dev/null; then
   echo -e "  ${BOLD}Manage:${NC}   sudo systemctl {start|stop|restart|status} ${SERVICE_NAME}"
